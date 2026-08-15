@@ -21,16 +21,16 @@ Aurora PostgreSQL is the material baseline cost. The current London public
 price is approximately USD 0.14 per ACU-hour. At the 0.5 ACU active floor this
 is about USD 0.07 per active hour.
 
-| Assumption | Approximate monthly cost |
-| --- | ---: |
-| Aurora active 30 minutes/day | $1.05 |
-| Aurora active 1 hour/day | $2.10 |
-| Aurora active 2 hours/day | $4.20 |
-| Aurora accidentally active continuously | $51.10 |
-| One Secrets Manager database secret | $0.40 |
-| 1 GB Aurora storage | $0.10 |
-| Route 53 hosted zone | $0 additional; reuse existing zone |
-| Static web, API, auth, scheduler, and logs at personal usage | Expected $0 to low cents |
+| Assumption                                                   |           Approximate monthly cost |
+| ------------------------------------------------------------ | ---------------------------------: |
+| Aurora active 30 minutes/day                                 |                              $1.05 |
+| Aurora active 1 hour/day                                     |                              $2.10 |
+| Aurora active 2 hours/day                                    |                              $4.20 |
+| Aurora accidentally active continuously                      |                             $51.10 |
+| One Secrets Manager database secret                          |                              $0.40 |
+| 1 GB Aurora storage                                          |                              $0.10 |
+| Route 53 hosted zone                                         | $0 additional; reuse existing zone |
+| Static web, API, auth, scheduler, and logs at personal usage |           Expected $0 to low cents |
 
 The expected MVP total is roughly USD 2-6 per month, excluding the existing
 domain registration and assuming the database pauses correctly. Shared AWS free
@@ -76,21 +76,21 @@ Reference: [official OpenAI model documentation](https://developers.openai.com/a
 
 ## Enforced AWS guardrails
 
-| Area | MVP limit |
-| --- | --- |
-| Aurora capacity | Minimum 0 ACU, maximum 1 ACU |
-| Aurora idle pause | Five minutes |
-| Aurora topology | One writer, no replicas, Standard storage |
-| API Lambda reserved concurrency | 4 |
-| Planner Lambda reserved concurrency | 1 |
-| API throttle | 5 requests/second, burst 10 |
-| Lambda architecture | ARM64 where supported |
-| Application log retention | 14 days |
-| Scheduler | One weekly schedule |
-| Cloud environments | Local and one production environment only |
-| Network | No NAT Gateway, load balancer, or RDS Proxy |
-| DNS | Reuse the existing `chrismatthews.me` hosted zone |
-| Paid external services | OpenAI only |
+| Area                                | MVP limit                                         |
+| ----------------------------------- | ------------------------------------------------- |
+| Aurora capacity                     | Minimum 0 ACU, maximum 1 ACU                      |
+| Aurora idle pause                   | Five minutes                                      |
+| Aurora topology                     | One writer, no replicas, Standard storage         |
+| API Lambda reserved concurrency     | 4                                                 |
+| Planner Lambda reserved concurrency | 1                                                 |
+| API throttle                        | 5 requests/second, burst 10                       |
+| Lambda architecture                 | ARM64 where supported                             |
+| Application log retention           | 14 days                                           |
+| Scheduler                           | One weekly schedule                               |
+| Cloud environments                  | Local and one production environment only         |
+| Network                             | No NAT Gateway, load balancer, or RDS Proxy       |
+| DNS                                 | Reuse the existing `chrismatthews.me` hosted zone |
+| Paid external services              | OpenAI only                                       |
 
 Every provisioned resource is tagged with at least `Application=MacroMap` and
 `Environment=production`. Cost allocation tags must be activated where the AWS

@@ -1,0 +1,55 @@
+{
+  "name": "macromap",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Cost-conscious weekly meal planning around individual macro targets",
+  "type": "module",
+  "engines": {
+    "node": "24.x",
+    "npm": "11.x"
+  },
+  "packageManager": "npm@11.19.0",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "infra"
+  ],
+  "scripts": {
+    "audit": "npm audit --audit-level=high",
+    "build": "npm run build --workspaces --if-present",
+    "cdk:diff": "npm run diff --workspace @macromap/infra --",
+    "cdk:synth": "npm run synth --workspace @macromap/infra",
+    "db:start": "docker compose up -d --wait postgres",
+    "db:stop": "docker compose down",
+    "dev": "npm run dev --workspace @macromap/web",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "test:integration": "vitest run packages/database/src/client.integration.test.ts",
+    "test:watch": "vitest",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "validate": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build && npm run test:e2e && npm run cdk:synth"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^24.13.3",
+    "@types/pg": "^8.21.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitest/coverage-v8": "^4.1.10",
+    "aws-cdk": "^2.1136.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.1",
+    "prettier": "^3.9.6",
+    "tsx": "^4.23.12",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "unrs-resolver@1.12.2": true,
+    "fsevents": false
+  }
+}

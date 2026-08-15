@@ -1,0 +1,16 @@
+{
+  "app": "npx tsx bin/macromap.ts",
+  "context": {
+    "@aws-cdk/core:checkSecretUsage": true,
+    "@aws-cdk/core:explicitStackTags": true,
+    "@aws-cdk/core:validateAgainstDefaultRules": true,
+    "@aws-cdk/core:validateSnapshotRemovalPolicy": true,
+    "@aws-cdk/aws-iam:minimizePolicies": true,
+    "@aws-cdk/aws-s3:publicAccessBlockedByDefault": true,
+    "@aws-cdk/aws-rds:preventRenderingDeprecatedCredentials": true,
+    "@aws-cdk/cognito:logUserPoolClientSecretValue": false,
+    "@aws-cdk/custom-resources:logApiResponseDataPropertyTrueDefault": false,
+    "@aws-cdk/customresources:installLatestAwsSdkDefault": false
+  },
+  "output": "../cdk.out"
+}

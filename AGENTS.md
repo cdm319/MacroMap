@@ -10,6 +10,8 @@ Read these before planning or changing implementation:
 2. `docs/technical-architecture.md` — approved components and system boundaries.
 3. `docs/cost-model.md` — budget, capacity limits, and cost approval rules.
 4. `docs/delivery-plan.md` — phase dependencies, CI, deployment, and validation.
+5. `docs/api-conventions.md` — shared identifiers, transport, errors, and retries.
+6. `docs/dependency-policy.md` — approved packages and dependency-change rules.
 
 Do not silently reinterpret conflicts. Stop, identify the smallest conflicting
 decision, and ask the human owner to resolve it. Update the authoritative

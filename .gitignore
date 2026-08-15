@@ -24,6 +24,8 @@ lib-cov
 # Coverage directory used by tools like istanbul
 coverage
 *.lcov
+playwright-report/
+test-results/
 
 # nyc test coverage
 .nyc_output
@@ -80,6 +82,7 @@ web_modules/
 # Next.js build output
 .next
 out
+apps/web/next-env.d.ts
 
 # Nuxt.js build / generate output
 .nuxt

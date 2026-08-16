@@ -25,21 +25,25 @@ Create a `production` environment with required reviewers and prevent
 self-review where the repository plan supports it. Add these repository or
 environment variables:
 
-| Name                             | Purpose                                                  |
-| -------------------------------- | -------------------------------------------------------- |
-| `AWS_ACCOUNT_ID`                 | Target AWS account                                       |
-| `AWS_ACCOUNT_BOOTSTRAP_ROLE_ARN` | Existing approved role used once to create project roles |
-| `AWS_DEPLOY_ROLE_ARN`            | Deploy-role output of the GitHub roles stack             |
-| `AWS_READ_ONLY_ROLE_ARN`         | Diff-role output of the GitHub roles stack               |
-| `MACROMAP_HOSTED_ZONE_ID`        | Existing `chrismatthews.me` public hosted-zone ID        |
+| Name                      | Purpose                                      |
+| ------------------------- | -------------------------------------------- |
+| `AWS_ACCOUNT_ID`          | Target AWS account                           |
+| `AWS_DEPLOY_ROLE_ARN`     | Owner-created production deployment role     |
+| `AWS_READ_ONLY_ROLE_ARN`  | Owner-created planning and pull-request role |
+| `MACROMAP_HOSTED_ZONE_ID` | Existing `chrismatthews.me` hosted-zone ID   |
 
 Add `MACROMAP_BUDGET_EMAIL` as an environment secret for the USD 8 and USD 15
 budget notifications. Never store its value in the repository.
 
 The account-level GitHub OIDC provider for `token.actions.githubusercontent.com`
-and CDK bootstrap stacks in `eu-west-2` and `us-east-1` must already exist. If
-the account has no initial OIDC-trusted role capable of deploying IAM, a human
-administrator must establish that root of trust first.
+and CDK bootstrap stacks in `eu-west-2` and `us-east-1` must already exist. The
+human owner creates the two dedicated MacroMap roles manually; no repository
+workflow creates them.
+
+The deployment role trusts only
+`repo:cdm319/MacroMap:environment:production` and may assume the CDK deployment
+roles in both regions. The read-only role trusts this repository's pull requests
+and `main`, has AWS `ReadOnlyAccess`, and may assume only the CDK lookup roles.
 
 Activate the `Application` user-defined cost allocation tag before relying on
 the project-filtered budgets. Until activation and the normal billing-data delay
@@ -47,15 +51,13 @@ have passed, use direct account billing review as the authoritative cost check.
 
 ## First release
 
-1. Merge the reviewed Phase 1 pull request to `main` after CI passes.
-2. Dispatch **Provision GitHub roles** from `main` and approve its `production`
-   environment gate. This creates free IAM roles only.
-3. Copy the `DeployRoleArn` and `DiffRoleArn` outputs into
-   `AWS_DEPLOY_ROLE_ARN` and `AWS_READ_ONLY_ROLE_ARN`.
-4. Dispatch **Deploy production** from `main`. Inspect the read-only diff before
+1. Manually create the two GitHub OIDC roles described above and configure their
+   ARNs in GitHub.
+2. Merge the reviewed Phase 1 pull request to `main` after CI passes.
+3. Dispatch **Deploy production** from `main`. Inspect the read-only diff before
    approving the deploy job. The reviewed cloud assembly is deployed unchanged.
-5. Bootstrap the empty database and household login using the next section.
-6. Use Cognito's invitation and temporary-password flow to sign in at
+4. Bootstrap the empty database and household login using the next section.
+5. Use Cognito's invitation and temporary-password flow to sign in at
    `https://macromap.chrismatthews.me`.
 
 ## One-time database bootstrap

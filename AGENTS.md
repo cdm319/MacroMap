@@ -65,7 +65,9 @@ and cost approval.
 
 ## AWS, deployment, and migrations
 
-- Define AWS resources only through the TypeScript CDK application.
+- Define application AWS resources only through the TypeScript CDK application.
+  The human-owned GitHub OIDC roles used by CI are account prerequisites and
+  are intentionally not provisioned from this repository.
 - Do not run local `cdk deploy`, mutate AWS, invoke production functions, change
   DNS, or trigger paid OpenAI calls.
 - Production deployment happens only from committed `main` through the manually
@@ -74,8 +76,10 @@ and cost approval.
   releases.
 - Never trigger a deployment unless the human explicitly requests it. Never
   approve an environment gate on the human's behalf.
-- Use the existing account GitHub OIDC provider with a dedicated least-privilege
-  MacroMap role. Never create or commit long-lived AWS credentials.
+- Use the existing account GitHub OIDC provider with dedicated least-privilege
+  MacroMap deployment and read-only roles. The human owner creates them
+  manually and configures their ARNs in GitHub. Never create or commit
+  long-lived AWS credentials.
 - The human owner may run the documented one-time database bootstrap from their
   developer machine after the first deployment. Agents must never run it.
 - Once production data exists, schema changes need an explicitly approved,

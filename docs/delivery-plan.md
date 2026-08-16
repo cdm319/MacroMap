@@ -49,16 +49,16 @@ Deliverables:
 - initial household and Chris/Alex profiles;
 - Aurora Serverless v2, Data API, Drizzle schema, and initial bootstrap SQL;
 - CloudFront, private S3 origin, and `macromap.chrismatthews.me`;
-- GitHub OIDC deployment role with least-privilege permissions;
+- documented least-privilege requirements for owner-created GitHub OIDC roles;
 - manually dispatched, environment-protected production deployment workflow;
 - documented owner-run one-time database bootstrap;
 - USD 8 and USD 15 budget notifications; and
 - a waking-database state in the web application.
 
-The existing account-level GitHub OIDC provider is reused. A dedicated MacroMap
-deployment role is required. Any one-time trust setup is documented and
-performed by a human or an already-approved CI provisioning path; application
-deployment remains CI-only.
+The existing account-level GitHub OIDC provider is reused. Dedicated MacroMap
+deployment and read-only roles are required. The human owner creates these
+account prerequisites manually; no repository workflow provisions them.
+Application deployment remains CI-only.
 
 The static application receives generated non-secret environment identifiers
 through a deployment-time `/config.json`. After the first deployment, the human

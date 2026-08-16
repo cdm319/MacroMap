@@ -16,9 +16,10 @@
   ],
   "scripts": {
     "audit": "npm audit --audit-level=high",
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build --workspace @macromap/web",
     "cdk:diff": "npm run diff --workspace @macromap/infra --",
     "cdk:synth": "npm run synth --workspace @macromap/infra",
+    "db:bootstrap": "npm run bootstrap --workspace @macromap/database --",
     "db:start": "docker compose up -d --wait postgres",
     "db:stop": "docker compose down",
     "dev": "npm run dev --workspace @macromap/web",
@@ -34,6 +35,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
+    "@types/aws-lambda": "^8.10.162",
     "@types/node": "^24.13.3",
     "@types/pg": "^8.21.0",
     "@types/react": "^19.2.18",

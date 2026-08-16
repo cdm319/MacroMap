@@ -4,16 +4,14 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
+    ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "bootstrap": "tsx src/bootstrap.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-rds-data": "^3.1111.0",
     "drizzle-orm": "^0.45.2",
     "pg": "^8.23.0"
   }

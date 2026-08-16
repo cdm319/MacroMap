@@ -11,6 +11,7 @@ macronutrient requirements.
 - [Delivery plan](docs/delivery-plan.md)
 - [API conventions](docs/api-conventions.md)
 - [Dependency policy](docs/dependency-policy.md)
+- [Production deployment runbook](docs/deployment-runbook.md)
 
 Repository-wide implementation and delivery rules are defined in
 [`AGENTS.md`](AGENTS.md).
@@ -46,5 +47,13 @@ npm run test:e2e
 npm run cdk:synth
 ```
 
-The CDK application is synthesis-only during Phase 0. Do not deploy it from a
-developer machine.
+Local development uses the non-secret `apps/web/public/config.json` seam and
+shows the seeded Chris and Alex household without contacting Cognito or AWS.
+Production replaces that file during deployment with generated Cognito and API
+identifiers.
+
+Infrastructure deploys automatically after a reviewed pull request is merged to
+`main`. The human owner performs the one-time empty-database bootstrap from
+their developer machine by following the
+[production deployment runbook](docs/deployment-runbook.md); agents must never
+run it.

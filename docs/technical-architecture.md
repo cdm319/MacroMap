@@ -1,7 +1,7 @@
 # MacroMap technical architecture
 
-Status: Approved for MVP implementation
-Last reviewed: 2026-08-15
+Status: Approved; Phase 1 implemented pending production verification
+Last reviewed: 2026-08-16
 
 ## Purpose and authority
 
@@ -28,7 +28,7 @@ The MVP therefore favours:
 - managed authentication and encrypted managed storage;
 - one production environment plus local development;
 - explicit limits instead of unbounded autoscaling; and
-- CI-only deployments with a human approval gate.
+- CI-only deployments authorised by a reviewed merge to `main`.
 
 The application assumes internet connectivity. A slower first request after an
 idle period is an accepted trade-off for allowing PostgreSQL to pause.
@@ -63,8 +63,8 @@ flowchart LR
 - Tests: Vitest for unit/integration tests and Playwright for critical browser
   journeys.
 
-Dependency versions are selected during repository bootstrap and pinned by the
-lockfile. Replacing these choices or introducing another runtime, database,
+Dependency versions are selected during initial repository setup and pinned by
+the lockfile. Replacing these choices or introducing another runtime, database,
 framework, ORM, cloud, or paid service is an architectural change.
 
 ## Repository shape
@@ -78,8 +78,7 @@ apps/
 packages/
   domain/              Pure business rules and planner
   contracts/           API request/response schemas
-  database/            Drizzle schema, repositories, and migrations
-  testing/             Shared fixtures and test builders
+  database/            Drizzle schema, repositories, and initial bootstrap SQL
 infra/                  AWS CDK application and assertions
 docs/                   Product, architecture, cost, and delivery contracts
 ```
@@ -101,6 +100,10 @@ create another hosted zone. If the zone cannot be accessed from the deployment
 account, deployment stops and reports the required DNS record for a human to
 create.
 
+The existing hosted-zone identifier is non-secret deployment configuration
+committed with the CDK application. CDK resolves the account from the
+authenticated deployment role; GitHub stores only that role's ARN.
+
 ### Web application
 
 The Next.js application is statically exported to a private S3 bucket served
@@ -117,9 +120,13 @@ using the authorisation-code flow with PKCE and no client secret in the browser.
 Chris and Alex are application-level planning profiles, not separate Cognito
 users in the MVP.
 
-Public self-registration is disabled. The initial household login is created by
-an explicitly approved administration/bootstrap step and subsequent account
-recovery uses Cognito's managed flow.
+Public self-registration is disabled. After the first deployment, the human
+owner creates the initial Cognito user and runs the documented one-time database
+bootstrap from their developer machine. The bootstrap binds Cognito's immutable
+`sub` to the seeded household. Agents must never perform this production
+operation. Subsequent account recovery uses Cognito's managed flow. A different
+`sub` cannot replace the existing household binding without a separately
+reviewed data operation.
 
 API Gateway validates Cognito JWTs. The API derives the authenticated actor from
 the validated `sub` claim and never accepts an account identifier supplied by
@@ -156,8 +163,15 @@ RDS Proxy, persistent connection pool, and Lambda VPC attachment, while allowing
 the cluster to pause. The UI must tolerate database resume latency and show a
 clear waking/retry state rather than treating the first timeout as data loss.
 
-Database changes use reviewed, forward-only Drizzle migrations. Application
-code and migrations must be deployable in an expand-then-contract sequence.
+Database structure is represented by the Drizzle schema. Because the first
+release has no existing data, a committed SQL file creates the initial schema
+and household records in one transaction through the Data API. Only the human
+owner runs that bootstrap, once, using the deployment runbook.
+
+The bootstrap is not a migration framework. Before changing the schema after
+production data exists, agree a reviewed, forward-only migration approach that
+supports expand-and-contract releases. Adding migration tooling requires the
+dependency review defined in `docs/dependency-policy.md`.
 
 ### Object storage
 
@@ -187,6 +201,9 @@ Automatic generation creates a draft only; it never approves a plan.
 - The database credential is held in AWS Secrets Manager and managed by RDS.
 - The OpenAI API key is held in a Standard SSM SecureString parameter.
 - Non-secret configuration is validated at Lambda startup.
+- The static application loads `/config.json` at runtime. Local development
+  commits only a `mode=local` seam; CDK generates the production API endpoint,
+  Cognito domain, client identifier, and redirect URI during deployment.
 - Secrets and tokens must never appear in logs, build artifacts, CloudFormation
   outputs, fixtures, or browser bundles.
 

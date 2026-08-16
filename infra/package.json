@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
     "diff": "cdk diff --change-set=false",
     "synth": "cdk synth --quiet",
     "typecheck": "tsc -p tsconfig.json --noEmit"

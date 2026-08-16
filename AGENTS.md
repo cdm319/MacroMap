@@ -43,7 +43,8 @@ impact as `none`, `decrease`, or `increase/uncertain` using
 
 For `increase/uncertain`, stop before editing and present the before/after
 monthly estimate, usage-sensitive maximum, cheaper options, and rollback route.
-Human approval to code the change does not authorise deployment.
+Human approval to code the change does not authorise merge. Merging to `main`
+authorises the automatic production deployment.
 
 Never change these values incidentally:
 
@@ -65,29 +66,38 @@ and cost approval.
 
 ## AWS, deployment, and migrations
 
-- Define AWS resources only through the TypeScript CDK application.
+- Define application AWS resources only through the TypeScript CDK application.
+  The human-owned GitHub OIDC role used by CI is an account prerequisite and is
+  intentionally not provisioned from this repository.
 - Do not run local `cdk deploy`, mutate AWS, invoke production functions, change
   DNS, or trigger paid OpenAI calls.
-- Production deployment happens only from committed `main` through the manually
-  approved GitHub Actions production workflow.
-- Every production deployment requires human approval, including app-only
-  releases.
-- Never trigger a deployment unless the human explicitly requests it. Never
-  approve an environment gate on the human's behalf.
-- Use the existing account GitHub OIDC provider with a dedicated least-privilege
-  MacroMap role. Never create or commit long-lived AWS credentials.
-- Run migrations only through the separate protected CI workflow. Migrations
-  must be reviewed, forward-only, and expand-then-contract.
+- Production deploys automatically from committed `main` through GitHub
+  Actions. The human decision to merge is the deployment approval.
+- Agents must work through pull requests and must never push or merge directly
+  to `main`. Do not manually dispatch the deployment workflow unless the human
+  explicitly requests a retry.
+- Use the existing account GitHub OIDC provider with one dedicated
+  least-privilege MacroMap deployment role. The human owner creates it manually
+  and configures its ARN in GitHub. Never create or commit long-lived AWS
+  credentials.
+- The human owner may run the documented one-time database bootstrap from their
+  developer machine after the first deployment. Agents must never run it.
+- Once production data exists, schema changes need an explicitly approved,
+  forward-only migration strategy. Do not treat the initial bootstrap as a
+  general migration mechanism.
 - Destructive data changes, backfills, restores, and production diagnostics need
   a specific plan and approval. Prefer read-only evidence.
-- Treat CDK diff as required evidence, not permission to deploy.
+- The deployment workflow must produce a successful CDK diff immediately before
+  deploying the same cloud assembly.
 
 ## Implementation boundaries
 
 - Keep one TypeScript modular monolith with pure domain packages and thin web,
   HTTP, persistence, AI, and AWS adapters.
-- Prefer direct, readable code and explicit names over premature abstraction or
-  configurable machinery.
+- Optimise code for human readability and cleanliness. Use the smallest amount
+  of code that clearly expresses the required behaviour; avoid verbosity for
+  its own sake, speculative abstractions, unnecessary layers, and defensive
+  machinery without a concrete requirement.
 - TypeScript is strict. Avoid `any`; validate all external data with versioned
   Zod schemas.
 - The authenticated Cognito `sub` is the identity boundary. Never trust a
@@ -132,8 +142,8 @@ fixtures covering objective priority and diagnostics, not only snapshot tests.
   dependency cannot reasonably meet the requirement.
 - Explain maintenance, bundle, security, and cost consequences before adding a
   major dependency or service SDK.
-- Do not hand-edit generated migrations, build output, or dependency artifacts
-  unless the tool's documented workflow requires it.
+- Do not hand-edit generated build output or dependency artifacts unless the
+  tool's documented workflow requires it.
 - Do not commit build output, secrets, local databases, environment files, or
   captured private recipe content.
 
@@ -148,5 +158,5 @@ Report:
   and
 - remaining risks, decisions, or follow-up work.
 
-Leave merging, production approval, deployment, and material contract decisions
-to the human owner.
+Leave merging, deployment authorisation, and material contract decisions to the
+human owner.

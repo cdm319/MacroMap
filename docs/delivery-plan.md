@@ -1,7 +1,7 @@
 # MacroMap MVP delivery plan
 
-Status: Approved implementation sequence
-Last reviewed: 2026-08-15
+Status: Approved implementation sequence; Phase 1 ready for review
+Last reviewed: 2026-08-16
 
 ## Delivery principles
 
@@ -10,7 +10,16 @@ with working behaviour, automated tests, updated documentation, and a reviewable
 diff. Production is never deployed from a developer machine.
 
 The order below is intentional: later work depends on stable recipe, nutrition,
-and snapshot contracts. A human approves merges and every production deployment.
+and snapshot contracts. A human-approved merge authorises its automatic
+production deployment.
+
+Current progress:
+
+- Phase 0 is complete and merged.
+- Phase 1 implementation is complete locally. Its production-only exit criteria
+  remain open until an approved deployment, database bootstrap, login smoke
+  test, and observed Aurora pause/resume check have occurred.
+- Phases 2-6 have not started.
 
 ## Phase 0: Repository and contracts
 
@@ -22,7 +31,7 @@ Deliverables:
 - initial API error and identifier conventions;
 - local PostgreSQL development setup;
 - pull-request CI with dependency install, lint, type check, tests, build, CDK
-  assertions, CDK synthesis, and diff checking; and
+  assertions, and CDK synthesis; and
 - committed lockfile and dependency policy.
 
 Exit criteria:
@@ -38,19 +47,26 @@ Deliverables:
 - static Next.js application with responsive shell;
 - Cognito managed login and logout;
 - authenticated `/v1/session` endpoint;
-- household and Chris/Alex profile bootstrap;
-- Aurora Serverless v2, Data API, Drizzle schema, and initial migration;
+- initial household and Chris/Alex profiles;
+- Aurora Serverless v2, Data API, Drizzle schema, and initial bootstrap SQL;
 - CloudFront, private S3 origin, and `macromap.chrismatthews.me`;
-- GitHub OIDC deployment role with least-privilege permissions;
-- manually dispatched, environment-protected production deployment workflow;
-- separate protected migration workflow;
+- documented least-privilege requirements for an owner-created GitHub OIDC role;
+- automatic production deployment after a reviewed merge to `main`;
+- documented owner-run one-time database bootstrap;
 - USD 8 and USD 15 budget notifications; and
 - a waking-database state in the web application.
 
-The existing account-level GitHub OIDC provider is reused. A dedicated MacroMap
-deployment role is required. Any one-time trust/bootstrap action is documented
-and performed by a human or an already-approved CI bootstrap path; application
-deployment remains CI-only.
+The existing account-level GitHub OIDC provider is reused. One dedicated
+MacroMap deployment role is required. The human owner creates this account
+prerequisite manually; no repository workflow provisions it. Application
+deployment remains CI-only. Its ARN is the only repository variable; the budget
+notification email remains an environment secret.
+
+The static application receives generated non-secret environment identifiers
+through a deployment-time `/config.json`. After the first deployment, the human
+owner runs the committed initial SQL and binds the first Cognito `sub` in one
+transaction. Agents must never run this production bootstrap. The bootstrap
+does not permit browser-supplied household ownership.
 
 Exit criteria:
 
@@ -58,7 +74,8 @@ Exit criteria:
 - the one household login can load both planning profiles;
 - the database pauses to zero and successfully resumes;
 - no resource outside the approved architecture appears in CDK diff; and
-- the production workflow cannot run without human approval.
+- only a protected merge to `main` or an explicit human retry can start the
+  production workflow.
 
 ## Phase 2: Profiles and recipe library
 
@@ -179,9 +196,8 @@ The pull-request workflow is read-only with respect to production. It runs:
 4. unit and PostgreSQL integration tests;
 5. critical Playwright journeys against local fixtures;
 6. production builds;
-7. CDK assertion tests and synthesis;
-8. a read-only CDK diff when AWS access is available; and
-9. a cost-impact summary for infrastructure changes.
+7. CDK assertion tests and synthesis; and
+8. a cost-impact summary for infrastructure changes.
 
 No PR workflow calls OpenAI, mutates AWS, applies migrations, or deploys.
 
@@ -190,25 +206,28 @@ No PR workflow calls OpenAI, mutates AWS, applies migrations, or deploys.
 Production deployment:
 
 - runs only from committed `main` through GitHub Actions;
-- is started manually;
+- starts automatically after a merge, with manual dispatch available for retry;
 - uses GitHub OIDC rather than stored AWS credentials;
-- has an unprotected plan job that produces CDK diff and build artifacts;
-- has a separate `production` environment-protected deploy job;
-- requires a human approval for every run;
+- uses one owner-created deployment role;
+- produces a CDK diff before deploying the same cloud assembly;
+- treats the human merge decision as deployment approval;
 - uses concurrency control to prevent overlapping deployments; and
 - records the deployed commit and stack outputs.
 
-An agent may build or repair this workflow but must not trigger it unless the
-human explicitly asks. An agent can never approve its own deployment gate.
+Agents may build or repair this workflow only through pull requests. They must
+never push or merge to `main`, and must not manually dispatch a retry unless the
+human explicitly asks.
 
-### Database migrations
+### Database bootstrap and later schema changes
 
-Migrations run through a separate manually dispatched and environment-protected
-workflow from `main`. The workflow prints the pending migration list before its
-approval gate. Destructive or contracting migrations require a backup decision
-and explicit approval beyond the ordinary deployment approval.
+The zero-data first release uses one committed initial SQL file. After the
+approved deployment, the human owner runs the documented bootstrap command from
+their developer machine. This is the only production mutation allowed outside
+CI, and agents must never perform it.
 
-Use expand-and-contract releases:
+Before Phase 2 changes the schema, agree a forward-only migration approach for
+real data. Destructive or contracting changes require a backup decision and
+explicit approval. Use expand-and-contract releases:
 
 1. deploy an additive, backward-compatible schema change;
 2. migrate/backfill through a bounded, resumable operation if required;

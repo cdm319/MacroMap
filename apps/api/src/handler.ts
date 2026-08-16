@@ -5,8 +5,8 @@ import type {
 import {
   createDataApiSessionRepository,
   type SessionRepository,
-} from '../../../packages/database/src/data-api.js';
-import { createSessionHandler } from './session.js';
+} from '@macromap/database';
+import { handleSession } from './session.js';
 
 function requireEnvironment(name: string): string {
   const value = process.env[name];
@@ -30,5 +30,5 @@ function getRepository(): SessionRepository {
 export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
 ): Promise<APIGatewayProxyStructuredResultV2> {
-  return createSessionHandler(getRepository())(event);
+  return handleSession(getRepository(), event);
 }

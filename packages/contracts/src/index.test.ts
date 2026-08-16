@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   apiErrorSchema,
-  healthResponseSchema,
+  runtimeConfigSchema,
   sessionResponseSchema,
 } from './index.js';
 
@@ -22,16 +22,6 @@ describe('shared API contracts', () => {
         requestId: 'request-123',
       },
     });
-  });
-
-  it('rejects structurally invalid health responses', () => {
-    expect(() =>
-      healthResponseSchema.parse({
-        service: 'other-api',
-        status: 'ok',
-        time: 'not-a-date',
-      }),
-    ).toThrow();
   });
 
   it('accepts the authenticated household session', () => {
@@ -57,5 +47,21 @@ describe('shared API contracts', () => {
     ).toMatchObject({
       people: [{ slug: 'chris' }, { slug: 'alex' }],
     });
+  });
+
+  it('accepts local and Cognito runtime configuration', () => {
+    expect(runtimeConfigSchema.parse({ mode: 'local' })).toEqual({
+      mode: 'local',
+    });
+    expect(
+      runtimeConfigSchema.parse({
+        apiBaseUrl: 'https://api.example.test',
+        authBaseUrl: 'https://auth.example.test',
+        clientId: 'client-id',
+        mode: 'cognito',
+        redirectUri: 'https://macromap.example.test',
+      }),
+    ).toMatchObject({ mode: 'cognito' });
+    expect(() => runtimeConfigSchema.parse({ mode: 'cognito' })).toThrow();
   });
 });

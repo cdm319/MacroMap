@@ -1,28 +1,23 @@
-export interface CognitoRuntimeConfig {
-  readonly apiBaseUrl: string;
-  readonly authBaseUrl: string;
-  readonly clientId: string;
-  readonly mode: 'cognito';
-  readonly redirectUri: string;
-}
-
-export interface LocalRuntimeConfig {
-  readonly mode: 'local';
-}
-
-export type RuntimeConfig = CognitoRuntimeConfig | LocalRuntimeConfig;
-
-interface CognitoTokens {
-  readonly accessToken: string;
-  readonly expiresAt: number;
-  readonly refreshToken?: string;
-}
+import type { CognitoRuntimeConfig } from '@macromap/contracts';
+import { z } from 'zod';
 
 interface TokenResponse {
   readonly access_token: string;
   readonly expires_in: number;
   readonly refresh_token?: string;
 }
+
+const storedTokensSchema = z.object({
+  accessToken: z.string(),
+  expiresAt: z.number(),
+  refreshToken: z.unknown().optional(),
+});
+
+const tokenResponseSchema = z.object({
+  access_token: z.string(),
+  expires_in: z.number(),
+  refresh_token: z.unknown().optional(),
+});
 
 const tokenStorageKey = 'macromap.tokens';
 const verifierStorageKey = 'macromap.pkce.verifier';
@@ -54,24 +49,17 @@ async function codeChallenge(verifier: string): Promise<string> {
 }
 
 function parseTokenResponse(value: unknown): TokenResponse {
-  if (
-    typeof value !== 'object' ||
-    value === null ||
-    !('access_token' in value) ||
-    typeof value.access_token !== 'string' ||
-    !('expires_in' in value) ||
-    typeof value.expires_in !== 'number'
-  ) {
+  const parsed = tokenResponseSchema.safeParse(value);
+  if (!parsed.success) {
     throw new Error('Cognito returned an invalid token response');
   }
-
   const refreshToken =
-    'refresh_token' in value && typeof value.refresh_token === 'string'
-      ? value.refresh_token
+    typeof parsed.data.refresh_token === 'string'
+      ? parsed.data.refresh_token
       : undefined;
   return {
-    access_token: value.access_token,
-    expires_in: value.expires_in,
+    access_token: parsed.data.access_token,
+    expires_in: parsed.data.expires_in,
     ...(refreshToken === undefined ? {} : { refresh_token: refreshToken }),
   };
 }
@@ -91,7 +79,7 @@ async function requestTokens(
 
 function storeTokens(response: TokenResponse, refreshToken?: string): string {
   const resolvedRefreshToken = response.refresh_token ?? refreshToken;
-  const tokens: CognitoTokens = {
+  const tokens = {
     accessToken: response.access_token,
     expiresAt: Date.now() + response.expires_in * 1_000,
     ...(resolvedRefreshToken === undefined
@@ -166,20 +154,19 @@ export async function restoreAccessToken(
   const serialized = sessionStorage.getItem(tokenStorageKey);
   if (serialized === null) return undefined;
 
-  let tokens: CognitoTokens;
+  let stored: unknown;
   try {
-    tokens = JSON.parse(serialized) as CognitoTokens;
+    stored = JSON.parse(serialized);
   } catch {
     clearSession();
     return undefined;
   }
-  if (
-    typeof tokens.accessToken !== 'string' ||
-    typeof tokens.expiresAt !== 'number'
-  ) {
+  const parsed = storedTokensSchema.safeParse(stored);
+  if (!parsed.success) {
     clearSession();
     return undefined;
   }
+  const tokens = parsed.data;
   if (tokens.expiresAt > Date.now() + 30_000) return tokens.accessToken;
   if (typeof tokens.refreshToken !== 'string') {
     clearSession();

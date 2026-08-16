@@ -16,7 +16,7 @@
   ],
   "scripts": {
     "audit": "npm audit --audit-level=high",
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build --workspace @macromap/web",
     "cdk:diff": "npm run diff --workspace @macromap/infra --",
     "cdk:synth": "npm run synth --workspace @macromap/infra",
     "db:bootstrap": "npm run bootstrap --workspace @macromap/database --",

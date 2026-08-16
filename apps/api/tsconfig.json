@@ -3,9 +3,5 @@
   "compilerOptions": {
     "noEmit": true
   },
-  "include": [
-    "src/**/*.ts",
-    "../../packages/contracts/src/**/*.ts",
-    "../../packages/database/src/**/*.ts"
-  ]
+  "include": ["src/**/*.ts"]
 }

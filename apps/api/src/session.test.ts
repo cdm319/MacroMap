@@ -1,7 +1,7 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
+import type { SessionRepository } from '@macromap/database';
 import { describe, expect, it, vi } from 'vitest';
-import type { SessionRepository } from '../../../packages/database/src/data-api.js';
-import { createSessionHandler } from './session.js';
+import { handleSession } from './session.js';
 
 const session = {
   household: {
@@ -39,9 +39,7 @@ function event(subject?: string): APIGatewayProxyEventV2WithJWTAuthorizer {
 describe('authenticated session handler', () => {
   it('loads the household from the validated Cognito subject', async () => {
     const findBySubject = vi.fn().mockResolvedValue(session);
-    const response = await createSessionHandler({ findBySubject })(
-      event('subject-1'),
-    );
+    const response = await handleSession({ findBySubject }, event('subject-1'));
 
     expect(findBySubject).toHaveBeenCalledWith('subject-1');
     expect(response.statusCode).toBe(200);
@@ -50,16 +48,17 @@ describe('authenticated session handler', () => {
 
   it('does not query without a validated subject', async () => {
     const repository: SessionRepository = { findBySubject: vi.fn() };
-    const response = await createSessionHandler(repository)(event());
+    const response = await handleSession(repository, event());
 
     expect(repository.findBySubject).not.toHaveBeenCalled();
     expect(response.statusCode).toBe(401);
   });
 
   it('rejects an identity that has not been bootstrapped', async () => {
-    const response = await createSessionHandler({
-      findBySubject: vi.fn().mockResolvedValue(undefined),
-    })(event('unknown-subject'));
+    const response = await handleSession(
+      { findBySubject: vi.fn().mockResolvedValue(undefined) },
+      event('unknown-subject'),
+    );
 
     expect(response.statusCode).toBe(403);
     expect(JSON.parse(response.body ?? '{}')).toMatchObject({
@@ -68,9 +67,12 @@ describe('authenticated session handler', () => {
   });
 
   it('returns a retryable waking response for database failures', async () => {
-    const response = await createSessionHandler({
-      findBySubject: vi.fn().mockRejectedValue(new Error('database paused')),
-    })(event('subject-1'));
+    const response = await handleSession(
+      {
+        findBySubject: vi.fn().mockRejectedValue(new Error('database paused')),
+      },
+      event('subject-1'),
+    );
 
     expect(response.statusCode).toBe(503);
     expect(JSON.parse(response.body ?? '{}')).toMatchObject({
@@ -79,12 +81,15 @@ describe('authenticated session handler', () => {
   });
 
   it('does not expose invalid persisted session data', async () => {
-    const response = await createSessionHandler({
-      findBySubject: vi.fn().mockResolvedValue({
-        household: { displayName: '', id: 'not-a-uuid' },
-        people: [],
-      }),
-    })(event('subject-1'));
+    const response = await handleSession(
+      {
+        findBySubject: vi.fn().mockResolvedValue({
+          household: { displayName: '', id: 'not-a-uuid' },
+          people: [],
+        }),
+      },
+      event('subject-1'),
+    );
 
     expect(response.statusCode).toBe(500);
     expect(JSON.parse(response.body ?? '{}')).toMatchObject({

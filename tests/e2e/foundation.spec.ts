@@ -1,4 +1,19 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+async function useCognitoConfig(page: Page): Promise<void> {
+  await page.route('**/config.json', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      json: {
+        apiBaseUrl: 'https://api.example.test',
+        authBaseUrl: 'https://auth.example.test',
+        clientId: 'client-id',
+        mode: 'cognito',
+        redirectUri: 'http://127.0.0.1:3000/',
+      },
+    }),
+  );
+}
 
 test('shows the private household foundation', async ({ page }) => {
   await page.goto('/');
@@ -15,18 +30,7 @@ test('shows the private household foundation', async ({ page }) => {
 });
 
 test('keeps an unauthenticated household behind sign-in', async ({ page }) => {
-  await page.route('**/config.json', (route) =>
-    route.fulfill({
-      contentType: 'application/json',
-      json: {
-        apiBaseUrl: 'https://api.example.test',
-        authBaseUrl: 'https://auth.example.test',
-        clientId: 'client-id',
-        mode: 'cognito',
-        redirectUri: 'http://127.0.0.1:3000/',
-      },
-    }),
-  );
+  await useCognitoConfig(page);
 
   await page.goto('/');
 
@@ -50,18 +54,7 @@ test('explains an auto-paused database and offers a retry', async ({
       }),
     );
   });
-  await page.route('**/config.json', (route) =>
-    route.fulfill({
-      contentType: 'application/json',
-      json: {
-        apiBaseUrl: 'https://api.example.test',
-        authBaseUrl: 'https://auth.example.test',
-        clientId: 'client-id',
-        mode: 'cognito',
-        redirectUri: 'http://127.0.0.1:3000/',
-      },
-    }),
-  );
+  await useCognitoConfig(page);
   await page.route('https://api.example.test/v1/session', (route) =>
     route.fulfill({
       contentType: 'application/json',

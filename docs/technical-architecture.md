@@ -79,7 +79,6 @@ packages/
   domain/              Pure business rules and planner
   contracts/           API request/response schemas
   database/            Drizzle schema, repositories, and initial bootstrap SQL
-  testing/             Shared fixtures and test builders
 infra/                  AWS CDK application and assertions
 docs/                   Product, architecture, cost, and delivery contracts
 ```

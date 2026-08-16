@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
-import { createLocalDatabase } from './index.js';
+import { createLocalDatabase } from './local.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 

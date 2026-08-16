@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
     "bootstrap:synth": "cdk synth --quiet --app 'npx tsx bin/bootstrap.ts'",
     "diff": "cdk diff --change-set=false",
     "synth": "cdk synth --quiet",

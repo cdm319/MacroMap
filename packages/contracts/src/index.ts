@@ -15,13 +15,18 @@ export const apiErrorSchema = z
   })
   .strict();
 
-export const healthResponseSchema = z
-  .object({
-    service: z.literal('macromap-api'),
-    status: z.literal('ok'),
-    time: z.string().datetime({ offset: true }),
-  })
-  .strict();
+export const cognitoRuntimeConfigSchema = z.object({
+  apiBaseUrl: z.string(),
+  authBaseUrl: z.string(),
+  clientId: z.string(),
+  mode: z.literal('cognito'),
+  redirectUri: z.string(),
+});
+
+export const runtimeConfigSchema = z.discriminatedUnion('mode', [
+  z.object({ mode: z.literal('local') }),
+  cognitoRuntimeConfigSchema,
+]);
 
 export const personSummarySchema = z
   .object({
@@ -44,6 +49,7 @@ export const sessionResponseSchema = z
   .strict();
 
 export type ApiError = z.infer<typeof apiErrorSchema>;
-export type HealthResponse = z.infer<typeof healthResponseSchema>;
+export type CognitoRuntimeConfig = z.infer<typeof cognitoRuntimeConfigSchema>;
 export type PersonSummary = z.infer<typeof personSummarySchema>;
+export type RuntimeConfig = z.infer<typeof runtimeConfigSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;

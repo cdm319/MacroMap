@@ -1,4 +1,9 @@
 :root {
+  --color-accent: #e4a83b;
+  --color-background: #f4f0e6;
+  --color-muted: #788078;
+  --color-primary: #214b37;
+  --color-surface: #fffdf8;
   color-scheme: light;
   font-family:
     'Avenir Next',
@@ -7,7 +12,7 @@
     system-ui,
     -apple-system,
     sans-serif;
-  background: #f4f0e6;
+  background: var(--color-background);
   color: #18231d;
 }
 
@@ -23,7 +28,7 @@ body {
       rgb(225 236 213 / 75%),
       transparent 30rem
     ),
-    #f4f0e6;
+    var(--color-background);
 }
 
 button {
@@ -102,7 +107,7 @@ button {
   height: 3.25rem;
   margin-bottom: 2.5rem;
   border-radius: 1rem 1rem 1rem 0.25rem;
-  background: #214b37;
+  background: var(--color-primary);
   color: #f8f3e8;
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 1.7rem;
@@ -129,9 +134,9 @@ button {
 }
 
 .primary-button {
-  border: 1px solid #214b37;
-  background: #214b37;
-  color: #fffdf8;
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-surface);
   box-shadow: 0 0.75rem 1.5rem rgb(33 75 55 / 18%);
 }
 
@@ -143,13 +148,13 @@ button {
 
 .secondary-button {
   border: 1px solid #b4bdb3;
-  background: #fffdf8;
-  color: #214b37;
+  background: var(--color-surface);
+  color: var(--color-primary);
 }
 
 .privacy-note {
   margin: 1rem 0 0;
-  color: #788078;
+  color: var(--color-muted);
   font-size: 0.78rem;
 }
 
@@ -158,7 +163,7 @@ button {
   height: 1.1rem;
   margin-bottom: 2rem;
   border-radius: 50%;
-  background: #e4a83b;
+  background: var(--color-accent);
   box-shadow: 0 0 0 0 rgb(228 168 59 / 40%);
   animation: pulse 1.8s infinite;
 }
@@ -225,13 +230,13 @@ button {
   padding: clamp(1.5rem, 5vw, 2.5rem);
   border: 1px solid rgb(35 67 50 / 14%);
   border-radius: 1.5rem;
-  background: #fffdf8;
+  background: var(--color-surface);
   box-shadow: 0 1.5rem 4rem rgb(31 50 39 / 9%);
 }
 
 .card-label {
   margin: 0 0 0.25rem;
-  color: #788078;
+  color: var(--color-muted);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.11em;
@@ -266,7 +271,7 @@ button {
   width: 2.8rem;
   height: 2.8rem;
   border-radius: 50%;
-  color: #214b37;
+  color: var(--color-primary);
   font-weight: 800;
   place-items: center;
 }
@@ -285,7 +290,7 @@ button {
 }
 
 .person small {
-  color: #788078;
+  color: var(--color-muted);
 }
 
 .coming-next {
@@ -296,7 +301,7 @@ button {
   max-width: 36rem;
   margin-top: 1rem;
   padding: 1rem 1.25rem;
-  border-left: 3px solid #e4a83b;
+  border-left: 3px solid var(--color-accent);
   background: rgb(255 253 248 / 62%);
 }
 

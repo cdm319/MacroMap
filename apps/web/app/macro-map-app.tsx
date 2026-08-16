@@ -1,7 +1,10 @@
 'use client';
 
 import {
+  runtimeConfigSchema,
   sessionResponseSchema,
+  type CognitoRuntimeConfig,
+  type RuntimeConfig,
   type SessionResponse,
 } from '@macromap/contracts';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -11,8 +14,6 @@ import {
   completeSignIn,
   logoutUrl,
   restoreAccessToken,
-  type CognitoRuntimeConfig,
-  type RuntimeConfig,
 } from './auth';
 
 const localSession: SessionResponse = {
@@ -54,23 +55,8 @@ class AuthenticationRequiredError extends Error {}
 async function loadRuntimeConfig(): Promise<RuntimeConfig> {
   const response = await fetch('/config.json', { cache: 'no-store' });
   if (!response.ok) throw new Error('MacroMap configuration is unavailable');
-  const value = (await response.json()) as Record<string, unknown>;
-  if (value.mode === 'local') return { mode: 'local' };
-  if (
-    value.mode === 'cognito' &&
-    typeof value.apiBaseUrl === 'string' &&
-    typeof value.authBaseUrl === 'string' &&
-    typeof value.clientId === 'string' &&
-    typeof value.redirectUri === 'string'
-  ) {
-    return {
-      apiBaseUrl: value.apiBaseUrl,
-      authBaseUrl: value.authBaseUrl,
-      clientId: value.clientId,
-      mode: 'cognito',
-      redirectUri: value.redirectUri,
-    };
-  }
+  const config = runtimeConfigSchema.safeParse(await response.json());
+  if (config.success) return config.data;
   throw new Error('MacroMap configuration is invalid');
 }
 
@@ -99,6 +85,22 @@ function friendlyError(error: unknown): string {
     : 'MacroMap encountered an unexpected problem';
 }
 
+async function loadAuthenticatedView(
+  config: CognitoRuntimeConfig,
+  accessToken: string,
+): Promise<ViewState> {
+  try {
+    const result = await requestSession(config, accessToken);
+    return result.kind === 'waking'
+      ? { accessToken, config, kind: 'waking' }
+      : { config, kind: 'ready', session: result.session };
+  } catch (error) {
+    if (!(error instanceof AuthenticationRequiredError)) throw error;
+    clearSession();
+    return { config, kind: 'signed-out' };
+  }
+}
+
 async function initializeView(): Promise<ViewState> {
   const config = await loadRuntimeConfig();
   if (config.mode === 'local') {
@@ -112,19 +114,7 @@ async function initializeView(): Promise<ViewState> {
   const accessToken = callbackToken ?? (await restoreAccessToken(config));
   if (accessToken === undefined) return { config, kind: 'signed-out' };
 
-  let result;
-  try {
-    result = await requestSession(config, accessToken);
-  } catch (error) {
-    if (error instanceof AuthenticationRequiredError) {
-      clearSession();
-      return { config, kind: 'signed-out' };
-    }
-    throw error;
-  }
-  return result.kind === 'waking'
-    ? { accessToken, config, kind: 'waking' }
-    : { config, kind: 'ready', session: result.session };
+  return loadAuthenticatedView(config, accessToken);
 }
 
 export function MacroMapApp() {
@@ -135,19 +125,10 @@ export function MacroMapApp() {
   const loadAuthenticatedSession = useCallback(
     async (config: CognitoRuntimeConfig, accessToken: string) => {
       try {
-        const result = await requestSession(config, accessToken);
-        if (result.kind === 'waking') {
-          setView({ accessToken, config, kind: 'waking' });
-          return;
-        }
-        wakeAttempts.current = 0;
-        setView({ config, kind: 'ready', session: result.session });
+        const nextView = await loadAuthenticatedView(config, accessToken);
+        if (nextView.kind === 'ready') wakeAttempts.current = 0;
+        setView(nextView);
       } catch (error) {
-        if (error instanceof AuthenticationRequiredError) {
-          clearSession();
-          setView({ config, kind: 'signed-out' });
-          return;
-        }
         setView({ kind: 'error', message: friendlyError(error) });
       }
     },
@@ -168,7 +149,7 @@ export function MacroMapApp() {
     return () => {
       active = false;
     };
-  }, [loadAuthenticatedSession]);
+  }, []);
 
   useEffect(() => {
     if (view.kind !== 'waking' || wakeAttempts.current >= 6) return;

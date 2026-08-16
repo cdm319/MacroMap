@@ -3,7 +3,6 @@ import { Pool } from 'pg';
 import * as schema from './schema.js';
 
 export * from './data-api.js';
-export * from './migration-files.js';
 export * from './schema.js';
 
 export function createLocalDatabase(connectionString: string) {

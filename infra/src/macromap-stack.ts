@@ -13,7 +13,6 @@ import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as lambdaNodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as logs from 'aws-cdk-lib/aws-logs';
@@ -37,7 +36,6 @@ import {
   APPLICATION_NAME,
   APPROVED_COST_GUARDRAILS,
   DATABASE_NAME,
-  GITHUB_REPOSITORY,
   PRODUCTION_REGION,
   ROOT_DOMAIN,
 } from './config.js';
@@ -277,32 +275,6 @@ export class MacroMapStack extends Stack {
       budgetEmail.valueAsString,
     );
 
-    const migrationRole = new iam.Role(this, 'MigrationRole', {
-      assumedBy: new iam.WebIdentityPrincipal(
-        `arn:${this.partition}:iam::${this.account}:oidc-provider/token.actions.githubusercontent.com`,
-        {
-          StringEquals: {
-            'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com',
-            'token.actions.githubusercontent.com:sub': `repo:${GITHUB_REPOSITORY}:environment:production`,
-          },
-        },
-      ),
-      description: 'Runs reviewed MacroMap SQL migrations from protected CI',
-    });
-    database.grantDataApiAccess(migrationRole);
-    migrationRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: ['cloudformation:DescribeStacks'],
-        resources: [this.stackId],
-      }),
-    );
-    migrationRole.addToPolicy(
-      new iam.PolicyStatement({
-        actions: ['cognito-idp:AdminCreateUser', 'cognito-idp:AdminGetUser'],
-        resources: [userPool.userPoolArn],
-      }),
-    );
-
     new CfnOutput(this, 'ApiBaseUrl', { value: api.apiEndpoint });
     new CfnOutput(this, 'DatabaseName', { value: DATABASE_NAME });
     new CfnOutput(this, 'DatabaseResourceArn', {
@@ -310,9 +282,6 @@ export class MacroMapStack extends Stack {
     });
     new CfnOutput(this, 'DatabaseSecretArn', {
       value: database.secret!.secretArn,
-    });
-    new CfnOutput(this, 'MigrationRoleArn', {
-      value: migrationRole.roleArn,
     });
     new CfnOutput(this, 'SiteUrl', {
       value: `https://${APPLICATION_DOMAIN}`,

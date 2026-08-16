@@ -52,6 +52,7 @@ shows the seeded Chris and Alex household without contacting Cognito or AWS.
 Production replaces that file during deployment with generated Cognito and API
 identifiers.
 
-Do not deploy infrastructure or apply production migrations from a developer
-machine. The protected GitHub Actions paths and required repository setup are
-documented in the [production deployment runbook](docs/deployment-runbook.md).
+Infrastructure deploys only through the protected GitHub Actions workflow. The
+human owner performs the one-time empty-database bootstrap from their developer
+machine by following the [production deployment runbook](docs/deployment-runbook.md);
+agents must never run it.

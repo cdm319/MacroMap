@@ -16,7 +16,7 @@ Current progress:
 
 - Phase 0 is complete and merged.
 - Phase 1 implementation is complete locally. Its production-only exit criteria
-  remain open until an approved deployment, migration, login smoke test, and
+  remain open until an approved deployment, database bootstrap, login smoke test, and
   observed Aurora pause/resume check have occurred.
 - Phases 2-6 have not started.
 
@@ -47,11 +47,11 @@ Deliverables:
 - Cognito managed login and logout;
 - authenticated `/v1/session` endpoint;
 - household and Chris/Alex profile bootstrap;
-- Aurora Serverless v2, Data API, Drizzle schema, and initial migration;
+- Aurora Serverless v2, Data API, Drizzle schema, and initial bootstrap SQL;
 - CloudFront, private S3 origin, and `macromap.chrismatthews.me`;
 - GitHub OIDC deployment role with least-privilege permissions;
 - manually dispatched, environment-protected production deployment workflow;
-- separate protected migration workflow;
+- documented owner-run one-time database bootstrap;
 - USD 8 and USD 15 budget notifications; and
 - a waking-database state in the web application.
 
@@ -61,10 +61,10 @@ and performed by a human or an already-approved CI bootstrap path; application
 deployment remains CI-only.
 
 The static application receives generated non-secret environment identifiers
-through a deployment-time `/config.json`. The initial SQL migration seeds one
-household and the Chris/Alex profiles, while a separately approved bootstrap
-option binds the first Cognito `sub`. Neither step permits browser-supplied
-household ownership.
+through a deployment-time `/config.json`. After the first deployment, the human
+owner runs the committed initial SQL and binds the first Cognito `sub` in one
+transaction. Agents must never run this production bootstrap. The bootstrap
+does not permit browser-supplied household ownership.
 
 Exit criteria:
 
@@ -215,14 +215,16 @@ Production deployment:
 An agent may build or repair this workflow but must not trigger it unless the
 human explicitly asks. An agent can never approve its own deployment gate.
 
-### Database migrations
+### Database bootstrap and later schema changes
 
-Migrations run through a separate manually dispatched and environment-protected
-workflow from `main`. The workflow prints the pending migration list before its
-approval gate. Destructive or contracting migrations require a backup decision
-and explicit approval beyond the ordinary deployment approval.
+The zero-data first release uses one committed initial SQL file. After the
+approved deployment, the human owner runs the documented bootstrap command from
+their developer machine. This is the only production mutation allowed outside
+CI, and agents must never perform it.
 
-Use expand-and-contract releases:
+Before Phase 2 changes the schema, agree a forward-only migration approach for
+real data. Destructive or contracting changes require a backup decision and
+explicit approval. Use expand-and-contract releases:
 
 1. deploy an additive, backward-compatible schema change;
 2. migrate/backfill through a bounded, resumable operation if required;

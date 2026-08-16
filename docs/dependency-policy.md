@@ -18,8 +18,8 @@ The Phase 1 baseline is deliberately small:
 - Next.js and React for the statically exported web application;
 - Zod for external and shared contract validation;
 - Drizzle ORM and `pg` for the schema, local PostgreSQL adapter, and tests;
-- the AWS RDS Data API client for the production repository and reviewed SQL
-  migration runner;
+- the AWS RDS Data API client for the production repository and one-time
+  database bootstrap;
 - AWS Lambda TypeScript definitions for handler boundaries;
 - AWS CDK and Constructs for production infrastructure and assertions;
 - TypeScript, ESLint, and Prettier for static quality checks;
@@ -27,9 +27,9 @@ The Phase 1 baseline is deliberately small:
 - Playwright for critical browser journeys.
 
 `pg` supports local development and integration tests only. Production uses the
-Aurora Data API and must not add a persistent Lambda connection pool. Migration
-files are explicit reviewed SQL applied by the repository's small Data API
-runner; no migration-generator dependency is approved.
+Aurora Data API and must not add a persistent Lambda connection pool. The
+initial schema is explicit reviewed SQL applied once by the human owner; no
+migration-generator dependency is approved.
 
 No UI framework, state manager, HTTP client, date library, decimal library,
 planner solver, analytics SDK, monitoring agent, or paid-service SDK is approved

@@ -28,6 +28,10 @@ const tokenStorageKey = 'macromap.tokens';
 const verifierStorageKey = 'macromap.pkce.verifier';
 const stateStorageKey = 'macromap.pkce.state';
 
+function cognitoUrl(config: CognitoRuntimeConfig, path: string): URL {
+  return new URL(`${config.authBaseUrl.replace(/\/$/u, '')}${path}`);
+}
+
 function base64Url(bytes: Uint8Array): string {
   let binary = '';
   for (const byte of bytes) binary += String.fromCharCode(byte);
@@ -47,10 +51,6 @@ async function codeChallenge(verifier: string): Promise<string> {
     new TextEncoder().encode(verifier),
   );
   return base64Url(new Uint8Array(digest));
-}
-
-function tokenEndpoint(config: CognitoRuntimeConfig): string {
-  return `${config.authBaseUrl.replace(/\/$/u, '')}/oauth2/token`;
 }
 
 function parseTokenResponse(value: unknown): TokenResponse {
@@ -76,6 +76,19 @@ function parseTokenResponse(value: unknown): TokenResponse {
   };
 }
 
+async function requestTokens(
+  config: CognitoRuntimeConfig,
+  parameters: Record<string, string>,
+): Promise<TokenResponse | undefined> {
+  const response = await fetch(cognitoUrl(config, '/oauth2/token'), {
+    body: new URLSearchParams({ client_id: config.clientId, ...parameters }),
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    method: 'POST',
+  });
+
+  return response.ok ? parseTokenResponse(await response.json()) : undefined;
+}
+
 function storeTokens(response: TokenResponse, refreshToken?: string): string {
   const resolvedRefreshToken = response.refresh_token ?? refreshToken;
   const tokens: CognitoTokens = {
@@ -97,9 +110,7 @@ export async function beginSignIn(
   sessionStorage.setItem(verifierStorageKey, verifier);
   sessionStorage.setItem(stateStorageKey, state);
 
-  const url = new URL(
-    `${config.authBaseUrl.replace(/\/$/u, '')}/oauth2/authorize`,
-  );
+  const url = cognitoUrl(config, '/oauth2/authorize');
   url.search = new URLSearchParams({
     client_id: config.clientId,
     code_challenge: await codeChallenge(verifier),
@@ -134,22 +145,19 @@ export async function completeSignIn(
     throw new Error('The sign-in response could not be verified');
   }
 
-  const response = await fetch(tokenEndpoint(config), {
-    body: new URLSearchParams({
-      client_id: config.clientId,
-      code,
-      code_verifier: verifier,
-      grant_type: 'authorization_code',
-      redirect_uri: config.redirectUri,
-    }),
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    method: 'POST',
+  const tokens = await requestTokens(config, {
+    code,
+    code_verifier: verifier,
+    grant_type: 'authorization_code',
+    redirect_uri: config.redirectUri,
   });
-  if (!response.ok) throw new Error('Cognito did not accept the sign-in code');
+  if (tokens === undefined) {
+    throw new Error('Cognito did not accept the sign-in code');
+  }
 
   sessionStorage.removeItem(verifierStorageKey);
   sessionStorage.removeItem(stateStorageKey);
-  return storeTokens(parseTokenResponse(await response.json()));
+  return storeTokens(tokens);
 }
 
 export async function restoreAccessToken(
@@ -178,23 +186,15 @@ export async function restoreAccessToken(
     return undefined;
   }
 
-  const response = await fetch(tokenEndpoint(config), {
-    body: new URLSearchParams({
-      client_id: config.clientId,
-      grant_type: 'refresh_token',
-      refresh_token: tokens.refreshToken,
-    }),
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    method: 'POST',
+  const refreshedTokens = await requestTokens(config, {
+    grant_type: 'refresh_token',
+    refresh_token: tokens.refreshToken,
   });
-  if (!response.ok) {
+  if (refreshedTokens === undefined) {
     clearSession();
     return undefined;
   }
-  return storeTokens(
-    parseTokenResponse(await response.json()),
-    tokens.refreshToken,
-  );
+  return storeTokens(refreshedTokens, tokens.refreshToken);
 }
 
 export function clearSession(): void {
@@ -204,7 +204,7 @@ export function clearSession(): void {
 }
 
 export function logoutUrl(config: CognitoRuntimeConfig): string {
-  const url = new URL(`${config.authBaseUrl.replace(/\/$/u, '')}/logout`);
+  const url = cognitoUrl(config, '/logout');
   url.search = new URLSearchParams({
     client_id: config.clientId,
     logout_uri: config.redirectUri,

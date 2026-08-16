@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { readFile } from 'node:fs/promises';
 import { createLocalDatabase } from './index.js';
-import { readMigrationFiles } from './migration-files.js';
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 
@@ -13,35 +13,12 @@ if (databaseUrl === undefined) {
     const client = createLocalDatabase(databaseUrl);
 
     beforeAll(async () => {
-      await client.pool.query(`create table if not exists macromap_migration (
-        name text primary key,
-        applied_at timestamptz not null default now()
-      )`);
-
-      for (const migration of await readMigrationFiles()) {
-        const existing = await client.pool.query(
-          'select 1 from macromap_migration where name = $1',
-          [migration.name],
-        );
-        if (existing.rowCount !== 0) continue;
-
-        const connection = await client.pool.connect();
-        try {
-          await connection.query('begin');
-          for (const statement of migration.statements) {
-            await connection.query(statement);
-          }
-          await connection.query(
-            'insert into macromap_migration (name) values ($1)',
-            [migration.name],
-          );
-          await connection.query('commit');
-        } catch (error) {
-          await connection.query('rollback');
-          throw error;
-        } finally {
-          connection.release();
-        }
+      const schema = await readFile(
+        new URL('../sql/initial-schema.sql', import.meta.url),
+        'utf8',
+      );
+      for (const statement of schema.split('--> statement-breakpoint')) {
+        if (statement.trim() !== '') await client.pool.query(statement);
       }
     });
 

@@ -78,7 +78,7 @@ apps/
 packages/
   domain/              Pure business rules and planner
   contracts/           API request/response schemas
-  database/            Drizzle schema, repositories, and migrations
+  database/            Drizzle schema, repositories, and initial bootstrap SQL
   testing/             Shared fixtures and test builders
 infra/                  AWS CDK application and assertions
 docs/                   Product, architecture, cost, and delivery contracts
@@ -117,12 +117,13 @@ using the authorisation-code flow with PKCE and no client secret in the browser.
 Chris and Alex are application-level planning profiles, not separate Cognito
 users in the MVP.
 
-Public self-registration is disabled. The initial household login is created by
-the protected migration/bootstrap workflow using an environment-protected email
-secret. The workflow creates the Cognito user when absent, reads its immutable
-`sub`, and idempotently binds that identity to the seeded household. Subsequent
-account recovery uses Cognito's managed flow. A different `sub` cannot replace
-the existing household binding without a separately reviewed data operation.
+Public self-registration is disabled. After the first deployment, the human
+owner creates the initial Cognito user and runs the documented one-time database
+bootstrap from their developer machine. The bootstrap binds Cognito's immutable
+`sub` to the seeded household. Agents must never perform this production
+operation. Subsequent account recovery uses Cognito's managed flow. A different
+`sub` cannot replace the existing household binding without a separately
+reviewed data operation.
 
 API Gateway validates Cognito JWTs. The API derives the authenticated actor from
 the validated `sub` claim and never accepts an account identifier supplied by
@@ -159,13 +160,15 @@ RDS Proxy, persistent connection pool, and Lambda VPC attachment, while allowing
 the cluster to pause. The UI must tolerate database resume latency and show a
 clear waking/retry state rather than treating the first timeout as data loss.
 
-Database structure is represented by the Drizzle schema. Database changes use
-reviewed, forward-only SQL files applied by the small in-repository Data API
-migration runner, which records each applied filename in a migration ledger and
-wraps each migration in a transaction. Application code and migrations must be
-deployable in an expand-then-contract sequence. Generated migrations or a new
-migration framework require the dependency review defined in
-`docs/dependency-policy.md`.
+Database structure is represented by the Drizzle schema. Because the first
+release has no existing data, a committed SQL file creates the initial schema
+and household records in one transaction through the Data API. Only the human
+owner runs that bootstrap, once, using the deployment runbook.
+
+The bootstrap is not a migration framework. Before changing the schema after
+production data exists, agree a reviewed, forward-only migration approach that
+supports expand-and-contract releases. Adding migration tooling requires the
+dependency review defined in `docs/dependency-policy.md`.
 
 ### Object storage
 

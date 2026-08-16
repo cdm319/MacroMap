@@ -4,6 +4,11 @@ Status: Approved for MVP implementation
 Prices checked: 2026-08-15
 AWS region: `eu-west-2` unless stated otherwise
 
+Phase 1 implementation status: the approved infrastructure and guardrails are
+represented in CDK and assertion tests, but no MacroMap AWS resources have been
+deployed from this change. Pricing and real idle behaviour still require the
+pre-deployment and post-deployment checks below.
+
 ## Cost objective
 
 MacroMap is a personal project. Its normal monthly infrastructure and AI cost
@@ -91,6 +96,16 @@ Reference: [official OpenAI model documentation](https://developers.openai.com/a
 | Network                             | No NAT Gateway, load balancer, or RDS Proxy       |
 | DNS                                 | Reuse the existing `chrismatthews.me` hosted zone |
 | Paid external services              | OpenAI only                                       |
+
+The scheduler and planner concurrency entries are maximums reserved for Phase
+4; Phase 1 intentionally creates neither resource. Phase 1 creates one API
+Lambda with reserved concurrency 4, one Aurora writer, and no NAT Gateway,
+endpoint, load balancer, proxy, container service, or read replica.
+
+The synthesised template also contains CDK-managed helper functions for static
+asset deployment and the cross-region certificate reference. They run only
+during a deployment, are not application services, and do not create an
+always-on compute charge.
 
 Every provisioned resource is tagged with at least `Application=MacroMap` and
 `Environment=production`. Cost allocation tags must be activated where the AWS

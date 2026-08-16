@@ -23,5 +23,27 @@ export const healthResponseSchema = z
   })
   .strict();
 
+export const personSummarySchema = z
+  .object({
+    displayName: z.string().min(1),
+    id: opaqueIdSchema,
+    slug: z.string().regex(/^[a-z][a-z0-9-]*$/u),
+  })
+  .strict();
+
+export const sessionResponseSchema = z
+  .object({
+    household: z
+      .object({
+        displayName: z.string().min(1),
+        id: opaqueIdSchema,
+      })
+      .strict(),
+    people: z.array(personSummarySchema).min(1),
+  })
+  .strict();
+
 export type ApiError = z.infer<typeof apiErrorSchema>;
 export type HealthResponse = z.infer<typeof healthResponseSchema>;
+export type PersonSummary = z.infer<typeof personSummarySchema>;
+export type SessionResponse = z.infer<typeof sessionResponseSchema>;

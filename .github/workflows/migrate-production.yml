@@ -1,0 +1,93 @@
+name: Migrate production database
+
+on:
+  workflow_dispatch:
+    inputs:
+      bootstrap_household_login:
+        description: Create and bind the first login using the protected email secret
+        default: false
+        required: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macromap-production-migration
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: List the reviewed migrations
+        run: npm run db:migrations:list
+
+  apply:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Assume the protected migration role
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: eu-west-2
+          role-to-assume: ${{ vars.AWS_MIGRATION_ROLE_ARN }}
+          role-session-name: MacroMapProductionMigration
+
+      - name: Read database connection outputs
+        run: |
+          DATABASE_NAME=$(aws cloudformation describe-stacks --stack-name MacroMapProduction --query "Stacks[0].Outputs[?OutputKey=='DatabaseName'].OutputValue" --output text)
+          DATABASE_RESOURCE_ARN=$(aws cloudformation describe-stacks --stack-name MacroMapProduction --query "Stacks[0].Outputs[?OutputKey=='DatabaseResourceArn'].OutputValue" --output text)
+          DATABASE_SECRET_ARN=$(aws cloudformation describe-stacks --stack-name MacroMapProduction --query "Stacks[0].Outputs[?OutputKey=='DatabaseSecretArn'].OutputValue" --output text)
+          USER_POOL_ID=$(aws cloudformation describe-stacks --stack-name MacroMapProduction --query "Stacks[0].Outputs[?OutputKey=='UserPoolId'].OutputValue" --output text)
+          echo "DATABASE_NAME=$DATABASE_NAME" >> "$GITHUB_ENV"
+          echo "DATABASE_RESOURCE_ARN=$DATABASE_RESOURCE_ARN" >> "$GITHUB_ENV"
+          echo "DATABASE_SECRET_ARN=$DATABASE_SECRET_ARN" >> "$GITHUB_ENV"
+          echo "USER_POOL_ID=$USER_POOL_ID" >> "$GITHUB_ENV"
+
+      - name: Apply pending migrations
+        run: npm run db:migrate
+
+      - name: Create and bind the initial household login
+        if: inputs.bootstrap_household_login
+        env:
+          LOGIN_EMAIL: ${{ secrets.MACROMAP_LOGIN_EMAIL }}
+        run: |
+          if ! aws cognito-idp admin-get-user --user-pool-id "$USER_POOL_ID" --username "$LOGIN_EMAIL" >/dev/null 2>&1; then
+            aws cognito-idp admin-create-user --user-pool-id "$USER_POOL_ID" --username "$LOGIN_EMAIL" --user-attributes Name=email,Value="$LOGIN_EMAIL" Name=email_verified,Value=true >/dev/null
+          fi
+          COGNITO_SUBJECT=$(aws cognito-idp admin-get-user --user-pool-id "$USER_POOL_ID" --username "$LOGIN_EMAIL" --query "UserAttributes[?Name=='sub'].Value | [0]" --output text)
+          npm run db:bootstrap:identity -- --subject "$COGNITO_SUBJECT"

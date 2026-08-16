@@ -1,6 +1,6 @@
 # Dependency policy
 
-Status: Phase 0 baseline
+Status: Phase 1 baseline
 
 ## Runtime and package manager
 
@@ -13,19 +13,23 @@ Status: Phase 0 baseline
 
 ## Approved baseline
 
-The Phase 0 baseline is deliberately small:
+The Phase 1 baseline is deliberately small:
 
 - Next.js and React for the statically exported web application;
 - Zod for external and shared contract validation;
-- Drizzle ORM and `pg` for the local PostgreSQL adapter and tests;
-- AWS CDK and Constructs for synthesis-only infrastructure code;
+- Drizzle ORM and `pg` for the schema, local PostgreSQL adapter, and tests;
+- the AWS RDS Data API client for the production repository and reviewed SQL
+  migration runner;
+- AWS Lambda TypeScript definitions for handler boundaries;
+- AWS CDK and Constructs for production infrastructure and assertions;
 - TypeScript, ESLint, and Prettier for static quality checks;
 - Vitest for unit, contract, integration, and CDK assertion tests; and
 - Playwright for critical browser journeys.
 
-`pg` supports local development only at this stage. The production Aurora Data
-API adapter is added in Phase 1 and must not be replaced with a persistent
-Lambda connection pool.
+`pg` supports local development and integration tests only. Production uses the
+Aurora Data API and must not add a persistent Lambda connection pool. Migration
+files are explicit reviewed SQL applied by the repository's small Data API
+runner; no migration-generator dependency is approved.
 
 No UI framework, state manager, HTTP client, date library, decimal library,
 planner solver, analytics SDK, monitoring agent, or paid-service SDK is approved

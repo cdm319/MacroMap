@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { apiErrorSchema, healthResponseSchema } from './index.js';
+import {
+  apiErrorSchema,
+  healthResponseSchema,
+  sessionResponseSchema,
+} from './index.js';
 
 describe('shared API contracts', () => {
   it('accepts the standard error envelope', () => {
@@ -28,5 +32,30 @@ describe('shared API contracts', () => {
         time: 'not-a-date',
       }),
     ).toThrow();
+  });
+
+  it('accepts the authenticated household session', () => {
+    expect(
+      sessionResponseSchema.parse({
+        household: {
+          displayName: 'Chris & Alex',
+          id: '00000000-0000-4000-8000-000000000001',
+        },
+        people: [
+          {
+            displayName: 'Chris',
+            id: '00000000-0000-4000-8000-000000000101',
+            slug: 'chris',
+          },
+          {
+            displayName: 'Alex',
+            id: '00000000-0000-4000-8000-000000000102',
+            slug: 'alex',
+          },
+        ],
+      }),
+    ).toMatchObject({
+      people: [{ slug: 'chris' }, { slug: 'alex' }],
+    });
   });
 });

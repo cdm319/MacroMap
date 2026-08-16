@@ -1,7 +1,7 @@
 # MacroMap technical architecture
 
-Status: Approved for MVP implementation
-Last reviewed: 2026-08-15
+Status: Approved; Phase 1 implemented pending production verification
+Last reviewed: 2026-08-16
 
 ## Purpose and authority
 
@@ -118,8 +118,11 @@ Chris and Alex are application-level planning profiles, not separate Cognito
 users in the MVP.
 
 Public self-registration is disabled. The initial household login is created by
-an explicitly approved administration/bootstrap step and subsequent account
-recovery uses Cognito's managed flow.
+the protected migration/bootstrap workflow using an environment-protected email
+secret. The workflow creates the Cognito user when absent, reads its immutable
+`sub`, and idempotently binds that identity to the seeded household. Subsequent
+account recovery uses Cognito's managed flow. A different `sub` cannot replace
+the existing household binding without a separately reviewed data operation.
 
 API Gateway validates Cognito JWTs. The API derives the authenticated actor from
 the validated `sub` claim and never accepts an account identifier supplied by
@@ -156,8 +159,13 @@ RDS Proxy, persistent connection pool, and Lambda VPC attachment, while allowing
 the cluster to pause. The UI must tolerate database resume latency and show a
 clear waking/retry state rather than treating the first timeout as data loss.
 
-Database changes use reviewed, forward-only Drizzle migrations. Application
-code and migrations must be deployable in an expand-then-contract sequence.
+Database structure is represented by the Drizzle schema. Database changes use
+reviewed, forward-only SQL files applied by the small in-repository Data API
+migration runner, which records each applied filename in a migration ledger and
+wraps each migration in a transaction. Application code and migrations must be
+deployable in an expand-then-contract sequence. Generated migrations or a new
+migration framework require the dependency review defined in
+`docs/dependency-policy.md`.
 
 ### Object storage
 
@@ -187,6 +195,9 @@ Automatic generation creates a draft only; it never approves a plan.
 - The database credential is held in AWS Secrets Manager and managed by RDS.
 - The OpenAI API key is held in a Standard SSM SecureString parameter.
 - Non-secret configuration is validated at Lambda startup.
+- The static application loads `/config.json` at runtime. Local development
+  commits only a `mode=local` seam; CDK generates the production API endpoint,
+  Cognito domain, client identifier, and redirect URI during deployment.
 - Secrets and tokens must never appear in logs, build artifacts, CloudFormation
   outputs, fixtures, or browser bundles.
 

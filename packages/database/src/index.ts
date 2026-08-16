@@ -1,5 +1,10 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
+import * as schema from './schema.js';
+
+export * from './data-api.js';
+export * from './migration-files.js';
+export * from './schema.js';
 
 export function createLocalDatabase(connectionString: string) {
   const pool = new Pool({
@@ -10,7 +15,7 @@ export function createLocalDatabase(connectionString: string) {
 
   return {
     close: () => pool.end(),
-    database: drizzle({ client: pool }),
+    database: drizzle({ client: pool, schema }),
     pool,
   };
 }

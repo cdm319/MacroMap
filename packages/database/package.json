@@ -10,10 +10,14 @@
     }
   },
   "scripts": {
+    "bootstrap:identity": "tsx src/bootstrap-identity.ts",
     "build": "tsc -p tsconfig.json",
+    "migrate": "tsx src/migrate.ts",
+    "migrations:list": "tsx src/list-migrations.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-rds-data": "^3.1111.0",
     "drizzle-orm": "^0.45.2",
     "pg": "^8.23.0"
   }

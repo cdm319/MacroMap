@@ -1,0 +1,49 @@
+name: Bootstrap GitHub roles
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macromap-github-role-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      CDK_DEFAULT_ACCOUNT: ${{ vars.AWS_ACCOUNT_ID }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Assume the existing account bootstrap role
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          aws-region: eu-west-2
+          role-to-assume: ${{ vars.AWS_ACCOUNT_BOOTSTRAP_ROLE_ARN }}
+          role-session-name: MacroMapGitHubRoleBootstrap
+
+      - name: Deploy the dedicated MacroMap GitHub roles
+        run: >-
+          npx cdk deploy MacroMapGitHubBootstrap
+          --app "npx tsx infra/bin/bootstrap.ts"
+          --require-approval never

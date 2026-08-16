@@ -1,6 +1,34 @@
 # API conventions
 
-Status: Phase 0 baseline
+Status: Phase 1 baseline
+
+## Phase 1 session endpoint
+
+`GET /v1/session` is the first authenticated endpoint. API Gateway validates
+the Cognito token and the handler uses only its `sub` claim to locate the
+household. A successful response is strictly validated as:
+
+```json
+{
+  "household": {
+    "displayName": "Chris & Alex",
+    "id": "00000000-0000-4000-8000-000000000001"
+  },
+  "people": [
+    {
+      "displayName": "Chris",
+      "id": "00000000-0000-4000-8000-000000000101",
+      "slug": "chris"
+    }
+  ]
+}
+```
+
+The real household returns both active profiles in display order. Missing JWT
+identity returns `401`; a valid but unbound Cognito identity returns `403`; and
+a database resume or temporary Data API failure returns `503` with code
+`DATABASE_WAKING`. The web app treats that last response as a retryable waking
+state.
 
 ## Resource and transport conventions
 

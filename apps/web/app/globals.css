@@ -1,15 +1,14 @@
 :root {
   color-scheme: light;
   font-family:
-    Inter,
+    'Avenir Next',
+    Avenir,
     ui-sans-serif,
     system-ui,
     -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
     sans-serif;
-  background: #f5f3ed;
-  color: #1e2a22;
+  background: #f4f0e6;
+  color: #18231d;
 }
 
 * {
@@ -18,44 +17,331 @@
 
 body {
   margin: 0;
+  background:
+    radial-gradient(
+      circle at 12% 5%,
+      rgb(225 236 213 / 75%),
+      transparent 30rem
+    ),
+    #f4f0e6;
+}
+
+button {
+  font: inherit;
 }
 
 .page-shell {
   display: grid;
   min-height: 100vh;
-  padding: 1.5rem;
+  padding: clamp(1rem, 4vw, 3rem);
+}
+
+.page-shell--centered {
   place-items: center;
 }
 
+.welcome-card,
 .status-card {
-  width: min(100%, 38rem);
-  padding: clamp(2rem, 6vw, 4rem);
-  border: 1px solid #d7d2c5;
-  border-radius: 1.25rem;
-  background: #fffdf8;
-  box-shadow: 0 1.25rem 4rem rgb(42 59 47 / 10%);
+  position: relative;
+  width: min(100%, 42rem);
+  overflow: hidden;
+  padding: clamp(2rem, 7vw, 5rem);
+  border: 1px solid rgb(35 67 50 / 14%);
+  border-radius: 2rem;
+  background: rgb(255 253 247 / 94%);
+  box-shadow: 0 2rem 6rem rgb(31 50 39 / 13%);
 }
 
-.status-card h1 {
-  margin: 0.25rem 0 1rem;
-  font-size: clamp(2.25rem, 8vw, 4rem);
-  letter-spacing: -0.055em;
-  line-height: 0.95;
+.welcome-card::after {
+  position: absolute;
+  width: 14rem;
+  height: 14rem;
+  border: 3rem solid #dbe6c7;
+  border-radius: 50%;
+  content: '';
+  inset: -7rem -7rem auto auto;
+  opacity: 0.75;
 }
 
-.status-card p:last-child {
+.welcome-card h1,
+.status-card h1,
+.dashboard-intro h1 {
+  margin: 0.45rem 0 1rem;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(2.7rem, 9vw, 5rem);
+  font-weight: 500;
+  letter-spacing: -0.06em;
+  line-height: 0.92;
+}
+
+.welcome-card .lede,
+.status-card > p:not(.eyebrow),
+.dashboard-intro > p:last-child {
   max-width: 32rem;
-  margin: 0;
-  color: #506056;
-  font-size: 1.05rem;
+  color: #536158;
+  font-size: clamp(1rem, 2vw, 1.13rem);
   line-height: 1.6;
 }
 
 .eyebrow {
   margin: 0;
-  color: #327052;
+  color: #397453;
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+.eyebrow--error {
+  color: #9a4d3e;
+}
+
+.brand-mark {
+  display: grid;
+  width: 3.25rem;
+  height: 3.25rem;
+  margin-bottom: 2.5rem;
+  border-radius: 1rem 1rem 1rem 0.25rem;
+  background: #214b37;
+  color: #f8f3e8;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.7rem;
+  place-items: center;
+  transform: rotate(-3deg);
+}
+
+.brand-mark--small {
+  width: 2.2rem;
+  height: 2.2rem;
+  margin: 0;
+  border-radius: 0.7rem 0.7rem 0.7rem 0.2rem;
+  font-size: 1.1rem;
+}
+
+.primary-button,
+.secondary-button {
+  min-height: 3.3rem;
+  margin-top: 1.5rem;
+  padding: 0.8rem 1.4rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.primary-button {
+  border: 1px solid #214b37;
+  background: #214b37;
+  color: #fffdf8;
+  box-shadow: 0 0.75rem 1.5rem rgb(33 75 55 / 18%);
+}
+
+.primary-button:hover,
+.primary-button:focus-visible {
+  background: #173b2a;
+  transform: translateY(-1px);
+}
+
+.secondary-button {
+  border: 1px solid #b4bdb3;
+  background: #fffdf8;
+  color: #214b37;
+}
+
+.privacy-note {
+  margin: 1rem 0 0;
+  color: #788078;
+  font-size: 0.78rem;
+}
+
+.pulse {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-bottom: 2rem;
+  border-radius: 50%;
+  background: #e4a83b;
+  box-shadow: 0 0 0 0 rgb(228 168 59 / 40%);
+  animation: pulse 1.8s infinite;
+}
+
+@keyframes pulse {
+  70% {
+    box-shadow: 0 0 0 1rem rgb(228 168 59 / 0%);
+  }
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(100% - 2rem, 72rem);
+  margin: 0 auto;
+  padding: 1.25rem 0;
+  border-bottom: 1px solid rgb(35 67 50 / 12%);
+}
+
+.wordmark {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.text-button {
+  padding: 0.5rem;
+  border: 0;
+  background: transparent;
+  color: #506056;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.text-button:hover,
+.text-button:focus-visible {
+  color: #183d2a;
+  text-decoration: underline;
+  text-underline-offset: 0.25rem;
+}
+
+.dashboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 28rem);
+  gap: clamp(2rem, 7vw, 7rem);
+  align-items: start;
+  width: min(100% - 2rem, 72rem);
+  margin: 0 auto;
+  padding: clamp(4rem, 10vw, 8rem) 0 3rem;
+}
+
+.dashboard-intro h1 {
+  max-width: 9ch;
+}
+
+.household-card {
+  padding: clamp(1.5rem, 5vw, 2.5rem);
+  border: 1px solid rgb(35 67 50 / 14%);
+  border-radius: 1.5rem;
+  background: #fffdf8;
+  box-shadow: 0 1.5rem 4rem rgb(31 50 39 / 9%);
+}
+
+.card-label {
+  margin: 0 0 0.25rem;
+  color: #788078;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.household-card h2 {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 2rem;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+
+.people-list {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 2rem;
+}
+
+.person {
+  display: flex;
+  gap: 0.9rem;
+  align-items: center;
+  padding-top: 0.85rem;
+  border-top: 1px solid #ebe7de;
+}
+
+.avatar {
+  display: grid;
+  flex: 0 0 auto;
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 50%;
+  color: #214b37;
+  font-weight: 800;
+  place-items: center;
+}
+
+.avatar--1 {
+  background: #dce8c9;
+}
+
+.avatar--2 {
+  background: #f4d8b4;
+}
+
+.person span:last-child {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.person small {
+  color: #788078;
+}
+
+.coming-next {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 1rem;
+  align-items: center;
+  max-width: 36rem;
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  border-left: 3px solid #e4a83b;
+  background: rgb(255 253 248 / 62%);
+}
+
+.coming-next > span {
+  color: #b37618;
+  font-size: 1.5rem;
+}
+
+.coming-next p {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0;
+  color: #5d695f;
+  line-height: 1.45;
+}
+
+.coming-next strong {
+  color: #24342a;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 44rem) {
+  .welcome-card,
+  .status-card {
+    border-radius: 1.35rem;
+  }
+
+  .dashboard {
+    grid-template-columns: 1fr;
+    padding-top: 3.5rem;
+  }
+
+  .dashboard-intro h1 {
+    font-size: clamp(3.2rem, 18vw, 5rem);
+  }
+
+  .coming-next {
+    grid-column: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse {
+    animation: none;
+  }
 }

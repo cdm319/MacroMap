@@ -1,7 +1,7 @@
 # MacroMap MVP delivery plan
 
-Status: Approved implementation sequence
-Last reviewed: 2026-08-15
+Status: Approved implementation sequence; Phase 1 ready for review
+Last reviewed: 2026-08-16
 
 ## Delivery principles
 
@@ -11,6 +11,14 @@ diff. Production is never deployed from a developer machine.
 
 The order below is intentional: later work depends on stable recipe, nutrition,
 and snapshot contracts. A human approves merges and every production deployment.
+
+Current progress:
+
+- Phase 0 is complete and merged.
+- Phase 1 implementation is complete locally. Its production-only exit criteria
+  remain open until an approved deployment, migration, login smoke test, and
+  observed Aurora pause/resume check have occurred.
+- Phases 2-6 have not started.
 
 ## Phase 0: Repository and contracts
 
@@ -51,6 +59,12 @@ The existing account-level GitHub OIDC provider is reused. A dedicated MacroMap
 deployment role is required. Any one-time trust/bootstrap action is documented
 and performed by a human or an already-approved CI bootstrap path; application
 deployment remains CI-only.
+
+The static application receives generated non-secret environment identifiers
+through a deployment-time `/config.json`. The initial SQL migration seeds one
+household and the Chris/Alex profiles, while a separately approved bootstrap
+option binds the first Cognito `sub`. Neither step permits browser-supplied
+household ownership.
 
 Exit criteria:
 

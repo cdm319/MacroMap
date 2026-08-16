@@ -10,14 +10,15 @@ with working behaviour, automated tests, updated documentation, and a reviewable
 diff. Production is never deployed from a developer machine.
 
 The order below is intentional: later work depends on stable recipe, nutrition,
-and snapshot contracts. A human approves merges and every production deployment.
+and snapshot contracts. A human-approved merge authorises its automatic
+production deployment.
 
 Current progress:
 
 - Phase 0 is complete and merged.
 - Phase 1 implementation is complete locally. Its production-only exit criteria
-  remain open until an approved deployment, database bootstrap, login smoke test, and
-  observed Aurora pause/resume check have occurred.
+  remain open until an approved deployment, database bootstrap, login smoke
+  test, and observed Aurora pause/resume check have occurred.
 - Phases 2-6 have not started.
 
 ## Phase 0: Repository and contracts
@@ -30,7 +31,7 @@ Deliverables:
 - initial API error and identifier conventions;
 - local PostgreSQL development setup;
 - pull-request CI with dependency install, lint, type check, tests, build, CDK
-  assertions, CDK synthesis, and diff checking; and
+  assertions, and CDK synthesis; and
 - committed lockfile and dependency policy.
 
 Exit criteria:
@@ -49,16 +50,17 @@ Deliverables:
 - initial household and Chris/Alex profiles;
 - Aurora Serverless v2, Data API, Drizzle schema, and initial bootstrap SQL;
 - CloudFront, private S3 origin, and `macromap.chrismatthews.me`;
-- documented least-privilege requirements for owner-created GitHub OIDC roles;
-- manually dispatched, environment-protected production deployment workflow;
+- documented least-privilege requirements for an owner-created GitHub OIDC role;
+- automatic production deployment after a reviewed merge to `main`;
 - documented owner-run one-time database bootstrap;
 - USD 8 and USD 15 budget notifications; and
 - a waking-database state in the web application.
 
-The existing account-level GitHub OIDC provider is reused. Dedicated MacroMap
-deployment and read-only roles are required. The human owner creates these
-account prerequisites manually; no repository workflow provisions them.
-Application deployment remains CI-only.
+The existing account-level GitHub OIDC provider is reused. One dedicated
+MacroMap deployment role is required. The human owner creates this account
+prerequisite manually; no repository workflow provisions it. Application
+deployment remains CI-only. Its ARN is the only repository variable; the budget
+notification email remains an environment secret.
 
 The static application receives generated non-secret environment identifiers
 through a deployment-time `/config.json`. After the first deployment, the human
@@ -72,7 +74,8 @@ Exit criteria:
 - the one household login can load both planning profiles;
 - the database pauses to zero and successfully resumes;
 - no resource outside the approved architecture appears in CDK diff; and
-- the production workflow cannot run without human approval.
+- only a protected merge to `main` or an explicit human retry can start the
+  production workflow.
 
 ## Phase 2: Profiles and recipe library
 
@@ -193,9 +196,8 @@ The pull-request workflow is read-only with respect to production. It runs:
 4. unit and PostgreSQL integration tests;
 5. critical Playwright journeys against local fixtures;
 6. production builds;
-7. CDK assertion tests and synthesis;
-8. a read-only CDK diff when AWS access is available; and
-9. a cost-impact summary for infrastructure changes.
+7. CDK assertion tests and synthesis; and
+8. a cost-impact summary for infrastructure changes.
 
 No PR workflow calls OpenAI, mutates AWS, applies migrations, or deploys.
 
@@ -204,16 +206,17 @@ No PR workflow calls OpenAI, mutates AWS, applies migrations, or deploys.
 Production deployment:
 
 - runs only from committed `main` through GitHub Actions;
-- is started manually;
+- starts automatically after a merge, with manual dispatch available for retry;
 - uses GitHub OIDC rather than stored AWS credentials;
-- has an unprotected plan job that produces CDK diff and build artifacts;
-- has a separate `production` environment-protected deploy job;
-- requires a human approval for every run;
+- uses one owner-created deployment role;
+- produces a CDK diff before deploying the same cloud assembly;
+- treats the human merge decision as deployment approval;
 - uses concurrency control to prevent overlapping deployments; and
 - records the deployed commit and stack outputs.
 
-An agent may build or repair this workflow but must not trigger it unless the
-human explicitly asks. An agent can never approve its own deployment gate.
+Agents may build or repair this workflow only through pull requests. They must
+never push or merge to `main`, and must not manually dispatch a retry unless the
+human explicitly asks.
 
 ### Database bootstrap and later schema changes
 

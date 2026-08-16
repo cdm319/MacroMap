@@ -43,7 +43,8 @@ impact as `none`, `decrease`, or `increase/uncertain` using
 
 For `increase/uncertain`, stop before editing and present the before/after
 monthly estimate, usage-sensitive maximum, cheaper options, and rollback route.
-Human approval to code the change does not authorise deployment.
+Human approval to code the change does not authorise merge. Merging to `main`
+authorises the automatic production deployment.
 
 Never change these values incidentally:
 
@@ -66,20 +67,19 @@ and cost approval.
 ## AWS, deployment, and migrations
 
 - Define application AWS resources only through the TypeScript CDK application.
-  The human-owned GitHub OIDC roles used by CI are account prerequisites and
-  are intentionally not provisioned from this repository.
+  The human-owned GitHub OIDC role used by CI is an account prerequisite and is
+  intentionally not provisioned from this repository.
 - Do not run local `cdk deploy`, mutate AWS, invoke production functions, change
   DNS, or trigger paid OpenAI calls.
-- Production deployment happens only from committed `main` through the manually
-  approved GitHub Actions production workflow.
-- Every production deployment requires human approval, including app-only
-  releases.
-- Never trigger a deployment unless the human explicitly requests it. Never
-  approve an environment gate on the human's behalf.
-- Use the existing account GitHub OIDC provider with dedicated least-privilege
-  MacroMap deployment and read-only roles. The human owner creates them
-  manually and configures their ARNs in GitHub. Never create or commit
-  long-lived AWS credentials.
+- Production deploys automatically from committed `main` through GitHub
+  Actions. The human decision to merge is the deployment approval.
+- Agents must work through pull requests and must never push or merge directly
+  to `main`. Do not manually dispatch the deployment workflow unless the human
+  explicitly requests a retry.
+- Use the existing account GitHub OIDC provider with one dedicated
+  least-privilege MacroMap deployment role. The human owner creates it manually
+  and configures its ARN in GitHub. Never create or commit long-lived AWS
+  credentials.
 - The human owner may run the documented one-time database bootstrap from their
   developer machine after the first deployment. Agents must never run it.
 - Once production data exists, schema changes need an explicitly approved,
@@ -87,7 +87,8 @@ and cost approval.
   general migration mechanism.
 - Destructive data changes, backfills, restores, and production diagnostics need
   a specific plan and approval. Prefer read-only evidence.
-- Treat CDK diff as required evidence, not permission to deploy.
+- The deployment workflow must produce a successful CDK diff immediately before
+  deploying the same cloud assembly.
 
 ## Implementation boundaries
 
@@ -157,5 +158,5 @@ Report:
   and
 - remaining risks, decisions, or follow-up work.
 
-Leave merging, production approval, deployment, and material contract decisions
-to the human owner.
+Leave merging, deployment authorisation, and material contract decisions to the
+human owner.

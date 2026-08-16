@@ -139,8 +139,8 @@ obtain explicit human approval. The request must state:
 4. cheaper alternatives and their trade-offs; and
 5. the rollback route.
 
-Approval to implement is not approval to deploy. Every production deployment
-has a separate human approval gate in CI.
+Approval to implement is not approval to merge. The human merge decision is the
+cost and deployment gate because every merge to `main` deploys automatically.
 
 The following always require this review, even when described as a fix:
 

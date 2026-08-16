@@ -4,6 +4,7 @@ export const DATABASE_NAME = 'macromap';
 export const GITHUB_REPOSITORY = 'cdm319/MacroMap';
 export const PRODUCTION_REGION = 'eu-west-2';
 export const ROOT_DOMAIN = 'chrismatthews.me';
+export const ROOT_HOSTED_ZONE_ID = 'Z1S11FADFNACAI';
 
 export const APPROVED_COST_GUARDRAILS = {
   apiBurstLimit: 10,

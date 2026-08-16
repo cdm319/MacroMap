@@ -28,7 +28,7 @@ The MVP therefore favours:
 - managed authentication and encrypted managed storage;
 - one production environment plus local development;
 - explicit limits instead of unbounded autoscaling; and
-- CI-only deployments with a human approval gate.
+- CI-only deployments authorised by a reviewed merge to `main`.
 
 The application assumes internet connectivity. A slower first request after an
 idle period is an accepted trade-off for allowing PostgreSQL to pause.
@@ -99,6 +99,10 @@ The existing `chrismatthews.me` public hosted zone is reused. MacroMap must not
 create another hosted zone. If the zone cannot be accessed from the deployment
 account, deployment stops and reports the required DNS record for a human to
 create.
+
+The existing hosted-zone identifier is non-secret deployment configuration
+committed with the CDK application. CDK resolves the account from the
+authenticated deployment role; GitHub stores only that role's ARN.
 
 ### Web application
 

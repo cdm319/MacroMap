@@ -52,7 +52,8 @@ shows the seeded Chris and Alex household without contacting Cognito or AWS.
 Production replaces that file during deployment with generated Cognito and API
 identifiers.
 
-Infrastructure deploys only through the protected GitHub Actions workflow. The
-human owner performs the one-time empty-database bootstrap from their developer
-machine by following the [production deployment runbook](docs/deployment-runbook.md);
-agents must never run it.
+Infrastructure deploys automatically after a reviewed pull request is merged to
+`main`. The human owner performs the one-time empty-database bootstrap from
+their developer machine by following the
+[production deployment runbook](docs/deployment-runbook.md); agents must never
+run it.

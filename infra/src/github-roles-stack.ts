@@ -3,7 +3,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import type { Construct } from 'constructs';
 import { APPLICATION_NAME, GITHUB_REPOSITORY } from './config.js';
 
-export class MacroMapBootstrapStack extends Stack {
+export class MacroMapGitHubRolesStack extends Stack {
   public constructor(scope: Construct, id: string, props: StackProps) {
     super(scope, id, props);
 

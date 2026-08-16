@@ -29,8 +29,8 @@ environment variables:
 | -------------------------------- | -------------------------------------------------------- |
 | `AWS_ACCOUNT_ID`                 | Target AWS account                                       |
 | `AWS_ACCOUNT_BOOTSTRAP_ROLE_ARN` | Existing approved role used once to create project roles |
-| `AWS_DEPLOY_ROLE_ARN`            | Output of `MacroMapGitHubBootstrap`                      |
-| `AWS_READ_ONLY_ROLE_ARN`         | Output of `MacroMapGitHubBootstrap`                      |
+| `AWS_DEPLOY_ROLE_ARN`            | Deploy-role output of the GitHub roles stack             |
+| `AWS_READ_ONLY_ROLE_ARN`         | Diff-role output of the GitHub roles stack               |
 | `MACROMAP_HOSTED_ZONE_ID`        | Existing `chrismatthews.me` public hosted-zone ID        |
 
 Add `MACROMAP_BUDGET_EMAIL` as an environment secret for the USD 8 and USD 15
@@ -48,7 +48,7 @@ have passed, use direct account billing review as the authoritative cost check.
 ## First release
 
 1. Merge the reviewed Phase 1 pull request to `main` after CI passes.
-2. Dispatch **Bootstrap GitHub roles** from `main` and approve its `production`
+2. Dispatch **Provision GitHub roles** from `main` and approve its `production`
    environment gate. This creates free IAM roles only.
 3. Copy the `DeployRoleArn` and `DiffRoleArn` outputs into
    `AWS_DEPLOY_ROLE_ARN` and `AWS_READ_ONLY_ROLE_ARN`.

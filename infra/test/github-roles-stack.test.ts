@@ -1,12 +1,12 @@
 import { App } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { describe, it } from 'vitest';
-import { MacroMapBootstrapStack } from '../src/bootstrap-stack.js';
+import { MacroMapGitHubRolesStack } from '../src/github-roles-stack.js';
 
-describe('GitHub bootstrap infrastructure', () => {
+describe('GitHub role provisioning', () => {
   it('restricts deployment to the protected production environment', () => {
     const app = new App();
-    const stack = new MacroMapBootstrapStack(app, 'BootstrapTest', {
+    const stack = new MacroMapGitHubRolesStack(app, 'GitHubRolesTest', {
       env: { account: '111111111111', region: 'eu-west-2' },
     });
     const template = Template.fromStack(stack);

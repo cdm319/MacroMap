@@ -63,8 +63,8 @@ flowchart LR
 - Tests: Vitest for unit/integration tests and Playwright for critical browser
   journeys.
 
-Dependency versions are selected during repository bootstrap and pinned by the
-lockfile. Replacing these choices or introducing another runtime, database,
+Dependency versions are selected during initial repository setup and pinned by
+the lockfile. Replacing these choices or introducing another runtime, database,
 framework, ORM, cloud, or paid service is an architectural change.
 
 ## Repository shape

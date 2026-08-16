@@ -54,7 +54,7 @@ describe('authenticated session handler', () => {
     expect(response.statusCode).toBe(401);
   });
 
-  it('rejects an identity that has not been bootstrapped', async () => {
+  it('rejects an identity that has not been linked', async () => {
     const response = await handleSession(
       { findBySubject: vi.fn().mockResolvedValue(undefined) },
       event('unknown-subject'),

@@ -34,7 +34,7 @@ if (databaseUrl === undefined) {
       expect(result.rows).toEqual([{ connected: 1 }]);
     });
 
-    it('bootstraps the singleton household and planning profiles', async () => {
+    it('creates the initial household and planning profiles', async () => {
       const result = await client.pool.query<{
         display_name: string;
         household_name: string;

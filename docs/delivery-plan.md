@@ -46,7 +46,7 @@ Deliverables:
 - static Next.js application with responsive shell;
 - Cognito managed login and logout;
 - authenticated `/v1/session` endpoint;
-- household and Chris/Alex profile bootstrap;
+- initial household and Chris/Alex profiles;
 - Aurora Serverless v2, Data API, Drizzle schema, and initial bootstrap SQL;
 - CloudFront, private S3 origin, and `macromap.chrismatthews.me`;
 - GitHub OIDC deployment role with least-privilege permissions;
@@ -56,8 +56,8 @@ Deliverables:
 - a waking-database state in the web application.
 
 The existing account-level GitHub OIDC provider is reused. A dedicated MacroMap
-deployment role is required. Any one-time trust/bootstrap action is documented
-and performed by a human or an already-approved CI bootstrap path; application
+deployment role is required. Any one-time trust setup is documented and
+performed by a human or an already-approved CI provisioning path; application
 deployment remains CI-only.
 
 The static application receives generated non-secret environment identifiers

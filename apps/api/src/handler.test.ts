@@ -2,9 +2,10 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
 import {
   HouseholdPeopleMismatchError,
   type HouseholdRepository,
+  type RecipeRepository,
 } from '@macromap/database';
 import { describe, expect, it, vi } from 'vitest';
-import { handleRequest } from './handler.js';
+import { handleRequest, type ApplicationRepositories } from './handler.js';
 
 const session = {
   household: {
@@ -35,20 +36,37 @@ const session = {
 
 function createRepository(
   overrides: Partial<HouseholdRepository> = {},
-): HouseholdRepository {
+  recipeOverrides: Partial<RecipeRepository> = {},
+): ApplicationRepositories {
   return {
-    findBySubject: vi.fn().mockResolvedValue(session),
-    updateSettings: vi.fn().mockResolvedValue(session),
-    ...overrides,
+    households: {
+      findBySubject: vi.fn().mockResolvedValue(session),
+      updateSettings: vi.fn().mockResolvedValue(session),
+      ...overrides,
+    },
+    recipes: {
+      archive: vi.fn().mockResolvedValue(true),
+      find: vi.fn().mockResolvedValue(undefined),
+      list: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
+      save: vi.fn(),
+      ...recipeOverrides,
+    },
   };
 }
 
 function event(
   routeKey: string,
-  options: { body?: unknown; subject?: string } = {},
+  options: {
+    body?: unknown;
+    pathParameters?: Record<string, string>;
+    queryStringParameters?: Record<string, string>;
+    subject?: string;
+  } = {},
 ): APIGatewayProxyEventV2WithJWTAuthorizer {
   return {
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    pathParameters: options.pathParameters,
+    queryStringParameters: options.queryStringParameters,
     requestContext: {
       authorizer: {
         jwt: {
@@ -70,7 +88,9 @@ describe('authenticated household API', () => {
       event('GET /v1/session', { subject: 'subject-1' }),
     );
 
-    expect(repository.findBySubject).toHaveBeenCalledWith('subject-1');
+    expect(repository.households.findBySubject).toHaveBeenCalledWith(
+      'subject-1',
+    );
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.body ?? '{}')).toEqual(session);
   });
@@ -79,8 +99,8 @@ describe('authenticated household API', () => {
     const repository = createRepository();
     const response = await handleRequest(repository, event('GET /v1/session'));
 
-    expect(repository.findBySubject).not.toHaveBeenCalled();
-    expect(repository.updateSettings).not.toHaveBeenCalled();
+    expect(repository.households.findBySubject).not.toHaveBeenCalled();
+    expect(repository.households.updateSettings).not.toHaveBeenCalled();
     expect(response.statusCode).toBe(401);
   });
 
@@ -151,7 +171,7 @@ describe('authenticated household API', () => {
       }),
     );
 
-    expect(repository.updateSettings).toHaveBeenCalledWith(
+    expect(repository.households.updateSettings).toHaveBeenCalledWith(
       'subject-1',
       settings,
     );
@@ -192,5 +212,88 @@ describe('authenticated household API', () => {
     expect(JSON.parse(changedResponse.body ?? '{}')).toMatchObject({
       error: { code: 'HOUSEHOLD_CHANGED' },
     });
+  });
+
+  it('lists recipes for the authenticated subject', async () => {
+    const repository = createRepository();
+    const response = await handleRequest(
+      repository,
+      event('GET /v1/recipes', { subject: 'subject-1' }),
+    );
+
+    expect(repository.recipes.list).toHaveBeenCalledWith(
+      'subject-1',
+      undefined,
+    );
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body ?? '{}')).toEqual({
+      items: [],
+      nextCursor: null,
+    });
+  });
+
+  it('validates and saves a complete recipe document', async () => {
+    const recipeId = '00000000-0000-4000-8000-000000000201';
+    const input = {
+      description: 'A quick dinner.',
+      ingredients: [
+        {
+          name: 'Pasta',
+          preparationNote: '',
+          quantity: 200,
+          unit: 'g',
+        },
+      ],
+      instructions: ['Boil the pasta.'],
+      mealTypes: ['dinner'],
+      nutrition: null,
+      servingCount: 2,
+      tags: { cuisines: ['Italian'], flavours: [], proteins: [] },
+      title: 'Tomato pasta',
+    };
+    const repository = createRepository(
+      {},
+      {
+        save: vi.fn().mockResolvedValue({
+          ...input,
+          id: recipeId,
+          planningStatus: 'needs-nutrition',
+          updatedAt: '2026-08-17T12:00:00.000Z',
+        }),
+      },
+    );
+    const response = await handleRequest(
+      repository,
+      event('PUT /v1/recipes/{recipeId}', {
+        body: input,
+        pathParameters: { recipeId },
+        subject: 'subject-1',
+      }),
+    );
+
+    expect(repository.recipes.save).toHaveBeenCalledWith(
+      'subject-1',
+      recipeId,
+      input,
+    );
+    expect(response.statusCode).toBe(200);
+  });
+
+  it('archives only a recipe owned by the authenticated household', async () => {
+    const recipeId = '00000000-0000-4000-8000-000000000201';
+    const repository = createRepository();
+    const response = await handleRequest(
+      repository,
+      event('DELETE /v1/recipes/{recipeId}', {
+        pathParameters: { recipeId },
+        subject: 'subject-1',
+      }),
+    );
+
+    expect(repository.recipes.archive).toHaveBeenCalledWith(
+      'subject-1',
+      recipeId,
+    );
+    expect(response.statusCode).toBe(204);
   });
 });

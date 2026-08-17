@@ -140,3 +140,23 @@ Common status mapping:
 Detailed endpoint schemas are introduced with their owning product slice. This
 document defines shared behaviour, not permission to invent endpoints ahead of
 requirements.
+
+## Recipe library endpoints
+
+- `GET /v1/recipes` returns active recipe summaries in descending update order.
+  An optional opaque `cursor` continues the list.
+- `GET /v1/recipes/{recipeId}` returns the complete editable recipe.
+- `PUT /v1/recipes/{recipeId}` creates or replaces that recipe as one
+  transaction. The client supplies the UUID, so retrying the same request does
+  not create a duplicate.
+- `DELETE /v1/recipes/{recipeId}` archives the recipe and returns `204`.
+
+A recipe document contains its title, description, serving count, ordered
+structured ingredients, ordered instructions, explicit meal types, editable
+cuisine/protein/flavour tags, and optional authoritative per-serving kcal,
+protein, carbohydrate, and fat. Missing nutrition is valid for storage and
+cooking but marks the recipe as unavailable to the future planner.
+
+Recipe edits are whole-document, last-write-wins operations for the single-login
+MVP. The Cognito `sub` determines ownership; recipe requests never accept a
+household identifier.

@@ -75,10 +75,92 @@ export const householdSettingsSchema = z
   })
   .strict();
 
+export const mealTypeSchema = z.enum(['breakfast', 'lunch', 'dinner']);
+
+export const recipeNutritionSchema = z
+  .object({
+    carbsGrams: z.number().nonnegative(),
+    fatGrams: z.number().nonnegative(),
+    kcal: z.number().positive(),
+    proteinGrams: z.number().nonnegative(),
+  })
+  .strict();
+
+export const recipeIngredientSchema = z
+  .object({
+    name: z.string().trim().min(1),
+    preparationNote: z.string().trim(),
+    quantity: z.number().positive(),
+    unit: z.string().trim().min(1),
+  })
+  .strict();
+
+const recipeTagsSchema = z
+  .object({
+    cuisines: z
+      .array(z.string().trim().min(1))
+      .refine((values) => new Set(values).size === values.length),
+    flavours: z
+      .array(z.string().trim().min(1))
+      .refine((values) => new Set(values).size === values.length),
+    proteins: z
+      .array(z.string().trim().min(1))
+      .refine((values) => new Set(values).size === values.length),
+  })
+  .strict();
+
+export const recipeInputSchema = z
+  .object({
+    description: z.string().trim(),
+    ingredients: z.array(recipeIngredientSchema).min(1),
+    instructions: z.array(z.string().trim().min(1)).min(1),
+    mealTypes: z
+      .array(mealTypeSchema)
+      .min(1)
+      .refine((values) => new Set(values).size === values.length),
+    nutrition: recipeNutritionSchema.nullable(),
+    servingCount: z.number().positive(),
+    tags: recipeTagsSchema,
+    title: z.string().trim().min(1),
+  })
+  .strict();
+
+export const recipeSchema = recipeInputSchema
+  .extend({
+    id: opaqueIdSchema,
+    planningStatus: z.enum(['ready', 'needs-nutrition']),
+    updatedAt: z.string().datetime(),
+  })
+  .strict();
+
+export const recipeSummarySchema = recipeSchema.pick({
+  id: true,
+  mealTypes: true,
+  nutrition: true,
+  planningStatus: true,
+  servingCount: true,
+  title: true,
+  updatedAt: true,
+});
+
+export const recipeListResponseSchema = z
+  .object({
+    items: z.array(recipeSummarySchema),
+    nextCursor: z.string().min(1).nullable(),
+  })
+  .strict();
+
 export type ApiError = z.infer<typeof apiErrorSchema>;
 export type CognitoRuntimeConfig = z.infer<typeof cognitoRuntimeConfigSchema>;
 export type HouseholdSettings = z.infer<typeof householdSettingsSchema>;
 export type MacroTargets = z.infer<typeof macroTargetsSchema>;
+export type MealType = z.infer<typeof mealTypeSchema>;
 export type PersonSummary = z.infer<typeof personSummarySchema>;
+export type Recipe = z.infer<typeof recipeSchema>;
+export type RecipeIngredient = z.infer<typeof recipeIngredientSchema>;
+export type RecipeInput = z.infer<typeof recipeInputSchema>;
+export type RecipeListResponse = z.infer<typeof recipeListResponseSchema>;
+export type RecipeNutrition = z.infer<typeof recipeNutritionSchema>;
+export type RecipeSummary = z.infer<typeof recipeSummarySchema>;
 export type RuntimeConfig = z.infer<typeof runtimeConfigSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;

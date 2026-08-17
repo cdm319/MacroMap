@@ -51,7 +51,13 @@ test('shows the private household foundation', async ({ page }) => {
   await page.goto('/');
 
   await expect(
-    page.getByRole('heading', { level: 1, name: 'Welcome home.' }),
+    page.getByRole('heading', { level: 1, name: 'Recipe library' }),
+  ).toBeVisible();
+  await expect(page.getByText('Your recipe book is empty')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Settings' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Planning settings' }),
   ).toBeVisible();
   await expect(
     page.getByRole('heading', { name: 'Chris & Alex' }),
@@ -81,6 +87,43 @@ test('shows the private household foundation', async ({ page }) => {
   await expect(page.getByText('Targets ready')).toHaveCount(2);
 });
 
+test('creates, cooks, edits, and archives a manual recipe', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Add recipe' }).click();
+
+  await page.getByLabel('Title').fill('Tomato pasta');
+  await page.getByLabel('Description').fill('A bright midweek dinner.');
+  await page.getByLabel('Ingredient 1 amount').fill('200');
+  await page.getByLabel('Ingredient 1 unit').fill('g');
+  await page.getByLabel('Ingredient 1 name').fill('Pasta');
+  await page.getByLabel('Step 1').fill('Boil the pasta until tender.');
+  await page.getByRole('button', { name: 'Save recipe' }).click();
+
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Tomato pasta' }),
+  ).toBeVisible();
+  await expect(page.getByText('Nutrition needed')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Start cooking' }).click();
+  await page.getByLabel('Cook this many servings').fill('4');
+  await expect(page.getByText(/400 g Pasta/u)).toBeVisible();
+  await expect(page.getByText('Boil the pasta until tender.')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Exit cooking mode' }).click();
+  await page.getByRole('button', { name: 'Edit' }).click();
+  await page.getByLabel('Title').fill('Summer tomato pasta');
+  await page.getByRole('button', { name: 'Save recipe' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Summer tomato pasta' }),
+  ).toBeVisible();
+
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Archive recipe' }).click();
+  await expect(page.getByText('Your recipe book is empty')).toBeVisible();
+});
+
 test('keeps an unauthenticated household behind sign-in', async ({ page }) => {
   await useCognitoConfig(page);
 
@@ -108,6 +151,12 @@ test('saves targets through the authenticated API', async ({ page }) => {
   await page.route('https://api.example.test/v1/session', (route) =>
     route.fulfill({ contentType: 'application/json', json: householdSession }),
   );
+  await page.route('https://api.example.test/v1/recipes', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      json: { items: [], nextCursor: null },
+    }),
+  );
 
   let savedBody: unknown;
   let authorization: string | undefined;
@@ -124,6 +173,7 @@ test('saves targets through the authenticated API', async ({ page }) => {
   );
 
   await page.goto('/');
+  await page.getByRole('button', { name: 'Settings' }).click();
   await page.getByRole('spinbutton', { name: 'Chris Calories' }).fill('2600');
   await page.getByRole('button', { name: 'Save targets' }).click();
 

@@ -69,6 +69,17 @@ describe('approved infrastructure foundation', () => {
       AuthorizationType: 'JWT',
       RouteKey: 'PUT /v1/household-settings',
     });
+    for (const routeKey of [
+      'GET /v1/recipes',
+      'GET /v1/recipes/{recipeId}',
+      'PUT /v1/recipes/{recipeId}',
+      'DELETE /v1/recipes/{recipeId}',
+    ]) {
+      template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
+        AuthorizationType: 'JWT',
+        RouteKey: routeKey,
+      });
+    }
     template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
       DefaultRouteSettings: {
         ThrottlingBurstLimit: 10,

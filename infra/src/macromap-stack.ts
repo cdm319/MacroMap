@@ -161,7 +161,11 @@ export class MacroMapStack extends Stack {
     const api = new HttpApi(this, 'Api', {
       corsPreflight: {
         allowHeaders: ['authorization', 'content-type'],
-        allowMethods: [CorsHttpMethod.GET, CorsHttpMethod.PUT],
+        allowMethods: [
+          CorsHttpMethod.DELETE,
+          CorsHttpMethod.GET,
+          CorsHttpMethod.PUT,
+        ],
         allowOrigins: [`https://${APPLICATION_DOMAIN}`],
       },
       createDefaultStage: false,
@@ -188,6 +192,24 @@ export class MacroMapStack extends Stack {
       ),
       methods: [HttpMethod.PUT],
       path: '/v1/household-settings',
+    });
+    api.addRoutes({
+      authorizer,
+      integration: new HttpLambdaIntegration(
+        'RecipeListIntegration',
+        sessionFunction,
+      ),
+      methods: [HttpMethod.GET],
+      path: '/v1/recipes',
+    });
+    api.addRoutes({
+      authorizer,
+      integration: new HttpLambdaIntegration(
+        'RecipeIntegration',
+        sessionFunction,
+      ),
+      methods: [HttpMethod.DELETE, HttpMethod.GET, HttpMethod.PUT],
+      path: '/v1/recipes/{recipeId}',
     });
     new HttpStage(this, 'DefaultStage', {
       autoDeploy: true,

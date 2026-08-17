@@ -80,11 +80,11 @@ and cost approval.
   least-privilege MacroMap deployment role. The human owner creates it manually
   and configures its ARN in GitHub. Never create or commit long-lived AWS
   credentials.
-- The human owner may run the documented one-time database bootstrap from their
-  developer machine after the first deployment. Agents must never run it.
-- Once production data exists, schema changes need an explicitly approved,
-  forward-only migration strategy. Do not treat the initial bootstrap as a
-  general migration mechanism.
+- The production database was initialized on 17 August 2026. Never run the
+  initial schema SQL against production or recreate the initial household
+  identity.
+- Production now contains real data. Schema changes need an explicitly
+  approved, forward-only migration strategy.
 - Destructive data changes, backfills, restores, and production diagnostics need
   a specific plan and approval. Prefer read-only evidence.
 - The deployment workflow must produce a successful CDK diff immediately before

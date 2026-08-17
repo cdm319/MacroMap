@@ -1,7 +1,7 @@
 # MacroMap technical architecture
 
-Status: Approved; Phase 1 implemented pending production verification
-Last reviewed: 2026-08-16
+Status: Approved; Phase 1 deployed and verified
+Last reviewed: 2026-08-17
 
 ## Purpose and authority
 
@@ -78,7 +78,7 @@ apps/
 packages/
   domain/              Pure business rules and planner
   contracts/           API request/response schemas
-  database/            Drizzle schema, repositories, and initial bootstrap SQL
+  database/            Drizzle schema, repositories, and initial schema SQL
 infra/                  AWS CDK application and assertions
 docs/                   Product, architecture, cost, and delivery contracts
 ```
@@ -120,13 +120,12 @@ using the authorisation-code flow with PKCE and no client secret in the browser.
 Chris and Alex are application-level planning profiles, not separate Cognito
 users in the MVP.
 
-Public self-registration is disabled. After the first deployment, the human
-owner creates the initial Cognito user and runs the documented one-time database
-bootstrap from their developer machine. The bootstrap binds Cognito's immutable
-`sub` to the seeded household. Agents must never perform this production
-operation. Subsequent account recovery uses Cognito's managed flow. A different
-`sub` cannot replace the existing household binding without a separately
-reviewed data operation.
+Public self-registration is disabled. The human owner created the initial
+Cognito user and bound its immutable `sub` to the seeded household during the
+first release on 17 August 2026. The one-time executable used for that operation
+has been removed. Subsequent account recovery uses Cognito's managed flow. A
+different `sub` cannot replace the existing household binding without a
+separately reviewed data operation.
 
 API Gateway validates Cognito JWTs. The API derives the authenticated actor from
 the validated `sub` claim and never accepts an account identifier supplied by
@@ -163,15 +162,15 @@ RDS Proxy, persistent connection pool, and Lambda VPC attachment, while allowing
 the cluster to pause. The UI must tolerate database resume latency and show a
 clear waking/retry state rather than treating the first timeout as data loss.
 
-Database structure is represented by the Drizzle schema. Because the first
-release has no existing data, a committed SQL file creates the initial schema
-and household records in one transaction through the Data API. Only the human
-owner runs that bootstrap, once, using the deployment runbook.
+Database structure is represented by the Drizzle schema. The committed initial
+SQL records the schema and household data used for the first release and creates
+fresh databases for local integration tests. It was applied to production once,
+on 17 August 2026, and must never be reapplied there.
 
-The bootstrap is not a migration framework. Before changing the schema after
-production data exists, agree a reviewed, forward-only migration approach that
-supports expand-and-contract releases. Adding migration tooling requires the
-dependency review defined in `docs/dependency-policy.md`.
+Production now contains real data. Before changing its schema, agree a reviewed,
+forward-only migration approach that supports expand-and-contract releases.
+Adding migration tooling requires the dependency review defined in
+`docs/dependency-policy.md`.
 
 ### Object storage
 

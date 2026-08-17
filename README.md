@@ -53,7 +53,6 @@ Production replaces that file during deployment with generated Cognito and API
 identifiers.
 
 Infrastructure deploys automatically after a reviewed pull request is merged to
-`main`. The human owner performs the one-time empty-database bootstrap from
-their developer machine by following the
-[production deployment runbook](docs/deployment-runbook.md); agents must never
-run it.
+`main`. Production was first deployed and initialized on 17 August 2026. The
+initial schema SQL remains source-controlled for reference and local integration
+tests, but must never be reapplied to production.

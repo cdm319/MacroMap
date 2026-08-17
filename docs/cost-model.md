@@ -1,13 +1,14 @@
 # MacroMap cost model and guardrails
 
-Status: Approved for MVP implementation
+Status: Approved and deployed for MVP
 Prices checked: 2026-08-15
 AWS region: `eu-west-2` unless stated otherwise
 
-Phase 1 implementation status: the approved infrastructure and guardrails are
-represented in CDK and assertion tests, but no MacroMap AWS resources have been
-deployed from this change. Pricing and real idle behaviour still require the
-pre-deployment and post-deployment checks below.
+Phase 1 was deployed on 17 August 2026. Both stacks completed successfully, the
+`Application` cost-allocation tag is active, and the USD 8 and USD 15 budgets
+each have actual and forecast notifications. Aurora auto-paused and resumed
+during the initial database setup. Actual monthly spend remains unverified until
+billing data is available.
 
 ## Cost objective
 

@@ -1,7 +1,7 @@
 # MacroMap production deployment runbook
 
-Status: Phase 1 implementation; no production deployment performed
-Last reviewed: 2026-08-16
+Status: Phase 1 live in production
+Last reviewed: 2026-08-17
 
 ## Boundaries
 
@@ -10,29 +10,29 @@ pull request is merged to `main`. The merge is the human deployment approval.
 Agents may prepare or repair the workflow through pull requests, but must never
 push or merge to `main` or dispatch a retry without an explicit human request.
 
-The only exception is the one-time bootstrap of the first empty database. The
-human owner runs the commands below from their developer machine after the first
-deployment. This mutates production, is not a migration process, and must never
-be run by an agent.
+Production contains real data. The first-release database initialization is
+complete and its executable has been removed. Never apply the initial schema SQL
+to production. Future schema or data operations need a reviewed, forward-only
+plan and explicit approval.
 
-The first deployment begins the expected USD 2-6 monthly cost envelope. The
+The expected USD 2-6 monthly cost envelope is now live. The
 database-not-pausing failure case remains approximately USD 51 per month. Check
 current official prices and the PR's cost classification before merging. The
 deployment workflow records a CDK diff immediately before deploying the same
 cloud assembly.
 
-## Required GitHub configuration
+## Production configuration
 
-Create a `production` environment restricted to deployments from `main`. It
-must not require a reviewer because reviewed merges deploy automatically. Add
-one repository variable:
+The `production` environment is restricted to deployments from `main`. It does
+not require a reviewer because reviewed merges deploy automatically. The
+repository has one deployment variable:
 
 | Name                  | Purpose                                  |
 | --------------------- | ---------------------------------------- |
 | `AWS_DEPLOY_ROLE_ARN` | Owner-created production deployment role |
 
-Add `MACROMAP_BUDGET_EMAIL` as an environment secret for the USD 8 and USD 15
-budget notifications. Never store its value in the repository.
+`MACROMAP_BUDGET_EMAIL` is an environment secret for the USD 8 and USD 15 budget
+notifications. Never store its value in the repository.
 
 The account-level GitHub OIDC provider for `token.actions.githubusercontent.com`
 and CDK bootstrap stacks in `eu-west-2` and `us-east-1` must already exist. The
@@ -48,77 +48,27 @@ The `chrismatthews.me` hosted-zone identifier is non-secret configuration in
 `infra/src/config.ts`. CDK resolves the account from the authenticated role, so
 neither value requires another GitHub variable.
 
-Activate the `Application` user-defined cost allocation tag before relying on
-the project-filtered budgets. Until activation and the normal billing-data delay
-have passed, use direct account billing review as the authoritative cost check.
+The `Application` user-defined cost-allocation tag is active. During the normal
+billing-data delay, use direct account billing review as the authoritative cost
+check.
 
-## First release
+## First release record
 
-1. Manually create the GitHub OIDC role described above and configure its ARN in
-   GitHub.
-2. Configure the `production` environment and its `MACROMAP_BUDGET_EMAIL`
-   secret.
-3. Merge the reviewed Phase 1 pull request to `main` after `validate` passes.
-   This starts deployment automatically; monitor its CDK diff and result.
-4. Bootstrap the empty database and household login using the next section.
-5. Use Cognito's invitation and temporary-password flow to sign in at
-   `https://macromap.chrismatthews.me`.
-
-## One-time database bootstrap
-
-Run this section only for a newly deployed, empty MacroMap database. It requires
-local AWS credentials that can describe the stack, administer its Cognito user
-pool, use the cluster Data API, and read the cluster secret.
-
-First confirm the intended AWS identity, then load the deployed identifiers:
-
-```sh
-aws sts get-caller-identity
-
-export AWS_REGION=eu-west-2
-export DATABASE_NAME=$(aws cloudformation describe-stacks --stack-name MacroMapProduction --query "Stacks[0].Outputs[?OutputKey=='DatabaseName'].OutputValue" --output text)
-export DATABASE_RESOURCE_ARN=$(aws cloudformation describe-stacks --stack-name MacroMapProduction --query "Stacks[0].Outputs[?OutputKey=='DatabaseResourceArn'].OutputValue" --output text)
-export DATABASE_SECRET_ARN=$(aws cloudformation describe-stacks --stack-name MacroMapProduction --query "Stacks[0].Outputs[?OutputKey=='DatabaseSecretArn'].OutputValue" --output text)
-export USER_POOL_ID=$(aws cloudformation describe-stacks --stack-name MacroMapProduction --query "Stacks[0].Outputs[?OutputKey=='UserPoolId'].OutputValue" --output text)
-export MACROMAP_LOGIN_EMAIL='replace-with-the-household-login-email'
-```
-
-Check that every value is non-empty before continuing. Create the Cognito user,
-read its immutable `sub`, and apply the initial SQL plus identity binding in one
-database transaction:
-
-```sh
-aws cognito-idp admin-create-user \
-  --user-pool-id "$USER_POOL_ID" \
-  --username "$MACROMAP_LOGIN_EMAIL" \
-  --user-attributes \
-    Name=email,Value="$MACROMAP_LOGIN_EMAIL" \
-    Name=email_verified,Value=true
-
-COGNITO_SUBJECT=$(aws cognito-idp admin-get-user \
-  --user-pool-id "$USER_POOL_ID" \
-  --username "$MACROMAP_LOGIN_EMAIL" \
-  --query "UserAttributes[?Name=='sub'].Value | [0]" \
-  --output text)
-
-npm run db:bootstrap -- --subject "$COGNITO_SUBJECT"
-```
-
-Success prints `Created the initial schema, household, profiles, and login
-link.` The SQL is intentionally not rerunnable: if any statement fails, the
-transaction rolls back. Do not retry against a partly understood database;
-inspect the error and the database state first.
-
-Clear the shell values afterwards:
-
-```sh
-unset AWS_REGION DATABASE_NAME DATABASE_RESOURCE_ARN DATABASE_SECRET_ARN
-unset USER_POOL_ID MACROMAP_LOGIN_EMAIL COGNITO_SUBJECT
-```
+- Pull request #2 merged as commit `783986a` on 17 August 2026.
+- The automatic deployment workflow completed successfully.
+- `MacroMapEdge` and `MacroMapProduction` reached `CREATE_COMPLETE`.
+- The initial schema, Chris and Alex profiles, Cognito user, and immutable
+  identity binding were created successfully.
+- The owner confirmed the managed login and private household view at
+  `https://macromap.chrismatthews.me`.
+- Aurora auto-pause and resume were observed during initialization.
+- The `Application` cost-allocation tag is active; USD 8 and USD 15 budgets each
+  have actual and forecast notifications.
 
 ## Smoke and cost checks
 
-After the approved release, verify:
+For later releases, verify the changed production surface and continue to
+monitor:
 
 - an unauthenticated `/v1/session` request is rejected;
 - the household login reaches the private view and shows Chris and Alex;
@@ -129,7 +79,11 @@ After the approved release, verify:
 - after at least five idle minutes, Aurora reaches 0 ACUs, then the next visit
   shows the waking state and successfully recovers.
 
-These live checks are not satisfied by local tests or CDK synthesis and must be
+Actual monthly spend is not yet available. The first monthly review must compare
+tagged Cost Explorer data with the cost model, and budget-email delivery can
+only be confirmed when a notification is emitted.
+
+Live checks are not satisfied by local tests or CDK synthesis and must be
 recorded after deployment.
 
 ## Later releases and rollback

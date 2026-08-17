@@ -19,7 +19,6 @@
     "build": "npm run build --workspace @macromap/web",
     "cdk:diff": "npm run diff --workspace @macromap/infra --",
     "cdk:synth": "npm run synth --workspace @macromap/infra",
-    "db:bootstrap": "npm run bootstrap --workspace @macromap/database --",
     "db:start": "docker compose up -d --wait postgres",
     "db:stop": "docker compose down",
     "dev": "npm run dev --workspace @macromap/web",

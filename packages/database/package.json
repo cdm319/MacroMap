@@ -7,7 +7,6 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "bootstrap": "tsx src/bootstrap.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

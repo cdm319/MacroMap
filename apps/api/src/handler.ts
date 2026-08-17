@@ -5,7 +5,6 @@ import type {
 import {
   householdSettingsSchema,
   sessionResponseSchema,
-  type ApiError,
 } from '@macromap/contracts';
 import {
   createDataApiHouseholdRepository,
@@ -13,28 +12,12 @@ import {
   type HouseholdRepository,
   type HouseholdSession,
 } from '@macromap/database';
-
-function jsonResponse(
-  statusCode: number,
-  body: unknown,
-): APIGatewayProxyStructuredResultV2 {
-  return {
-    body: JSON.stringify(body),
-    headers: { 'content-type': 'application/json' },
-    statusCode,
-  };
-}
-
-function errorResponse(
-  statusCode: number,
-  code: string,
-  message: string,
-  requestId: string,
-): APIGatewayProxyStructuredResultV2 {
-  return jsonResponse(statusCode, {
-    error: { code, message, requestId },
-  } satisfies ApiError);
-}
+import {
+  createDataApiRecipeRepository,
+  type RecipeRepository,
+} from '@macromap/database';
+import { errorResponse, jsonResponse } from './http.js';
+import { handleRecipeRequest } from './recipes.js';
 
 function sessionResponse(
   session: HouseholdSession,
@@ -154,19 +137,28 @@ function requireEnvironment(name: string): string {
   return value;
 }
 
-let repository: HouseholdRepository | undefined;
+export interface ApplicationRepositories {
+  readonly households: HouseholdRepository;
+  readonly recipes: RecipeRepository;
+}
 
-function getRepository(): HouseholdRepository {
-  repository ??= createDataApiHouseholdRepository({
+let repositories: ApplicationRepositories | undefined;
+
+function getRepositories(): ApplicationRepositories {
+  const config = {
     databaseName: requireEnvironment('DATABASE_NAME'),
     resourceArn: requireEnvironment('DATABASE_RESOURCE_ARN'),
     secretArn: requireEnvironment('DATABASE_SECRET_ARN'),
-  });
-  return repository;
+  };
+  repositories ??= {
+    households: createDataApiHouseholdRepository(config),
+    recipes: createDataApiRecipeRepository(config),
+  };
+  return repositories;
 }
 
 export async function handleRequest(
-  repository: HouseholdRepository,
+  repositories: ApplicationRepositories,
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
 ): Promise<APIGatewayProxyStructuredResultV2> {
   const requestId = event.requestContext.requestId;
@@ -181,10 +173,13 @@ export async function handleRequest(
   }
 
   if (event.routeKey === 'GET /v1/session') {
-    return loadSession(repository, subject, requestId);
+    return loadSession(repositories.households, subject, requestId);
   }
   if (event.routeKey === 'PUT /v1/household-settings') {
-    return updateSettings(repository, event, subject, requestId);
+    return updateSettings(repositories.households, event, subject, requestId);
+  }
+  if (event.routeKey.includes('/v1/recipes')) {
+    return handleRecipeRequest(repositories.recipes, event, subject, requestId);
   }
   return errorResponse(404, 'NOT_FOUND', 'Endpoint not found.', requestId);
 }
@@ -192,5 +187,5 @@ export async function handleRequest(
 export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
 ): Promise<APIGatewayProxyStructuredResultV2> {
-  return handleRequest(getRepository(), event);
+  return handleRequest(getRepositories(), event);
 }

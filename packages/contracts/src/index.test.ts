@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   apiErrorSchema,
   householdSettingsSchema,
+  recipeInputSchema,
+  recipeSchema,
   runtimeConfigSchema,
   sessionResponseSchema,
 } from './index.js';
@@ -105,5 +107,54 @@ describe('shared API contracts', () => {
       }),
     ).toMatchObject({ mode: 'cognito' });
     expect(() => runtimeConfigSchema.parse({ mode: 'cognito' })).toThrow();
+  });
+
+  it('accepts a complete manual recipe with optional nutrition', () => {
+    const input = {
+      description: 'A quick pasta dinner.',
+      ingredients: [
+        {
+          name: 'Pasta',
+          preparationNote: '',
+          quantity: 200,
+          unit: 'g',
+        },
+      ],
+      instructions: ['Boil the pasta.'],
+      mealTypes: ['dinner'],
+      nutrition: null,
+      servingCount: 2,
+      tags: {
+        cuisines: ['Italian'],
+        flavours: ['Fresh'],
+        proteins: [],
+      },
+      title: 'Tomato pasta',
+    };
+
+    expect(recipeInputSchema.parse(input)).toEqual(input);
+    expect(
+      recipeSchema.parse({
+        ...input,
+        id: '00000000-0000-4000-8000-000000000201',
+        planningStatus: 'needs-nutrition',
+        updatedAt: '2026-08-17T12:00:00.000Z',
+      }),
+    ).toMatchObject({ title: 'Tomato pasta' });
+  });
+
+  it('rejects a recipe without usable portions or ingredients', () => {
+    expect(() =>
+      recipeInputSchema.parse({
+        description: '',
+        ingredients: [],
+        instructions: ['Cook it.'],
+        mealTypes: ['dinner'],
+        nutrition: null,
+        servingCount: 0,
+        tags: { cuisines: [], flavours: [], proteins: [] },
+        title: 'Incomplete',
+      }),
+    ).toThrow();
   });
 });

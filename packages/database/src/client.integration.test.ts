@@ -16,6 +16,7 @@ if (databaseUrl === undefined) {
       for (const filename of [
         'initial-schema.sql',
         'updates/001-person-macro-targets.sql',
+        'updates/002-recipe-library.sql',
       ]) {
         const sql = await readFile(
           new URL(`../sql/${filename}`, import.meta.url),
@@ -72,6 +73,43 @@ if (databaseUrl === undefined) {
           target_kcal: null,
         },
       ]);
+    });
+
+    it('stores an ordered household recipe', async () => {
+      await client.pool.query(
+        `insert into recipe (
+           id, household_id, title, description, serving_count
+         ) values ($1, $2, $3, $4, $5)`,
+        [
+          '00000000-0000-4000-8000-000000000201',
+          '00000000-0000-4000-8000-000000000001',
+          'Tomato pasta',
+          'A quick dinner.',
+          2,
+        ],
+      );
+      await client.pool.query(
+        `insert into recipe_ingredient (
+           recipe_id, sort_order, name, quantity, unit, preparation_note
+         ) values ($1, 0, 'Pasta', 200, 'g', '')`,
+        ['00000000-0000-4000-8000-000000000201'],
+      );
+      await client.pool.query(
+        `insert into recipe_step (recipe_id, sort_order, instruction)
+         values ($1, 0, 'Boil the pasta.')`,
+        ['00000000-0000-4000-8000-000000000201'],
+      );
+      await client.pool.query(
+        `insert into recipe_tag (recipe_id, category, value)
+         values ($1, 'meal_type', 'dinner')`,
+        ['00000000-0000-4000-8000-000000000201'],
+      );
+
+      const result = await client.pool.query<{ title: string }>(
+        `select title from recipe where id = $1`,
+        ['00000000-0000-4000-8000-000000000201'],
+      );
+      expect(result.rows).toEqual([{ title: 'Tomato pasta' }]);
     });
   });
 }

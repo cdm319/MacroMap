@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-rds-data": "^3.1111.0",
+    "@macromap/contracts": "*",
     "drizzle-orm": "^0.45.2",
     "pg": "^8.23.0"
   }

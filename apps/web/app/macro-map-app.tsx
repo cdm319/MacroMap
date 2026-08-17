@@ -16,7 +16,8 @@ import {
   logoutUrl,
   restoreAccessToken,
 } from './auth';
-import { MacroSettingsForm } from './macro-settings-form';
+import { HouseholdSettingsView } from './household-settings';
+import { RecipeLibrary } from './recipe-library';
 
 const localSession: SessionResponse = {
   household: {
@@ -138,6 +139,7 @@ async function initializeView(): Promise<ViewState> {
 
 export function MacroMapApp() {
   const [view, setView] = useState<ViewState>({ kind: 'loading' });
+  const [section, setSection] = useState<'recipes' | 'settings'>('recipes');
   const initialization = useRef<Promise<ViewState> | undefined>(undefined);
   const wakeAttempts = useRef(0);
 
@@ -329,52 +331,48 @@ export function MacroMapApp() {
           </span>
           <span>MacroMap</span>
         </div>
-        {view.config.mode === 'cognito' ? (
-          <button className="text-button" onClick={() => signOut(view.config)}>
-            Sign out
+        <nav className="app-navigation" aria-label="Main navigation">
+          <button
+            aria-current={section === 'recipes' ? 'page' : undefined}
+            onClick={() => setSection('recipes')}
+          >
+            Recipes
           </button>
-        ) : null}
-      </header>
-
-      <section className="dashboard" aria-labelledby="dashboard-title">
-        <div className="dashboard-intro">
-          <p className="eyebrow">Your household</p>
-          <h1 id="dashboard-title">Welcome home.</h1>
-          <p>
-            Set the daily targets MacroMap will use when it plans meals for the
-            two of you.
-          </p>
+          <button
+            aria-current={section === 'settings' ? 'page' : undefined}
+            onClick={() => setSection('settings')}
+          >
+            Settings
+          </button>
+        </nav>
+        <div className="header-actions">
+          {view.config.mode === 'cognito' ? (
+            <button
+              className="text-button"
+              onClick={() => signOut(view.config)}
+            >
+              Sign out
+            </button>
+          ) : null}
         </div>
-
-        <article className="household-card">
-          <div>
-            <p className="card-label">Planning for</p>
-            <h2>{view.session.household.displayName}</h2>
-          </div>
-          <div className="people-list">
-            {view.session.people.map((person, index) => (
-              <div className="person" key={person.id}>
-                <span className={`avatar avatar--${index + 1}`}>
-                  {person.displayName.slice(0, 1)}
-                </span>
-                <span>
-                  <strong>{person.displayName}</strong>
-                  <small>
-                    {person.macroTargets === null
-                      ? 'Targets needed'
-                      : 'Targets ready'}
-                  </small>
-                </span>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <MacroSettingsForm
+      </header>
+      {section === 'recipes' ? (
+        <RecipeLibrary
+          api={
+            'accessToken' in view
+              ? {
+                  accessToken: view.accessToken,
+                  baseUrl: view.config.apiBaseUrl,
+                }
+              : undefined
+          }
+        />
+      ) : (
+        <HouseholdSettingsView
           onSave={(settings) => saveSettings(view, settings)}
           session={view.session}
         />
-      </section>
+      )}
     </main>
   );
 }

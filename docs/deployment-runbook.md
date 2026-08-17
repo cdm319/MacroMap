@@ -22,6 +22,11 @@ The owner applied and verified
 August 2026. It added four nullable columns and validation constraints to
 `person` without transforming existing data. Do not reapply it to production.
 
+The owner applied and verified
+`packages/database/sql/updates/002-recipe-library.sql` in production on 17
+August 2026. It created four empty recipe tables and their supporting index
+without transforming existing data. Do not reapply it to production.
+
 The expected USD 2-6 monthly cost envelope is now live. The
 database-not-pausing failure case remains approximately USD 51 per month. Check
 current official prices and the PR's cost classification before merging. The

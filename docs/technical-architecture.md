@@ -78,7 +78,7 @@ apps/
 packages/
   domain/              Pure business rules and planner
   contracts/           API request/response schemas
-  database/            Drizzle schema, repositories, and initial schema SQL
+  database/            Drizzle schema, repositories, and reviewed SQL files
 infra/                  AWS CDK application and assertions
 docs/                   Product, architecture, cost, and delivery contracts
 ```
@@ -225,13 +225,15 @@ is stored as household planning configuration and defaults to `0.15`.
 
 ### Recipes
 
-- `recipe`: editable metadata, source, yield, photo, and planning eligibility.
-- `recipe_ingredient`: original text plus structured ingredient, amount, unit,
-  and preparation note.
+- `recipe`: editable title, description, yield, archive state, and optional
+  authoritative per-serving nutrition. Source, photo, and nutrition provenance
+  are added with the slices that need them.
+- `recipe_ingredient`: ordered structured ingredient, amount, unit, and
+  preparation note. Imported source text is added with recipe imports.
 - `recipe_step`: ordered cooking instructions.
 - `recipe_tag`: explicit meal types and editable inferred descriptors.
-- `recipe_nutrition`: per-recipe nutrition values, provenance, confidence, and
-  authoritative/estimated state.
+- estimated nutrition provenance and confidence are introduced with nutrition
+  estimation rather than modelled speculatively in the manual-entry slice.
 - `ingredient`: canonical identity used for nutrition matching and grocery
   consolidation.
 - `ingredient_nutrition_match`: the selected CoFID or USDA match and confidence.
@@ -340,6 +342,14 @@ Mutations that can reasonably conflict use optimistic concurrency or
 idempotency keys. Household settings are a whole-form, last-write-wins update
 for the single-login MVP. Error responses use a shared envelope with a stable
 machine-readable code and a safe human-readable message.
+
+Recipes use a client-generated UUID and a whole-document `PUT`, making creation
+and retries idempotent without another key mechanism. `GET /v1/recipes` uses an
+opaque cursor and returns active recipe summaries; the item endpoint reads,
+replaces, or soft-archives one recipe. Ingredient, instruction, tag, and recipe
+rows are saved in one transaction. Every query derives the household from the
+validated Cognito `sub`; an identifier owned by another household is reported
+as absent.
 
 ## Security and observability
 

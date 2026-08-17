@@ -19,8 +19,9 @@ Current progress:
 - Phase 1 is deployed in production. Database initialization, household login,
   private-session smoke testing, and Aurora pause/resume verification completed
   on 17 August 2026.
-- Phase 2 is in progress. Its first slice adds editable macro targets and the
-  household snack reserve.
+- Phase 2 is in progress. Macro targets and the household snack reserve are
+  live. The current slice adds the manual recipe library and cooking mode;
+  imports, nutrition estimation, and recipe photos remain later work.
 - Phases 3-6 have not started.
 
 ## Phase 0: Repository and contracts

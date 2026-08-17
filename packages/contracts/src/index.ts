@@ -77,6 +77,32 @@ export const householdSettingsSchema = z
 
 export const mealTypeSchema = z.enum(['breakfast', 'lunch', 'dinner']);
 
+export const recipePhotoContentTypeSchema = z.enum([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+]);
+
+export const maxRecipePhotoBytes = 5 * 1024 * 1024;
+
+export const recipePhotoUploadRequestSchema = z
+  .object({
+    contentType: recipePhotoContentTypeSchema,
+    sizeBytes: z.number().int().positive().max(maxRecipePhotoBytes),
+  })
+  .strict();
+
+export const recipePhotoUploadResponseSchema = z
+  .object({
+    uploadId: opaqueIdSchema,
+    uploadUrl: z.string().url(),
+  })
+  .strict();
+
+export const recipePhotoResponseSchema = z
+  .object({ photoUrl: z.string().url() })
+  .strict();
+
 export const recipeNutritionSchema = z
   .object({
     carbsGrams: z.number().nonnegative(),
@@ -128,6 +154,7 @@ export const recipeInputSchema = z
 export const recipeSchema = recipeInputSchema
   .extend({
     id: opaqueIdSchema,
+    photoUrl: z.string().url().nullable(),
     planningStatus: z.enum(['ready', 'needs-nutrition']),
     updatedAt: z.string().datetime(),
   })
@@ -137,6 +164,7 @@ export const recipeSummarySchema = recipeSchema.pick({
   id: true,
   mealTypes: true,
   nutrition: true,
+  photoUrl: true,
   planningStatus: true,
   servingCount: true,
   title: true,
@@ -161,6 +189,15 @@ export type RecipeIngredient = z.infer<typeof recipeIngredientSchema>;
 export type RecipeInput = z.infer<typeof recipeInputSchema>;
 export type RecipeListResponse = z.infer<typeof recipeListResponseSchema>;
 export type RecipeNutrition = z.infer<typeof recipeNutritionSchema>;
+export type RecipePhotoContentType = z.infer<
+  typeof recipePhotoContentTypeSchema
+>;
+export type RecipePhotoUploadRequest = z.infer<
+  typeof recipePhotoUploadRequestSchema
+>;
+export type RecipePhotoUploadResponse = z.infer<
+  typeof recipePhotoUploadResponseSchema
+>;
 export type RecipeSummary = z.infer<typeof recipeSummarySchema>;
 export type RuntimeConfig = z.infer<typeof runtimeConfigSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;

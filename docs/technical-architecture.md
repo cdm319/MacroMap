@@ -1,7 +1,7 @@
 # MacroMap technical architecture
 
-Status: Approved; Phase 1 deployed and verified
-Last reviewed: 2026-08-17
+Status: Approved; Phase 2 implemented
+Last reviewed: 2026-08-18
 
 ## Purpose and authority
 
@@ -40,12 +40,13 @@ flowchart LR
     Browser["Browser or mobile browser"] --> Web["CloudFront and private S3 web origin"]
     Browser --> Auth["Amazon Cognito managed login"]
     Browser --> API["API Gateway HTTP API"]
+    Browser -->|"short-lived signed URLs"| Media["Private S3 recipe media"]
     API --> ApiLambda["API Lambda"]
     Schedule["EventBridge Scheduler<br/>Friday 17:00 Europe/London"] --> PlannerLambda["Planning Lambda"]
     ApiLambda --> DataApi["Aurora Data API"]
     PlannerLambda --> DataApi
     DataApi --> Database["Aurora PostgreSQL Serverless v2"]
-    ApiLambda --> Media["Private S3 recipe media"]
+    ApiLambda --> Media
     ApiLambda --> OpenAI["OpenAI Responses API"]
     ApiLambda --> Nutrition["CoFID data and USDA fallback"]
 ```
@@ -171,22 +172,26 @@ Production now contains real data. Schema changes use reviewed, forward-only
 SQL files under `packages/database/sql/updates`. The human owner applies each
 file manually before the code that depends on it is merged. A data migration is
 needed only when existing records must be transformed; Phase 2's nullable macro
-columns do not require one. No schema runner is included until repeated changes
-demonstrate a need for it.
+and photo-marker columns do not require one. No schema runner is included until
+repeated changes demonstrate a need for it.
 
 ### Object storage
 
 Recipe photos are stored in a separate private S3 bucket. The API issues
-short-lived signed upload and download operations after authorisation. Imports
-retain source attribution; copied images are never assumed to be the source of
-recipe truth. A neutral bundled placeholder is used when a recipe has no photo.
+five-minute signed upload and download operations after authorisation. Uploads
+are staged until the API verifies a maximum size of 5 MiB and a JPEG, PNG, or
+WebP file signature. Valid photos replace the recipe's single object; abandoned
+staging objects expire after one day. Imports retain source attribution; copied
+images are never assumed to be the source of recipe truth. A neutral bundled
+placeholder is used when a recipe has no photo.
 
 Server-side URL and image fetching accepts only HTTP(S), applies strict time and
 byte limits, validates content type, and sends no user cookies or credentials.
 It resolves and revalidates every redirect target and rejects loopback, private,
 link-local, metadata-service, and other non-public addresses. Uploaded images
-are size-limited and checked by file signature rather than trusting the supplied
-extension or content type.
+are checked by file signature rather than trusting the supplied extension or
+content type. The bucket blocks public access, uses S3-managed encryption, has
+no replication or versioning, and is retained during an ordinary rollback.
 
 ### Scheduling
 
@@ -225,9 +230,10 @@ is stored as household planning configuration and defaults to `0.15`.
 
 ### Recipes
 
-- `recipe`: editable title, description, yield, archive state, and optional
-  authoritative per-serving nutrition. Source, photo, and nutrition provenance
-  are added with the slices that need them.
+- `recipe`: editable title, description, yield, archive state, optional
+  authoritative per-serving nutrition, and a nullable marker for its private
+  photo. Source and nutrition provenance are added with the slices that need
+  them.
 - `recipe_ingredient`: ordered structured ingredient, amount, unit, and
   preparation note. Imported source text is added with recipe imports.
 - `recipe_step`: ordered cooking instructions.

@@ -1,7 +1,7 @@
 # MacroMap MVP delivery plan
 
-Status: Approved implementation sequence; Phase 2 in progress
-Last reviewed: 2026-08-17
+Status: Approved implementation sequence; Phase 2 complete
+Last reviewed: 2026-08-18
 
 ## Delivery principles
 
@@ -19,9 +19,9 @@ Current progress:
 - Phase 1 is deployed in production. Database initialization, household login,
   private-session smoke testing, and Aurora pause/resume verification completed
   on 17 August 2026.
-- Phase 2 is in progress. Macro targets and the household snack reserve are
-  live. The current slice adds the manual recipe library and cooking mode;
-  imports, nutrition estimation, and recipe photos remain later work.
+- Phase 2 is complete. Macro targets, snack reserve settings, the manual recipe
+  library, private photos, and cooking mode are implemented. Imports and
+  nutrition estimation remain Phase 3 work.
 - Phases 3-6 have not started.
 
 ## Phase 0: Repository and contracts

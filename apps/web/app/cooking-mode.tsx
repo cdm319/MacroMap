@@ -2,6 +2,7 @@
 
 import type { Recipe } from '@macromap/contracts';
 import { useEffect, useState } from 'react';
+import { RecipePhoto } from './recipe-photo';
 
 interface CookingModeProps {
   readonly onExit: () => void;
@@ -54,10 +55,12 @@ export function CookingMode({ onExit, recipe }: CookingModeProps) {
         </button>
       </header>
 
-      <div className="cooking-photo-placeholder" aria-label="No recipe photo">
-        <span aria-hidden="true">M</span>
-        <p>No photo for this recipe</p>
-      </div>
+      <RecipePhoto
+        alt={recipe.title}
+        className="cooking-photo"
+        photoUrl={recipe.photoUrl}
+        placeholderText="No photo for this recipe"
+      />
 
       <div className="cooking-controls">
         <label className="form-field">

@@ -1,6 +1,6 @@
 # Dependency policy
 
-Status: Phase 1 baseline
+Status: Phase 2 baseline
 
 ## Runtime and package manager
 
@@ -19,6 +19,7 @@ The Phase 1 baseline is deliberately small:
 - Zod for external and shared contract validation;
 - Drizzle ORM and `pg` for the schema, local PostgreSQL adapter, and tests;
 - the AWS RDS Data API client for the production repository;
+- the AWS S3 client and request presigner for private recipe photos;
 - AWS Lambda TypeScript definitions for handler boundaries;
 - AWS CDK and Constructs for production infrastructure and assertions;
 - TypeScript, ESLint, and Prettier for static quality checks;
@@ -30,6 +31,10 @@ Aurora Data API and must not add a persistent Lambda connection pool. The
 explicit, reviewed initial schema SQL was applied once and now remains a local
 integration-test fixture and historical schema record. No schema-management
 dependency is approved.
+
+The S3 client and presigner are official modular AWS SDK packages. They are
+bundled only into the API Lambda and replace substantially more error-prone
+custom Signature Version 4 code; they add no provider or standing charge.
 
 No UI framework, state manager, HTTP client, date library, decimal library,
 planner solver, analytics SDK, monitoring agent, or paid-service SDK is approved

@@ -1,7 +1,7 @@
 # MacroMap cost model and guardrails
 
 Status: Approved and deployed for MVP
-Prices checked: 2026-08-15
+Prices checked: 2026-08-18
 AWS region: `eu-west-2` unless stated otherwise
 
 Phase 1 was deployed on 17 August 2026. Both stacks completed successfully, the
@@ -36,6 +36,7 @@ is about USD 0.07 per active hour.
 | One Secrets Manager database secret                          |                              $0.40 |
 | 1 GB Aurora storage                                          |                              $0.10 |
 | Route 53 hosted zone                                         | $0 additional; reuse existing zone |
+| Up to 1,000 maximum-size recipe photos in S3                 |                        About $0.12 |
 | Static web, API, auth, scheduler, and logs at personal usage |           Expected $0 to low cents |
 
 The expected MVP total is roughly USD 2-6 per month, excluding the existing
@@ -52,6 +53,22 @@ Reference pricing:
 - [Cognito pricing](https://aws.amazon.com/cognito/pricing/)
 - [EventBridge pricing](https://aws.amazon.com/eventbridge/pricing/)
 - [Route 53 pricing](https://aws.amazon.com/route53/pricing/)
+- [S3 pricing](https://aws.amazon.com/s3/pricing/)
+
+### Recipe photo storage
+
+The owner approved one private S3 Standard bucket on 18 August 2026 as an
+`increase/uncertain` change. Each recipe has at most one current photo, each
+photo is limited to 5 MiB, unfinished uploads expire after one day, and the cost
+model assumes no more than 1,000 stored photos. That ceiling is about 4.9 GiB,
+or approximately USD 0.12 per month at a conservative USD 0.025 per GiB-month.
+Normal request charges are expected to remain below one cent.
+
+Inbound transfer is free and AWS currently includes the first 100 GB per month
+of internet transfer out across AWS services. That allowance is account-wide,
+so it is not treated as a guarantee. If it is already exhausted, 10,000 views
+of maximum-size photos would transfer about 49 GB and are conservatively sized
+at roughly USD 5. The existing USD 8 and USD 15 budgets remain the guardrail.
 
 ## AI budget
 
@@ -96,6 +113,7 @@ Reference: [official OpenAI model documentation](https://developers.openai.com/a
 | Cloud environments                  | Local and one production environment only         |
 | Network                             | No NAT Gateway, load balancer, or RDS Proxy       |
 | DNS                                 | Reuse the existing `chrismatthews.me` hosted zone |
+| Recipe photos                       | One private bucket; 5 MiB per photo               |
 | Paid external services              | OpenAI only                                       |
 
 The scheduler and planner concurrency entries are maximums reserved for Phase

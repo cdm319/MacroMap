@@ -131,6 +131,25 @@ export class MacroMapStack extends Stack {
       retention: logs.RetentionDays.TWO_WEEKS,
       removalPolicy: RemovalPolicy.DESTROY,
     });
+    const recipePhotoBucket = new s3.Bucket(this, 'RecipePhotoBucket', {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      cors: [
+        {
+          allowedHeaders: ['content-type'],
+          allowedMethods: [s3.HttpMethods.PUT],
+          allowedOrigins: [`https://${APPLICATION_DOMAIN}`],
+        },
+      ],
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      lifecycleRules: [
+        {
+          expiration: Duration.days(1),
+          prefix: 'uploads/',
+        },
+      ],
+      removalPolicy: RemovalPolicy.RETAIN,
+    });
     const sessionFunction = new lambdaNodejs.NodejsFunction(
       this,
       'SessionFunction',
@@ -146,6 +165,7 @@ export class MacroMapStack extends Stack {
           DATABASE_NAME,
           DATABASE_RESOURCE_ARN: database.clusterArn,
           DATABASE_SECRET_ARN: database.secret!.secretArn,
+          RECIPE_PHOTO_BUCKET_NAME: recipePhotoBucket.bucketName,
         },
         handler: 'handler',
         logGroup: apiLogGroup,
@@ -157,6 +177,7 @@ export class MacroMapStack extends Stack {
       },
     );
     database.grantDataApiAccess(sessionFunction);
+    recipePhotoBucket.grantReadWrite(sessionFunction);
 
     const api = new HttpApi(this, 'Api', {
       corsPreflight: {
@@ -164,6 +185,7 @@ export class MacroMapStack extends Stack {
         allowMethods: [
           CorsHttpMethod.DELETE,
           CorsHttpMethod.GET,
+          CorsHttpMethod.POST,
           CorsHttpMethod.PUT,
         ],
         allowOrigins: [`https://${APPLICATION_DOMAIN}`],
@@ -210,6 +232,24 @@ export class MacroMapStack extends Stack {
       ),
       methods: [HttpMethod.DELETE, HttpMethod.GET, HttpMethod.PUT],
       path: '/v1/recipes/{recipeId}',
+    });
+    api.addRoutes({
+      authorizer,
+      integration: new HttpLambdaIntegration(
+        'RecipePhotoIntegration',
+        sessionFunction,
+      ),
+      methods: [HttpMethod.DELETE, HttpMethod.POST],
+      path: '/v1/recipes/{recipeId}/photos',
+    });
+    api.addRoutes({
+      authorizer,
+      integration: new HttpLambdaIntegration(
+        'RecipePhotoUploadIntegration',
+        sessionFunction,
+      ),
+      methods: [HttpMethod.PUT],
+      path: '/v1/recipes/{recipeId}/photos/{uploadId}',
     });
     new HttpStage(this, 'DefaultStage', {
       autoDeploy: true,

@@ -3,6 +3,7 @@ import {
   apiErrorSchema,
   householdSettingsSchema,
   recipeInputSchema,
+  recipePhotoUploadRequestSchema,
   recipeSchema,
   runtimeConfigSchema,
   sessionResponseSchema,
@@ -137,10 +138,32 @@ describe('shared API contracts', () => {
       recipeSchema.parse({
         ...input,
         id: '00000000-0000-4000-8000-000000000201',
+        photoUrl: null,
         planningStatus: 'needs-nutrition',
         updatedAt: '2026-08-17T12:00:00.000Z',
       }),
     ).toMatchObject({ title: 'Tomato pasta' });
+  });
+
+  it('accepts only bounded supported recipe photos', () => {
+    expect(
+      recipePhotoUploadRequestSchema.parse({
+        contentType: 'image/webp',
+        sizeBytes: 5 * 1024 * 1024,
+      }),
+    ).toEqual({ contentType: 'image/webp', sizeBytes: 5 * 1024 * 1024 });
+    expect(() =>
+      recipePhotoUploadRequestSchema.parse({
+        contentType: 'image/gif',
+        sizeBytes: 1_024,
+      }),
+    ).toThrow();
+    expect(() =>
+      recipePhotoUploadRequestSchema.parse({
+        contentType: 'image/jpeg',
+        sizeBytes: 5 * 1024 * 1024 + 1,
+      }),
+    ).toThrow();
   });
 
   it('rejects a recipe without usable portions or ingredients', () => {

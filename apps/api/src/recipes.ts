@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type {
   APIGatewayProxyEventV2WithJWTAuthorizer,
   APIGatewayProxyStructuredResultV2,
@@ -6,23 +7,33 @@ import {
   opaqueIdSchema,
   recipeInputSchema,
   recipeListResponseSchema,
+  recipePhotoResponseSchema,
+  recipePhotoUploadRequestSchema,
+  recipePhotoUploadResponseSchema,
   recipeSchema,
 } from '@macromap/contracts';
 import {
   RecipeNotFoundError,
   type RecipePageCursor,
   type RecipeRepository,
+  type StoredRecipe,
+  type StoredRecipeSummary,
 } from '@macromap/database';
 import { errorResponse, jsonResponse } from './http.js';
+import {
+  InvalidRecipePhotoError,
+  type RecipePhotoStore,
+} from './recipe-photo-store.js';
 
 export async function handleRecipeRequest(
   repository: RecipeRepository,
+  photos: RecipePhotoStore,
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
   subject: string,
   requestId: string,
 ): Promise<APIGatewayProxyStructuredResultV2> {
   if (event.routeKey === 'GET /v1/recipes') {
-    return listRecipes(repository, event, subject, requestId);
+    return listRecipes(repository, photos, event, subject, requestId);
   }
 
   const recipeId = opaqueIdSchema.safeParse(event.pathParameters?.recipeId);
@@ -36,13 +47,43 @@ export async function handleRecipeRequest(
   }
 
   if (event.routeKey === 'GET /v1/recipes/{recipeId}') {
-    return findRecipe(repository, subject, recipeId.data, requestId);
+    return findRecipe(repository, photos, subject, recipeId.data, requestId);
   }
   if (event.routeKey === 'PUT /v1/recipes/{recipeId}') {
-    return saveRecipe(repository, event, subject, recipeId.data, requestId);
+    return saveRecipe(
+      repository,
+      photos,
+      event,
+      subject,
+      recipeId.data,
+      requestId,
+    );
   }
   if (event.routeKey === 'DELETE /v1/recipes/{recipeId}') {
     return archiveRecipe(repository, subject, recipeId.data, requestId);
+  }
+  if (event.routeKey === 'POST /v1/recipes/{recipeId}/photos') {
+    return createPhotoUpload(
+      repository,
+      photos,
+      event,
+      subject,
+      recipeId.data,
+      requestId,
+    );
+  }
+  if (event.routeKey === 'PUT /v1/recipes/{recipeId}/photos/{uploadId}') {
+    return completePhotoUpload(
+      repository,
+      photos,
+      event,
+      subject,
+      recipeId.data,
+      requestId,
+    );
+  }
+  if (event.routeKey === 'DELETE /v1/recipes/{recipeId}/photos') {
+    return deletePhoto(repository, photos, subject, recipeId.data, requestId);
   }
 
   return errorResponse(404, 'NOT_FOUND', 'Endpoint not found.', requestId);
@@ -50,6 +91,7 @@ export async function handleRecipeRequest(
 
 async function listRecipes(
   repository: RecipeRepository,
+  photos: RecipePhotoStore,
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
   subject: string,
   requestId: string,
@@ -70,7 +112,9 @@ async function listRecipes(
     const page = await repository.list(subject, cursor);
     if (page === undefined) return accountNotBootstrapped(requestId);
     const response = recipeListResponseSchema.safeParse({
-      items: page.items,
+      items: await Promise.all(
+        page.items.map((recipe) => presentSummary(recipe, photos)),
+      ),
       nextCursor:
         page.nextCursor === null ? null : encodeCursor(page.nextCursor),
     });
@@ -85,6 +129,7 @@ async function listRecipes(
 
 async function findRecipe(
   repository: RecipeRepository,
+  photos: RecipePhotoStore,
   subject: string,
   recipeId: string,
   requestId: string,
@@ -92,7 +137,9 @@ async function findRecipe(
   try {
     const recipe = await repository.find(subject, recipeId);
     if (recipe === undefined) return recipeNotFound(requestId);
-    const response = recipeSchema.safeParse(recipe);
+    const response = recipeSchema.safeParse(
+      await presentRecipe(recipe, photos),
+    );
     if (response.success) return jsonResponse(200, response.data);
   } catch (error) {
     return databaseError(error, 'recipe_load_failed', requestId);
@@ -106,6 +153,7 @@ async function findRecipe(
 
 async function saveRecipe(
   repository: RecipeRepository,
+  photos: RecipePhotoStore,
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
   subject: string,
   recipeId: string,
@@ -123,7 +171,9 @@ async function saveRecipe(
   try {
     const recipe = await repository.save(subject, recipeId, input.data);
     if (recipe === undefined) return accountNotBootstrapped(requestId);
-    const response = recipeSchema.safeParse(recipe);
+    const response = recipeSchema.safeParse(
+      await presentRecipe(recipe, photos),
+    );
     if (response.success) return jsonResponse(200, response.data);
   } catch (error) {
     if (error instanceof RecipeNotFoundError) return recipeNotFound(requestId);
@@ -134,6 +184,95 @@ async function saveRecipe(
     JSON.stringify({ event: 'invalid_saved_recipe', recipeId, requestId }),
   );
   return internalError(requestId);
+}
+
+async function createPhotoUpload(
+  repository: RecipeRepository,
+  photos: RecipePhotoStore,
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+  subject: string,
+  recipeId: string,
+  requestId: string,
+): Promise<APIGatewayProxyStructuredResultV2> {
+  const input = recipePhotoUploadRequestSchema.safeParse(readJson(event));
+  if (!input.success) return invalidPhoto(requestId);
+
+  try {
+    if ((await repository.find(subject, recipeId)) === undefined) {
+      return recipeNotFound(requestId);
+    }
+    const uploadId = randomUUID();
+    const response = recipePhotoUploadResponseSchema.parse({
+      uploadId,
+      uploadUrl: await photos.createUpload(
+        recipeId,
+        uploadId,
+        input.data.contentType,
+      ),
+    });
+    return jsonResponse(201, response);
+  } catch (error) {
+    return photoStorageError(
+      error,
+      'recipe_photo_upload_create_failed',
+      requestId,
+    );
+  }
+}
+
+async function completePhotoUpload(
+  repository: RecipeRepository,
+  photos: RecipePhotoStore,
+  event: APIGatewayProxyEventV2WithJWTAuthorizer,
+  subject: string,
+  recipeId: string,
+  requestId: string,
+): Promise<APIGatewayProxyStructuredResultV2> {
+  const uploadId = opaqueIdSchema.safeParse(event.pathParameters?.uploadId);
+  if (!uploadId.success) return invalidPhoto(requestId);
+
+  try {
+    if ((await repository.find(subject, recipeId)) === undefined) {
+      return recipeNotFound(requestId);
+    }
+    await photos.completeUpload(recipeId, uploadId.data);
+    if (!(await repository.setPhoto(subject, recipeId, new Date()))) {
+      return recipeNotFound(requestId);
+    }
+    return jsonResponse(
+      200,
+      recipePhotoResponseSchema.parse({
+        photoUrl: await photos.viewUrl(recipeId),
+      }),
+    );
+  } catch (error) {
+    return photoStorageError(
+      error,
+      'recipe_photo_upload_complete_failed',
+      requestId,
+    );
+  }
+}
+
+async function deletePhoto(
+  repository: RecipeRepository,
+  photos: RecipePhotoStore,
+  subject: string,
+  recipeId: string,
+  requestId: string,
+): Promise<APIGatewayProxyStructuredResultV2> {
+  try {
+    if ((await repository.find(subject, recipeId)) === undefined) {
+      return recipeNotFound(requestId);
+    }
+    await photos.delete(recipeId);
+    if (!(await repository.setPhoto(subject, recipeId, null))) {
+      return recipeNotFound(requestId);
+    }
+    return { statusCode: 204 };
+  } catch (error) {
+    return photoStorageError(error, 'recipe_photo_delete_failed', requestId);
+  }
 }
 
 async function archiveRecipe(
@@ -174,11 +313,47 @@ function encodeCursor(cursor: RecipePageCursor): string {
   ).toString('base64url');
 }
 
+async function presentRecipe(recipe: StoredRecipe, photos: RecipePhotoStore) {
+  const { photoUpdatedAt, ...stored } = recipe;
+  return {
+    ...stored,
+    photoUrl: photoUpdatedAt === null ? null : await photos.viewUrl(recipe.id),
+  };
+}
+
+async function presentSummary(
+  recipe: StoredRecipeSummary,
+  photos: RecipePhotoStore,
+) {
+  const { photoUpdatedAt, ...stored } = recipe;
+  return {
+    ...stored,
+    photoUrl: photoUpdatedAt === null ? null : await photos.viewUrl(recipe.id),
+  };
+}
+
+function readJson(event: APIGatewayProxyEventV2WithJWTAuthorizer): unknown {
+  try {
+    return JSON.parse(event.body ?? '');
+  } catch {
+    return undefined;
+  }
+}
+
 function invalidRecipe(requestId: string): APIGatewayProxyStructuredResultV2 {
   return errorResponse(
     400,
     'VALIDATION_FAILED',
     'Enter a complete recipe with usable servings, ingredients, and instructions.',
+    requestId,
+  );
+}
+
+function invalidPhoto(requestId: string): APIGatewayProxyStructuredResultV2 {
+  return errorResponse(
+    400,
+    'INVALID_RECIPE_PHOTO',
+    'Choose a JPEG, PNG, or WebP image no larger than 5 MB.',
     requestId,
   );
 }
@@ -223,6 +398,29 @@ function databaseError(
     503,
     'DATABASE_WAKING',
     'MacroMap is waking its database. Please try again shortly.',
+    requestId,
+  );
+}
+
+function photoStorageError(
+  error: unknown,
+  event: string,
+  requestId: string,
+): APIGatewayProxyStructuredResultV2 {
+  if (error instanceof InvalidRecipePhotoError) {
+    return errorResponse(422, 'INVALID_RECIPE_PHOTO', error.message, requestId);
+  }
+  console.error(
+    JSON.stringify({
+      errorName: error instanceof Error ? error.name : 'UnknownError',
+      event,
+      requestId,
+    }),
+  );
+  return errorResponse(
+    503,
+    'PHOTO_STORAGE_UNAVAILABLE',
+    'Recipe photo storage is temporarily unavailable. Please try again.',
     requestId,
   );
 }

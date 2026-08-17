@@ -5,12 +5,16 @@ import { useEffect, useState } from 'react';
 import { CookingMode } from './cooking-mode';
 import {
   archiveRecipe,
+  deleteRecipePhoto,
   getRecipe,
   listRecipes,
   saveRecipe,
+  uploadRecipePhoto,
+  validateRecipePhoto,
   type RecipeApiConfig,
 } from './recipe-api';
 import { RecipeForm } from './recipe-form';
+import { RecipePhoto } from './recipe-photo';
 
 interface RecipeLibraryProps {
   readonly api: RecipeApiConfig | undefined;
@@ -116,6 +120,41 @@ export function RecipeLibrary({ api }: RecipeLibraryProps) {
     }
   }
 
+  function showUpdatedRecipe(recipe: Recipe): void {
+    setLocalRecipes((current) => [
+      recipe,
+      ...current.filter(({ id }) => id !== recipe.id),
+    ]);
+    setRecipes((current) => [
+      summaryFrom(recipe),
+      ...current.filter(({ id }) => id !== recipe.id),
+    ]);
+    setView({ kind: 'view', recipe });
+  }
+
+  async function uploadPhoto(recipe: Recipe, file: File): Promise<void> {
+    validateRecipePhoto(file);
+    const photoUrl =
+      api === undefined
+        ? URL.createObjectURL(file)
+        : await uploadRecipePhoto(api, recipe.id, file);
+    if (api === undefined && recipe.photoUrl?.startsWith('blob:') === true) {
+      URL.revokeObjectURL(recipe.photoUrl);
+    }
+    showUpdatedRecipe({ ...recipe, photoUrl });
+  }
+
+  async function removePhoto(recipe: Recipe): Promise<void> {
+    if (api === undefined) {
+      if (recipe.photoUrl?.startsWith('blob:') === true) {
+        URL.revokeObjectURL(recipe.photoUrl);
+      }
+    } else {
+      await deleteRecipePhoto(api, recipe.id);
+    }
+    showUpdatedRecipe({ ...recipe, photoUrl: null });
+  }
+
   if (view.kind === 'new') {
     return (
       <RecipeForm
@@ -148,6 +187,8 @@ export function RecipeLibrary({ api }: RecipeLibraryProps) {
         onBack={() => setView({ kind: 'list' })}
         onCook={() => setView({ kind: 'cook', recipe: view.recipe })}
         onEdit={() => setView({ kind: 'edit', recipe: view.recipe })}
+        onPhotoRemove={() => removePhoto(view.recipe)}
+        onPhotoUpload={(file) => uploadPhoto(view.recipe, file)}
         recipe={view.recipe}
       />
     );
@@ -189,9 +230,11 @@ export function RecipeLibrary({ api }: RecipeLibraryProps) {
               key={recipe.id}
               onClick={() => openRecipe(recipe)}
             >
-              <div className="recipe-card-photo" aria-hidden="true">
-                M
-              </div>
+              <RecipePhoto
+                alt=""
+                className="recipe-card-photo"
+                photoUrl={recipe.photoUrl}
+              />
               <div>
                 <p className="recipe-tags">
                   {recipe.mealTypes.map(capitalize).join(' · ')}
@@ -228,20 +271,52 @@ function RecipeDetail({
   onBack,
   onCook,
   onEdit,
+  onPhotoRemove,
+  onPhotoUpload,
   recipe,
 }: {
   readonly onArchive: () => void;
   readonly onBack: () => void;
   readonly onCook: () => void;
   readonly onEdit: () => void;
+  readonly onPhotoRemove: () => Promise<void>;
+  readonly onPhotoUpload: (file: File) => Promise<void>;
   readonly recipe: Recipe;
 }) {
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoMessage, setPhotoMessage] = useState<string>();
   const tags = [
     ...recipe.mealTypes.map(capitalize),
     ...recipe.tags.cuisines,
     ...recipe.tags.proteins,
     ...recipe.tags.flavours,
   ];
+
+  async function choosePhoto(file: File | undefined): Promise<void> {
+    if (file === undefined) return;
+    setPhotoBusy(true);
+    setPhotoMessage(undefined);
+    try {
+      await onPhotoUpload(file);
+    } catch (error) {
+      setPhotoMessage(messageFrom(error));
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  async function removePhoto(): Promise<void> {
+    setPhotoBusy(true);
+    setPhotoMessage(undefined);
+    try {
+      await onPhotoRemove();
+    } catch (error) {
+      setPhotoMessage(messageFrom(error));
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
   return (
     <article className="recipe-detail">
       <button className="text-button back-button" onClick={onBack}>
@@ -262,6 +337,47 @@ function RecipeDetail({
           </button>
         </div>
       </div>
+
+      <section className="recipe-photo-section">
+        <RecipePhoto
+          alt={recipe.title}
+          className="recipe-detail-photo"
+          photoUrl={recipe.photoUrl}
+          placeholderText="No photo for this recipe"
+        />
+        <div className="recipe-photo-actions">
+          <label className="secondary-button photo-upload-button">
+            <input
+              accept="image/jpeg,image/png,image/webp"
+              disabled={photoBusy}
+              onChange={(event) => {
+                void choosePhoto(event.target.files?.[0]);
+                event.target.value = '';
+              }}
+              type="file"
+            />
+            {photoBusy
+              ? 'Uploading…'
+              : recipe.photoUrl === null
+                ? 'Add photo'
+                : 'Replace photo'}
+          </label>
+          {recipe.photoUrl === null ? null : (
+            <button
+              className="text-button"
+              disabled={photoBusy}
+              onClick={() => void removePhoto()}
+            >
+              Remove photo
+            </button>
+          )}
+        </div>
+        {photoMessage === undefined ? null : (
+          <p className="notice" role="alert">
+            {photoMessage}
+          </p>
+        )}
+      </section>
 
       <div className="recipe-detail-grid">
         <section className="detail-card">
@@ -339,6 +455,7 @@ function localRecipe(id: string, input: RecipeInput): Recipe {
   return {
     ...input,
     id,
+    photoUrl: null,
     planningStatus: input.nutrition === null ? 'needs-nutrition' : 'ready',
     updatedAt: new Date().toISOString(),
   };
@@ -349,6 +466,7 @@ function summaryFrom(recipe: Recipe): RecipeSummary {
     id,
     mealTypes,
     nutrition,
+    photoUrl,
     planningStatus,
     servingCount,
     title,
@@ -358,6 +476,7 @@ function summaryFrom(recipe: Recipe): RecipeSummary {
     id,
     mealTypes,
     nutrition,
+    photoUrl,
     planningStatus,
     servingCount,
     title,

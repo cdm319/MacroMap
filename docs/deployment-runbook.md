@@ -1,7 +1,7 @@
 # MacroMap production deployment runbook
 
-Status: Phase 1 live in production
-Last reviewed: 2026-08-17
+Status: Phase 1 live; Phase 2 photo release pending
+Last reviewed: 2026-08-18
 
 ## Boundaries
 
@@ -26,6 +26,13 @@ The owner applied and verified
 `packages/database/sql/updates/002-recipe-library.sql` in production on 17
 August 2026. It created four empty recipe tables and their supporting index
 without transforming existing data. Do not reapply it to production.
+
+The recipe-photo release requires the additive
+`packages/database/sql/updates/003-recipe-photos.sql` file. It adds one nullable
+timestamp to `recipe` and does not transform existing data. The owner must apply
+and verify it before merging the code that reads that column. Do not reapply it
+after it has succeeded; record the completion date here in the same pull
+request.
 
 The expected USD 2-6 monthly cost envelope is now live. The
 database-not-pausing failure case remains approximately USD 51 per month. Check

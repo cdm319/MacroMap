@@ -74,6 +74,9 @@ describe('approved infrastructure foundation', () => {
       'GET /v1/recipes/{recipeId}',
       'PUT /v1/recipes/{recipeId}',
       'DELETE /v1/recipes/{recipeId}',
+      'POST /v1/recipes/{recipeId}/photos',
+      'PUT /v1/recipes/{recipeId}/photos/{uploadId}',
+      'DELETE /v1/recipes/{recipeId}/photos',
     ]) {
       template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
         AuthorizationType: 'JWT',
@@ -92,6 +95,33 @@ describe('approved infrastructure foundation', () => {
     template.hasResourceProperties('AWS::Cognito::UserPoolClient', {
       AllowedOAuthFlows: ['code'],
       GenerateSecret: false,
+    });
+  });
+
+  it('stores recipe photos privately and removes abandoned uploads', () => {
+    template.hasResourceProperties('AWS::S3::Bucket', {
+      BucketEncryption: {
+        ServerSideEncryptionConfiguration: [
+          {
+            ServerSideEncryptionByDefault: { SSEAlgorithm: 'AES256' },
+          },
+        ],
+      },
+      LifecycleConfiguration: {
+        Rules: [
+          {
+            ExpirationInDays: 1,
+            Prefix: 'uploads/',
+            Status: 'Enabled',
+          },
+        ],
+      },
+      PublicAccessBlockConfiguration: {
+        BlockPublicAcls: true,
+        BlockPublicPolicy: true,
+        IgnorePublicAcls: true,
+        RestrictPublicBuckets: true,
+      },
     });
   });
 

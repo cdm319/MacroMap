@@ -17,6 +17,10 @@ import {
   type RecipeRepository,
 } from '@macromap/database';
 import { errorResponse, jsonResponse } from './http.js';
+import {
+  createS3RecipePhotoStore,
+  type RecipePhotoStore,
+} from './recipe-photo-store.js';
 import { handleRecipeRequest } from './recipes.js';
 
 function sessionResponse(
@@ -137,28 +141,32 @@ function requireEnvironment(name: string): string {
   return value;
 }
 
-export interface ApplicationRepositories {
+export interface ApplicationDependencies {
   readonly households: HouseholdRepository;
+  readonly photos: RecipePhotoStore;
   readonly recipes: RecipeRepository;
 }
 
-let repositories: ApplicationRepositories | undefined;
+let dependencies: ApplicationDependencies | undefined;
 
-function getRepositories(): ApplicationRepositories {
+function getDependencies(): ApplicationDependencies {
   const config = {
     databaseName: requireEnvironment('DATABASE_NAME'),
     resourceArn: requireEnvironment('DATABASE_RESOURCE_ARN'),
     secretArn: requireEnvironment('DATABASE_SECRET_ARN'),
   };
-  repositories ??= {
+  dependencies ??= {
     households: createDataApiHouseholdRepository(config),
+    photos: createS3RecipePhotoStore(
+      requireEnvironment('RECIPE_PHOTO_BUCKET_NAME'),
+    ),
     recipes: createDataApiRecipeRepository(config),
   };
-  return repositories;
+  return dependencies;
 }
 
 export async function handleRequest(
-  repositories: ApplicationRepositories,
+  dependencies: ApplicationDependencies,
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
 ): Promise<APIGatewayProxyStructuredResultV2> {
   const requestId = event.requestContext.requestId;
@@ -173,13 +181,19 @@ export async function handleRequest(
   }
 
   if (event.routeKey === 'GET /v1/session') {
-    return loadSession(repositories.households, subject, requestId);
+    return loadSession(dependencies.households, subject, requestId);
   }
   if (event.routeKey === 'PUT /v1/household-settings') {
-    return updateSettings(repositories.households, event, subject, requestId);
+    return updateSettings(dependencies.households, event, subject, requestId);
   }
   if (event.routeKey.includes('/v1/recipes')) {
-    return handleRecipeRequest(repositories.recipes, event, subject, requestId);
+    return handleRecipeRequest(
+      dependencies.recipes,
+      dependencies.photos,
+      event,
+      subject,
+      requestId,
+    );
   }
   return errorResponse(404, 'NOT_FOUND', 'Endpoint not found.', requestId);
 }
@@ -187,5 +201,5 @@ export async function handleRequest(
 export async function handler(
   event: APIGatewayProxyEventV2WithJWTAuthorizer,
 ): Promise<APIGatewayProxyStructuredResultV2> {
-  return handleRequest(getRepositories(), event);
+  return handleRequest(getDependencies(), event);
 }

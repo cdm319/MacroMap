@@ -107,6 +107,7 @@ export const recipes = pgTable(
       precision: 9,
       scale: 2,
     }),
+    photoUpdatedAt: timestamp('photo_updated_at', { withTimezone: true }),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
     ...timestamps,
   },

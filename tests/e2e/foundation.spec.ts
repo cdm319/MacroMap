@@ -106,10 +106,21 @@ test('creates, cooks, edits, and archives a manual recipe', async ({
   ).toBeVisible();
   await expect(page.getByText('Nutrition needed')).toBeVisible();
 
+  await page.getByLabel('Add photo').setInputFiles({
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      'base64',
+    ),
+    mimeType: 'image/png',
+    name: 'tomato-pasta.png',
+  });
+  await expect(page.getByRole('img', { name: 'Tomato pasta' })).toBeVisible();
+
   await page.getByRole('button', { name: 'Start cooking' }).click();
   await page.getByLabel('Cook this many servings').fill('4');
   await expect(page.getByText(/400 g Pasta/u)).toBeVisible();
   await expect(page.getByText('Boil the pasta until tender.')).toBeVisible();
+  await expect(page.getByRole('img', { name: 'Tomato pasta' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Exit cooking mode' }).click();
   await page.getByRole('button', { name: 'Edit' }).click();

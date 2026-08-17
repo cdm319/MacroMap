@@ -5,7 +5,11 @@ import {
   type RecipeRepository,
 } from '@macromap/database';
 import { describe, expect, it, vi } from 'vitest';
-import { handleRequest, type ApplicationRepositories } from './handler.js';
+import { handleRequest, type ApplicationDependencies } from './handler.js';
+import {
+  InvalidRecipePhotoError,
+  type RecipePhotoStore,
+} from './recipe-photo-store.js';
 
 const session = {
   household: {
@@ -37,18 +41,29 @@ const session = {
 function createRepository(
   overrides: Partial<HouseholdRepository> = {},
   recipeOverrides: Partial<RecipeRepository> = {},
-): ApplicationRepositories {
+  photoOverrides: Partial<RecipePhotoStore> = {},
+): ApplicationDependencies {
   return {
     households: {
       findBySubject: vi.fn().mockResolvedValue(session),
       updateSettings: vi.fn().mockResolvedValue(session),
       ...overrides,
     },
+    photos: {
+      completeUpload: vi.fn(),
+      createUpload: vi
+        .fn()
+        .mockResolvedValue('https://photos.example.test/upload'),
+      delete: vi.fn(),
+      viewUrl: vi.fn().mockResolvedValue('https://photos.example.test/recipe'),
+      ...photoOverrides,
+    },
     recipes: {
       archive: vi.fn().mockResolvedValue(true),
       find: vi.fn().mockResolvedValue(undefined),
       list: vi.fn().mockResolvedValue({ items: [], nextCursor: null }),
       save: vi.fn(),
+      setPhoto: vi.fn().mockResolvedValue(true),
       ...recipeOverrides,
     },
   };
@@ -257,6 +272,7 @@ describe('authenticated household API', () => {
         save: vi.fn().mockResolvedValue({
           ...input,
           id: recipeId,
+          photoUpdatedAt: null,
           planningStatus: 'needs-nutrition',
           updatedAt: '2026-08-17T12:00:00.000Z',
         }),
@@ -296,4 +312,135 @@ describe('authenticated household API', () => {
     );
     expect(response.statusCode).toBe(204);
   });
+
+  it('creates a short-lived upload for an owned recipe', async () => {
+    const recipeId = '00000000-0000-4000-8000-000000000201';
+    const repository = createRepository(
+      {},
+      { find: vi.fn().mockResolvedValue(storedRecipe(recipeId)) },
+    );
+    const response = await handleRequest(
+      repository,
+      event('POST /v1/recipes/{recipeId}/photos', {
+        body: { contentType: 'image/jpeg', sizeBytes: 1_024 },
+        pathParameters: { recipeId },
+        subject: 'subject-1',
+      }),
+    );
+    const body = JSON.parse(response.body ?? '{}') as {
+      uploadId: string;
+      uploadUrl: string;
+    };
+
+    expect(response.statusCode).toBe(201);
+    expect(body.uploadId).toMatch(/^[0-9a-f-]{36}$/u);
+    expect(body.uploadUrl).toBe('https://photos.example.test/upload');
+    expect(repository.photos.createUpload).toHaveBeenCalledWith(
+      recipeId,
+      body.uploadId,
+      'image/jpeg',
+    );
+  });
+
+  it('publishes only a validated photo for an owned recipe', async () => {
+    const recipeId = '00000000-0000-4000-8000-000000000201';
+    const uploadId = '00000000-0000-4000-8000-000000000301';
+    const repository = createRepository(
+      {},
+      { find: vi.fn().mockResolvedValue(storedRecipe(recipeId)) },
+    );
+    const response = await handleRequest(
+      repository,
+      event('PUT /v1/recipes/{recipeId}/photos/{uploadId}', {
+        pathParameters: { recipeId, uploadId },
+        subject: 'subject-1',
+      }),
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(repository.photos.completeUpload).toHaveBeenCalledWith(
+      recipeId,
+      uploadId,
+    );
+    expect(repository.recipes.setPhoto).toHaveBeenCalledWith(
+      'subject-1',
+      recipeId,
+      expect.any(Date),
+    );
+    expect(JSON.parse(response.body ?? '{}')).toEqual({
+      photoUrl: 'https://photos.example.test/recipe',
+    });
+  });
+
+  it('rejects a staged upload whose contents are not a supported image', async () => {
+    const recipeId = '00000000-0000-4000-8000-000000000201';
+    const uploadId = '00000000-0000-4000-8000-000000000301';
+    const response = await handleRequest(
+      createRepository(
+        {},
+        { find: vi.fn().mockResolvedValue(storedRecipe(recipeId)) },
+        {
+          completeUpload: vi
+            .fn()
+            .mockRejectedValue(new InvalidRecipePhotoError()),
+        },
+      ),
+      event('PUT /v1/recipes/{recipeId}/photos/{uploadId}', {
+        pathParameters: { recipeId, uploadId },
+        subject: 'subject-1',
+      }),
+    );
+
+    expect(response.statusCode).toBe(422);
+    expect(JSON.parse(response.body ?? '{}')).toMatchObject({
+      error: { code: 'INVALID_RECIPE_PHOTO' },
+    });
+  });
+
+  it('removes a photo only after checking recipe ownership', async () => {
+    const recipeId = '00000000-0000-4000-8000-000000000201';
+    const repository = createRepository(
+      {},
+      { find: vi.fn().mockResolvedValue(storedRecipe(recipeId)) },
+    );
+    const response = await handleRequest(
+      repository,
+      event('DELETE /v1/recipes/{recipeId}/photos', {
+        pathParameters: { recipeId },
+        subject: 'subject-1',
+      }),
+    );
+
+    expect(response.statusCode).toBe(204);
+    expect(repository.photos.delete).toHaveBeenCalledWith(recipeId);
+    expect(repository.recipes.setPhoto).toHaveBeenCalledWith(
+      'subject-1',
+      recipeId,
+      null,
+    );
+  });
 });
+
+function storedRecipe(recipeId: string) {
+  return {
+    description: 'A quick dinner.',
+    id: recipeId,
+    ingredients: [
+      {
+        name: 'Pasta',
+        preparationNote: '',
+        quantity: 200,
+        unit: 'g',
+      },
+    ],
+    instructions: ['Boil the pasta.'],
+    mealTypes: ['dinner'] as const,
+    nutrition: null,
+    photoUpdatedAt: null,
+    planningStatus: 'needs-nutrition' as const,
+    servingCount: 2,
+    tags: { cuisines: ['Italian'], flavours: [], proteins: [] },
+    title: 'Tomato pasta',
+    updatedAt: '2026-08-17T12:00:00.000Z',
+  };
+}

@@ -1,9 +1,8 @@
 import { RDSDataClient } from '@aws-sdk/client-rds-data';
 import type {
   MealType,
-  Recipe,
   RecipeInput,
-  RecipeSummary,
+  RecipeNutrition,
 } from '@macromap/contracts';
 import { and, asc, desc, eq, inArray, isNull, lt, or } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/aws-data-api/pg';
@@ -22,13 +21,26 @@ export interface RecipePageCursor {
 }
 
 export interface RecipePage {
-  readonly items: ReadonlyArray<RecipeSummary>;
+  readonly items: ReadonlyArray<StoredRecipeSummary>;
   readonly nextCursor: RecipePageCursor | null;
 }
 
+export interface StoredRecipeSummary {
+  readonly id: string;
+  readonly mealTypes: ReadonlyArray<MealType>;
+  readonly nutrition: RecipeNutrition | null;
+  readonly photoUpdatedAt: string | null;
+  readonly planningStatus: 'needs-nutrition' | 'ready';
+  readonly servingCount: number;
+  readonly title: string;
+  readonly updatedAt: string;
+}
+
+export type StoredRecipe = RecipeInput & StoredRecipeSummary;
+
 export interface RecipeRepository {
   archive(subject: string, recipeId: string): Promise<boolean>;
-  find(subject: string, recipeId: string): Promise<Recipe | undefined>;
+  find(subject: string, recipeId: string): Promise<StoredRecipe | undefined>;
   list(
     subject: string,
     cursor?: RecipePageCursor,
@@ -37,7 +49,12 @@ export interface RecipeRepository {
     subject: string,
     recipeId: string,
     recipe: RecipeInput,
-  ): Promise<Recipe | undefined>;
+  ): Promise<StoredRecipe | undefined>;
+  setPhoto(
+    subject: string,
+    recipeId: string,
+    updatedAt: Date | null,
+  ): Promise<boolean>;
 }
 
 export class RecipeNotFoundError extends Error {
@@ -211,6 +228,7 @@ export function createDataApiRecipeRepository(
           .select({
             archivedAt: recipes.archivedAt,
             householdId: recipes.householdId,
+            photoUpdatedAt: recipes.photoUpdatedAt,
           })
           .from(recipes)
           .where(eq(recipes.id, recipeId));
@@ -298,11 +316,34 @@ export function createDataApiRecipeRepository(
         return {
           ...input,
           id: recipeId,
+          mealTypes: input.mealTypes,
+          photoUpdatedAt: existing?.photoUpdatedAt?.toISOString() ?? null,
           planningStatus:
             input.nutrition === null ? 'needs-nutrition' : 'ready',
           updatedAt: updatedAt.toISOString(),
         };
       });
+    },
+
+    async setPhoto(subject, recipeId, updatedAt) {
+      const [identity] = await database
+        .select({ householdId: accountIdentities.householdId })
+        .from(accountIdentities)
+        .where(eq(accountIdentities.cognitoSubject, subject));
+      if (identity === undefined) return false;
+
+      const updated = await database
+        .update(recipes)
+        .set({ photoUpdatedAt: updatedAt, updatedAt: new Date() })
+        .where(
+          and(
+            eq(recipes.id, recipeId),
+            eq(recipes.householdId, identity.householdId),
+            isNull(recipes.archivedAt),
+          ),
+        )
+        .returning({ id: recipes.id });
+      return updated.length === 1;
     },
   };
 }
@@ -314,6 +355,7 @@ const recipeColumns = {
   nutritionFatGrams: recipes.nutritionFatGrams,
   nutritionKcal: recipes.nutritionKcal,
   nutritionProteinGrams: recipes.nutritionProteinGrams,
+  photoUpdatedAt: recipes.photoUpdatedAt,
   servingCount: recipes.servingCount,
   title: recipes.title,
   updatedAt: recipes.updatedAt,
@@ -326,6 +368,7 @@ interface RecipeRow {
   readonly nutritionFatGrams: string | null;
   readonly nutritionKcal: string | null;
   readonly nutritionProteinGrams: string | null;
+  readonly photoUpdatedAt: Date | null;
   readonly servingCount: string;
   readonly title: string;
   readonly updatedAt: Date;
@@ -337,11 +380,12 @@ function numeric(value: number | undefined): string | null {
 
 function readRecipeSummary(
   recipe: RecipeRow,
-): Omit<RecipeSummary, 'mealTypes'> {
+): Omit<StoredRecipeSummary, 'mealTypes'> {
   const nutrition = readNutrition(recipe);
   return {
     id: recipe.id,
     nutrition,
+    photoUpdatedAt: recipe.photoUpdatedAt?.toISOString() ?? null,
     planningStatus: nutrition === null ? 'needs-nutrition' : 'ready',
     servingCount: Number(recipe.servingCount),
     title: recipe.title,
@@ -349,7 +393,7 @@ function readRecipeSummary(
   };
 }
 
-function readNutrition(recipe: RecipeRow): Recipe['nutrition'] {
+function readNutrition(recipe: RecipeRow): RecipeNutrition | null {
   const values = [
     recipe.nutritionKcal,
     recipe.nutritionProteinGrams,
@@ -378,7 +422,7 @@ function readRecipe(
   }>,
   steps: ReadonlyArray<{ instruction: string }>,
   tags: ReadonlyArray<{ category: string; value: string }>,
-): Recipe {
+): StoredRecipe {
   return {
     ...readRecipeSummary(recipe),
     description: recipe.description,

@@ -131,15 +131,40 @@
 }
 
 .recipe-card-photo {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 0;
+}
+
+.recipe-photo-image {
+  display: block;
+  object-fit: cover;
+}
+
+.recipe-photo-placeholder {
   display: grid;
-  min-height: 10rem;
   background:
     radial-gradient(circle at 75% 20%, rgb(228 168 59 / 45%), transparent 25%),
     linear-gradient(135deg, #dbe7c9, #f3e1c4);
   color: rgb(33 75 55 / 35%);
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 3.5rem;
+  place-content: center;
   place-items: center;
+  text-align: center;
+}
+
+.recipe-photo-placeholder p {
+  margin: 0;
+  font-family:
+    'Avenir Next',
+    Avenir,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .recipe-card > div:last-child {
@@ -210,6 +235,41 @@
 
 .detail-actions {
   flex: 0 0 auto;
+}
+
+.recipe-photo-section {
+  margin-bottom: 1.25rem;
+}
+
+.recipe-detail-photo,
+.cooking-photo {
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  border-radius: 1.5rem;
+}
+
+.recipe-photo-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.photo-upload-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  margin-top: 0;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+}
+
+.photo-upload-button input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
 }
 
 .recipe-detail-grid {
@@ -524,28 +584,8 @@
   margin-bottom: 1.5rem;
 }
 
-.cooking-photo-placeholder {
-  display: grid;
-  min-height: 14rem;
+.cooking-photo {
   margin-bottom: 1.25rem;
-  border-radius: 1.5rem;
-  background:
-    radial-gradient(circle at 70% 20%, rgb(228 168 59 / 45%), transparent 25%),
-    linear-gradient(135deg, #dbe7c9, #f3e1c4);
-  color: rgb(33 75 55 / 55%);
-  place-content: center;
-  text-align: center;
-}
-
-.cooking-photo-placeholder span {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 4rem;
-}
-
-.cooking-photo-placeholder p {
-  margin: 0;
-  font-size: 0.8rem;
-  font-weight: 700;
 }
 
 .cooking-controls {
@@ -639,7 +679,8 @@
   .cooking-header,
   .cooking-controls,
   .detail-actions,
-  .form-actions {
+  .form-actions,
+  .recipe-photo-actions {
     align-items: stretch;
     flex-direction: column;
   }

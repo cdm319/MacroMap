@@ -1,6 +1,6 @@
 # API conventions
 
-Status: Phase 2 in progress
+Status: Phase 2 complete
 
 ## Phase 1 session endpoint
 
@@ -150,13 +150,25 @@ requirements.
   transaction. The client supplies the UUID, so retrying the same request does
   not create a duplicate.
 - `DELETE /v1/recipes/{recipeId}` archives the recipe and returns `204`.
+- `POST /v1/recipes/{recipeId}/photos` validates the declared JPEG, PNG, or WebP
+  type and maximum 5 MiB size, then returns a short-lived staged upload.
+- `PUT /v1/recipes/{recipeId}/photos/{uploadId}` verifies the staged object's
+  size and file signature, publishes it, and returns its short-lived view URL.
+- `DELETE /v1/recipes/{recipeId}/photos` removes the current photo and returns
+  `204`.
 
 A recipe document contains its title, description, serving count, ordered
 structured ingredients, ordered instructions, explicit meal types, editable
 cuisine/protein/flavour tags, and optional authoritative per-serving kcal,
-protein, carbohydrate, and fat. Missing nutrition is valid for storage and
-cooking but marks the recipe as unavailable to the future planner.
+protein, carbohydrate, and fat. Responses include a nullable signed `photoUrl`.
+Missing nutrition is valid for storage and cooking but marks the recipe as
+unavailable to the future planner.
 
 Recipe edits are whole-document, last-write-wins operations for the single-login
 MVP. The Cognito `sub` determines ownership; recipe requests never accept a
 household identifier.
+
+Photo operations first verify that the recipe belongs to the authenticated
+household. Signed URLs expire after five minutes. The browser uploads directly
+to the private bucket, but the staged object is not displayed until the API has
+validated its actual bytes. Unfinished staging objects expire after one day.

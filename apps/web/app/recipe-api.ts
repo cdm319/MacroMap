@@ -1,4 +1,8 @@
 import {
+  apiErrorSchema,
+  recipePhotoResponseSchema,
+  recipePhotoUploadRequestSchema,
+  recipePhotoUploadResponseSchema,
   recipeListResponseSchema,
   recipeSchema,
   type Recipe,
@@ -58,6 +62,60 @@ export async function archiveRecipe(
   });
 }
 
+export async function uploadRecipePhoto(
+  config: RecipeApiConfig,
+  recipeId: string,
+  file: File,
+): Promise<string> {
+  const input = validateRecipePhoto(file);
+  const createResponse = await request(
+    config,
+    `${config.baseUrl}/v1/recipes/${recipeId}/photos`,
+    {
+      body: JSON.stringify(input),
+      headers: { 'content-type': 'application/json' },
+      method: 'POST',
+    },
+  );
+  const upload = recipePhotoUploadResponseSchema.parse(
+    await createResponse.json(),
+  );
+  const uploaded = await fetch(upload.uploadUrl, {
+    body: file,
+    headers: { 'content-type': input.contentType },
+    method: 'PUT',
+  });
+  if (!uploaded.ok) throw new Error('MacroMap could not upload that photo.');
+
+  const completeResponse = await request(
+    config,
+    `${config.baseUrl}/v1/recipes/${recipeId}/photos/${upload.uploadId}`,
+    { method: 'PUT' },
+  );
+  return recipePhotoResponseSchema.parse(await completeResponse.json())
+    .photoUrl;
+}
+
+export async function deleteRecipePhoto(
+  config: RecipeApiConfig,
+  recipeId: string,
+): Promise<void> {
+  await request(config, `${config.baseUrl}/v1/recipes/${recipeId}/photos`, {
+    method: 'DELETE',
+  });
+}
+
+export function validateRecipePhoto(file: File) {
+  const input = recipePhotoUploadRequestSchema.safeParse({
+    contentType: file.type,
+    sizeBytes: file.size,
+  });
+  if (!input.success) {
+    throw new Error('Choose a JPEG, PNG, or WebP image no larger than 5 MB.');
+  }
+  return input.data;
+}
+
 async function request(
   config: RecipeApiConfig,
   input: string | URL,
@@ -73,10 +131,15 @@ async function request(
   if (response.status === 401) {
     throw new Error('Your session ended. Please sign in again.');
   }
-  if (response.status === 503) {
-    throw new Error('The database is waking. Please try again shortly.');
+  if (!response.ok) {
+    const error = apiErrorSchema.safeParse(
+      await response.json().catch(() => null),
+    );
+    throw new Error(
+      error.success
+        ? error.data.error.message
+        : 'MacroMap could not complete that request.',
+    );
   }
-  if (!response.ok)
-    throw new Error('MacroMap could not complete that request.');
   return response;
 }

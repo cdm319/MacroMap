@@ -15,6 +15,13 @@ complete and its executable has been removed. Never apply the initial schema SQL
 to production. Future schema or data operations need a reviewed, forward-only
 plan and explicit approval.
 
+## Phase 2 schema update record
+
+The owner applied and verified
+`packages/database/sql/updates/001-person-macro-targets.sql` in production on 17
+August 2026. It added four nullable columns and validation constraints to
+`person` without transforming existing data. Do not reapply it to production.
+
 The expected USD 2-6 monthly cost envelope is now live. The
 database-not-pausing failure case remains approximately USD 51 per month. Check
 current official prices and the PR's cost classification before merging. The
@@ -90,8 +97,8 @@ recorded after deployment.
 
 For ordinary changes, merge to `main` after review and successful validation;
 deployment then starts automatically. Use manual dispatch only to retry a failed
-run. Before any later schema change, agree and document a forward-only migration
-strategy suitable for real data.
+run. Before any later schema change, agree and document a forward-only update
+plan suitable for real data.
 
 To roll back application or infrastructure code, revert the responsible commit
 through another reviewed pull request. Merging the revert deploys it. Retained

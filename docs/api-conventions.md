@@ -1,6 +1,6 @@
 # API conventions
 
-Status: Phase 1 baseline
+Status: Phase 2 in progress
 
 ## Phase 1 session endpoint
 
@@ -12,12 +12,19 @@ household. A successful response is strictly validated as:
 {
   "household": {
     "displayName": "Chris & Alex",
-    "id": "00000000-0000-4000-8000-000000000001"
+    "id": "00000000-0000-4000-8000-000000000001",
+    "snackReserve": 0.15
   },
   "people": [
     {
       "displayName": "Chris",
       "id": "00000000-0000-4000-8000-000000000101",
+      "macroTargets": {
+        "carbsGrams": 300,
+        "fatGrams": 80,
+        "kcal": 2500,
+        "proteinGrams": 180
+      },
       "slug": "chris"
     }
   ]
@@ -29,6 +36,34 @@ identity returns `401`; a valid but unbound Cognito identity returns `403`; and
 a database resume or temporary Data API failure returns `503` with code
 `DATABASE_WAKING`. The web app treats that last response as a retryable waking
 state.
+
+## Household settings
+
+`PUT /v1/household-settings` replaces the complete planning settings for the
+authenticated household. The request contains `snackReserve` as a fraction and
+one complete set of daily targets for every active person:
+
+```json
+{
+  "people": [
+    {
+      "id": "00000000-0000-4000-8000-000000000101",
+      "macroTargets": {
+        "carbsGrams": 300,
+        "fatGrams": 80,
+        "kcal": 2500,
+        "proteinGrams": 180
+      }
+    }
+  ],
+  "snackReserve": 0.15
+}
+```
+
+The Cognito `sub` determines the household. Every supplied person identifier
+must belong to that household, and every active person must appear exactly
+once. The household reserve and all targets are saved in one transaction. A
+successful response is the updated session shape above.
 
 ## Resource and transport conventions
 
@@ -85,9 +120,10 @@ Common status mapping:
 ## Mutations and retries
 
 - Retriable create/generate operations accept an idempotency key.
-- Mutable aggregate responses include a monotonically increasing `version`.
-- Updates include the last observed version; a mismatch returns `409` without
-  partially applying changes.
+- Aggregates with realistic concurrent editors use a monotonically increasing
+  version and reject stale updates with `409`.
+- Household settings are whole-form, last-write-wins in the single-login MVP.
+  Add versioning only if concurrent household editing becomes a real need.
 - Scheduled work uses a natural uniqueness key, such as household plus week
   start, in addition to an invocation idempotency key.
 - Mutations are transactional at the domain aggregate boundary.

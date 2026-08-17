@@ -13,12 +13,17 @@ if (databaseUrl === undefined) {
     const client = createLocalDatabase(databaseUrl);
 
     beforeAll(async () => {
-      const schema = await readFile(
-        new URL('../sql/initial-schema.sql', import.meta.url),
-        'utf8',
-      );
-      for (const statement of schema.split('--> statement-breakpoint')) {
-        if (statement.trim() !== '') await client.pool.query(statement);
+      for (const filename of [
+        'initial-schema.sql',
+        'updates/001-person-macro-targets.sql',
+      ]) {
+        const sql = await readFile(
+          new URL(`../sql/${filename}`, import.meta.url),
+          'utf8',
+        );
+        for (const statement of sql.split('--> statement-breakpoint')) {
+          if (statement.trim() !== '') await client.pool.query(statement);
+        }
       }
     });
 
@@ -39,8 +44,11 @@ if (databaseUrl === undefined) {
         display_name: string;
         household_name: string;
         slug: string;
+        snack_reserve: string;
+        target_kcal: number | null;
       }>(
-        `select p.display_name, h.display_name as household_name, p.slug
+        `select p.display_name, h.display_name as household_name, p.slug,
+                h.snack_reserve, p.target_kcal
          from person p
          inner join household h on h.id = p.household_id
          where p.household_id = $1
@@ -52,12 +60,16 @@ if (databaseUrl === undefined) {
         {
           display_name: 'Chris',
           household_name: 'Chris & Alex',
+          snack_reserve: '0.1500',
           slug: 'chris',
+          target_kcal: null,
         },
         {
           display_name: 'Alex',
           household_name: 'Chris & Alex',
+          snack_reserve: '0.1500',
           slug: 'alex',
+          target_kcal: null,
         },
       ]);
     });

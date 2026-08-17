@@ -65,6 +65,10 @@ describe('approved infrastructure foundation', () => {
       AuthorizationType: 'JWT',
       RouteKey: 'GET /v1/session',
     });
+    template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
+      AuthorizationType: 'JWT',
+      RouteKey: 'PUT /v1/household-settings',
+    });
     template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
       DefaultRouteSettings: {
         ThrottlingBurstLimit: 10,

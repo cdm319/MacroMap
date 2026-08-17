@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   apiErrorSchema,
+  householdSettingsSchema,
   runtimeConfigSchema,
   sessionResponseSchema,
 } from './index.js';
@@ -30,16 +31,24 @@ describe('shared API contracts', () => {
         household: {
           displayName: 'Chris & Alex',
           id: '00000000-0000-4000-8000-000000000001',
+          snackReserve: 0.15,
         },
         people: [
           {
             displayName: 'Chris',
             id: '00000000-0000-4000-8000-000000000101',
+            macroTargets: {
+              carbsGrams: 300,
+              fatGrams: 80,
+              kcal: 2_500,
+              proteinGrams: 180,
+            },
             slug: 'chris',
           },
           {
             displayName: 'Alex',
             id: '00000000-0000-4000-8000-000000000102',
+            macroTargets: null,
             slug: 'alex',
           },
         ],
@@ -47,6 +56,39 @@ describe('shared API contracts', () => {
     ).toMatchObject({
       people: [{ slug: 'chris' }, { slug: 'alex' }],
     });
+  });
+
+  it('requires complete, positive daily target settings', () => {
+    const settings = {
+      people: [
+        {
+          id: '00000000-0000-4000-8000-000000000101',
+          macroTargets: {
+            carbsGrams: 300,
+            fatGrams: 80,
+            kcal: 2_500,
+            proteinGrams: 180,
+          },
+        },
+      ],
+      snackReserve: 0.15,
+    };
+
+    expect(householdSettingsSchema.parse(settings)).toEqual(settings);
+    expect(() =>
+      householdSettingsSchema.parse({
+        ...settings,
+        people: [
+          {
+            ...settings.people[0],
+            macroTargets: { ...settings.people[0]?.macroTargets, kcal: 0 },
+          },
+        ],
+      }),
+    ).toThrow();
+    expect(() =>
+      householdSettingsSchema.parse({ ...settings, snackReserve: 1 }),
+    ).toThrow();
   });
 
   it('accepts local and Cognito runtime configuration', () => {

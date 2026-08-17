@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  type HouseholdSettings,
   runtimeConfigSchema,
   sessionResponseSchema,
   type CognitoRuntimeConfig,
@@ -15,21 +16,25 @@ import {
   logoutUrl,
   restoreAccessToken,
 } from './auth';
+import { MacroSettingsForm } from './macro-settings-form';
 
 const localSession: SessionResponse = {
   household: {
     displayName: 'Chris & Alex',
     id: '00000000-0000-4000-8000-000000000001',
+    snackReserve: 0.15,
   },
   people: [
     {
       displayName: 'Chris',
       id: '00000000-0000-4000-8000-000000000101',
+      macroTargets: null,
       slug: 'chris',
     },
     {
       displayName: 'Alex',
       id: '00000000-0000-4000-8000-000000000102',
+      macroTargets: null,
       slug: 'alex',
     },
   ],
@@ -43,12 +48,21 @@ type ViewState =
       readonly config: CognitoRuntimeConfig;
       readonly kind: 'waking';
     }
+  | ReadyView
+  | { readonly kind: 'error'; readonly message: string };
+
+type ReadyView =
   | {
-      readonly config: RuntimeConfig;
+      readonly config: Extract<RuntimeConfig, { mode: 'local' }>;
       readonly kind: 'ready';
       readonly session: SessionResponse;
     }
-  | { readonly kind: 'error'; readonly message: string };
+  | {
+      readonly accessToken: string;
+      readonly config: CognitoRuntimeConfig;
+      readonly kind: 'ready';
+      readonly session: SessionResponse;
+    };
 
 class AuthenticationRequiredError extends Error {}
 
@@ -93,7 +107,12 @@ async function loadAuthenticatedView(
     const result = await requestSession(config, accessToken);
     return result.kind === 'waking'
       ? { accessToken, config, kind: 'waking' }
-      : { config, kind: 'ready', session: result.session };
+      : {
+          accessToken,
+          config,
+          kind: 'ready',
+          session: result.session,
+        };
   } catch (error) {
     if (!(error instanceof AuthenticationRequiredError)) throw error;
     clearSession();
@@ -172,6 +191,54 @@ export function MacroMapApp() {
     if (config.mode === 'local') return;
     clearSession();
     window.location.assign(logoutUrl(config));
+  }
+
+  async function saveSettings(
+    currentView: ReadyView,
+    settings: HouseholdSettings,
+  ): Promise<SessionResponse> {
+    let session: SessionResponse;
+    if (!('accessToken' in currentView)) {
+      const targets = new Map(
+        settings.people.map(({ id, macroTargets }) => [id, macroTargets]),
+      );
+      session = {
+        household: {
+          ...currentView.session.household,
+          snackReserve: settings.snackReserve,
+        },
+        people: currentView.session.people.map((person) => ({
+          ...person,
+          macroTargets: targets.get(person.id) ?? person.macroTargets,
+        })),
+      };
+    } else {
+      const response = await fetch(
+        `${currentView.config.apiBaseUrl}/v1/household-settings`,
+        {
+          body: JSON.stringify(settings),
+          headers: {
+            authorization: `Bearer ${currentView.accessToken}`,
+            'content-type': 'application/json',
+          },
+          method: 'PUT',
+        },
+      );
+      if (response.status === 401) {
+        clearSession();
+        setView({ config: currentView.config, kind: 'signed-out' });
+        throw new Error('Your session ended. Please sign in again.');
+      }
+      if (response.status === 503) {
+        throw new Error('The database is waking. Try saving again shortly.');
+      }
+      if (!response.ok)
+        throw new Error('MacroMap could not save your targets.');
+      session = sessionResponseSchema.parse(await response.json());
+    }
+
+    setView({ ...currentView, session });
+    return session;
   }
 
   if (view.kind === 'loading') {
@@ -274,8 +341,8 @@ export function MacroMapApp() {
           <p className="eyebrow">Your household</p>
           <h1 id="dashboard-title">Welcome home.</h1>
           <p>
-            The private foundation is ready. Recipe management is the next stop
-            on the map.
+            Set the daily targets MacroMap will use when it plans meals for the
+            two of you.
           </p>
         </div>
 
@@ -292,20 +359,21 @@ export function MacroMapApp() {
                 </span>
                 <span>
                   <strong>{person.displayName}</strong>
-                  <small>Personal portions enabled</small>
+                  <small>
+                    {person.macroTargets === null
+                      ? 'Targets needed'
+                      : 'Targets ready'}
+                  </small>
                 </span>
               </div>
             ))}
           </div>
         </article>
 
-        <div className="coming-next">
-          <span aria-hidden="true">→</span>
-          <p>
-            <strong>Coming next</strong>
-            Add recipes, ingredients and exact macro information.
-          </p>
-        </div>
+        <MacroSettingsForm
+          onSave={(settings) => saveSettings(view, settings)}
+          session={view.session}
+        />
       </section>
     </main>
   );

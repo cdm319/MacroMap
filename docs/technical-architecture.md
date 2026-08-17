@@ -167,10 +167,12 @@ SQL records the schema and household data used for the first release and creates
 fresh databases for local integration tests. It was applied to production once,
 on 17 August 2026, and must never be reapplied there.
 
-Production now contains real data. Before changing its schema, agree a reviewed,
-forward-only migration approach that supports expand-and-contract releases.
-Adding migration tooling requires the dependency review defined in
-`docs/dependency-policy.md`.
+Production now contains real data. Schema changes use reviewed, forward-only
+SQL files under `packages/database/sql/updates`. The human owner applies each
+file manually before the code that depends on it is merged. A data migration is
+needed only when existing records must be transformed; Phase 2's nullable macro
+columns do not require one. No schema runner is included until repeated changes
+demonstrate a need for it.
 
 ### Object storage
 
@@ -215,8 +217,8 @@ adjusted during detailed schema design without changing their responsibilities.
 
 - `household`: the authenticated data boundary.
 - `account_identity`: maps a Cognito `sub` to the household.
-- `person`: Chris or Alex, including display name and active state.
-- `macro_target`: kcal, protein, carbohydrate, and fat targets for one person.
+- `person`: Chris or Alex, including display name, active state, and current
+  kcal, protein, carbohydrate, and fat targets.
 
 Targets and all calculated nutrients use decimal values. The 15% snack reserve
 is stored as household planning configuration and defaults to `0.15`.
@@ -324,7 +326,7 @@ contracts and cost-sensitive configuration.
 The detailed schemas will live in `packages/contracts`. The intended resource
 surface is:
 
-- `/v1/session` and `/v1/people`
+- `/v1/session`, `/v1/household-settings`, and `/v1/people`
 - `/v1/recipes` and `/v1/recipes/{recipeId}`
 - `/v1/recipe-imports/preview` and `/v1/recipe-imports/{importId}/save`
 - `/v1/weekly-plans/{weekStart}`
@@ -334,9 +336,10 @@ surface is:
 - `/v1/weekly-plans/{weekStart}/grocery-list`
 - signed recipe-photo upload/download operations
 
-Mutation endpoints use optimistic concurrency or idempotency keys. Error
-responses use a shared envelope with a stable machine-readable code and a safe
-human-readable message.
+Mutations that can reasonably conflict use optimistic concurrency or
+idempotency keys. Household settings are a whole-form, last-write-wins update
+for the single-login MVP. Error responses use a shared envelope with a stable
+machine-readable code and a safe human-readable message.
 
 ## Security and observability
 

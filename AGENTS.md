@@ -20,13 +20,13 @@ document in the same change as an approved contract change.
 ## Before making changes
 
 - Inspect the current branch, worktree status, relevant implementation,
-  contracts, migrations, and tests.
+  contracts, schema updates, and tests.
 - Preserve unrelated and uncommitted user work.
 - Keep work ticket- or task-scoped. Use an isolated branch/worktree for parallel
   work and do not merge it yourself.
 - State a short implementation and validation plan before sensitive work.
 - Obtain explicit approval before changing architecture, authentication,
-  database contracts, migrations, dependency policy, infrastructure, AI
+  database contracts or schema, dependency policy, infrastructure, AI
   prompts/schemas/models, or cost-sensitive configuration.
 - Do not expand the MVP into an explicitly out-of-scope feature without a
   product decision.
@@ -64,7 +64,7 @@ database, replica, second hosted zone, cloud staging environment, paid
 observability service, or another paid provider without explicit architecture
 and cost approval.
 
-## AWS, deployment, and migrations
+## AWS, deployment, and database changes
 
 - Define application AWS resources only through the TypeScript CDK application.
   The human-owned GitHub OIDC role used by CI is an account prerequisite and is
@@ -84,7 +84,8 @@ and cost approval.
   initial schema SQL against production or recreate the initial household
   identity.
 - Production now contains real data. Schema changes need an explicitly
-  approved, forward-only migration strategy.
+  approved, forward-only update plan. Use "data migration" only for an
+  operation that transforms existing records, not for additive DDL.
 - Destructive data changes, backfills, restores, and production diagnostics need
   a specific plan and approval. Prefer read-only evidence.
 - The deployment workflow must produce a successful CDK diff immediately before
@@ -154,7 +155,8 @@ Report:
 - behaviour and files changed;
 - cost classification and whether approval was required;
 - validation completed and its results;
-- deployment, migration, AWS, and live OpenAI actions explicitly not performed;
+- deployment, production schema/data, AWS, and live OpenAI actions explicitly
+  not performed;
   and
 - remaining risks, decisions, or follow-up work.
 

@@ -59,6 +59,13 @@ export const people = pgTable(
     displayName: text('display_name').notNull(),
     slug: text('slug').notNull(),
     sortOrder: integer('sort_order').notNull(),
+    targetKcal: integer('target_kcal'),
+    targetProteinGrams: numeric('target_protein_g', {
+      precision: 7,
+      scale: 2,
+    }),
+    targetCarbsGrams: numeric('target_carbs_g', { precision: 7, scale: 2 }),
+    targetFatGrams: numeric('target_fat_g', { precision: 7, scale: 2 }),
     ...timestamps,
   },
   (table) => [

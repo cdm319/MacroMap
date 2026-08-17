@@ -28,7 +28,7 @@ The Phase 1 baseline is deliberately small:
 `pg` supports local development and integration tests only. Production uses the
 Aurora Data API and must not add a persistent Lambda connection pool. The
 explicit, reviewed initial schema SQL was applied once and now remains a local
-integration-test fixture and historical schema record. No migration-generator
+integration-test fixture and historical schema record. No schema-management
 dependency is approved.
 
 No UI framework, state manager, HTTP client, date library, decimal library,

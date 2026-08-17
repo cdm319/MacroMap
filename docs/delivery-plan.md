@@ -1,6 +1,6 @@
 # MacroMap MVP delivery plan
 
-Status: Approved implementation sequence; Phase 1 complete
+Status: Approved implementation sequence; Phase 2 in progress
 Last reviewed: 2026-08-17
 
 ## Delivery principles
@@ -19,7 +19,9 @@ Current progress:
 - Phase 1 is deployed in production. Database initialization, household login,
   private-session smoke testing, and Aurora pause/resume verification completed
   on 17 August 2026.
-- Phases 2-6 have not started.
+- Phase 2 is in progress. Its first slice adds editable macro targets and the
+  household snack reserve.
+- Phases 3-6 have not started.
 
 ## Phase 0: Repository and contracts
 
@@ -199,7 +201,8 @@ The pull-request workflow is read-only with respect to production. It runs:
 7. CDK assertion tests and synthesis; and
 8. a cost-impact summary for infrastructure changes.
 
-No PR workflow calls OpenAI, mutates AWS, applies migrations, or deploys.
+No PR workflow calls OpenAI, mutates AWS, applies production schema updates, or
+deploys.
 
 ### Production deployment
 
@@ -225,12 +228,13 @@ completed that operation on 17 August 2026, and the executable runner has been
 removed. The SQL remains the historical baseline and a local integration-test
 fixture; it must never be reapplied to production.
 
-Before Phase 2 changes the schema, agree a forward-only migration approach for
-real data. Destructive or contracting changes require a backup decision and
+Schema changes use reviewed, forward-only SQL files applied manually by the
+human owner. Destructive or contracting changes require a backup decision and
 explicit approval. Use expand-and-contract releases:
 
-1. deploy an additive, backward-compatible schema change;
-2. migrate/backfill through a bounded, resumable operation if required;
+1. apply an additive, backward-compatible schema update;
+2. backfill through a bounded, resumable operation only if existing rows need
+   new values;
 3. deploy code using the new shape; and
 4. remove the old shape only in a later approved release.
 
@@ -262,5 +266,5 @@ A slice is complete only when:
 - security and cost impacts are stated;
 - requirements and architecture documents remain accurate;
 - no unrelated user changes are included; and
-- deployment, migration, and live-call actions taken or deliberately not taken
-  are reported plainly.
+- deployment, production schema/data, and live-call actions taken or
+  deliberately not taken are reported plainly.

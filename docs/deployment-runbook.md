@@ -15,37 +15,12 @@ complete and its executable has been removed. Never apply the initial schema SQL
 to production. Future schema or data operations need a reviewed, forward-only
 plan and explicit approval.
 
-## Pending Phase 2 schema update
+## Phase 2 schema update record
 
-`packages/database/sql/updates/001-person-macro-targets.sql` adds four nullable
-columns and validation constraints to `person`. It does not rewrite or move any
-existing data. The owner must apply it once before merging the macro-settings
-release.
-
-Use the existing `DATABASE_RESOURCE_ARN` and `DATABASE_SECRET_ARN` shell values.
-Wake the database first, repeating only this harmless query if Aurora reports
-that it is resuming:
-
-```shell
-aws rds-data execute-statement \
-  --resource-arn "$DATABASE_RESOURCE_ARN" \
-  --secret-arn "$DATABASE_SECRET_ARN" \
-  --database macromap \
-  --sql "select 1"
-```
-
-After that succeeds, apply the update once:
-
-```shell
-aws rds-data execute-statement \
-  --resource-arn "$DATABASE_RESOURCE_ARN" \
-  --secret-arn "$DATABASE_SECRET_ARN" \
-  --database macromap \
-  --sql file://packages/database/sql/updates/001-person-macro-targets.sql
-```
-
-Do not merge if this command fails. The existing application remains compatible
-with the added nullable columns, so applying the SQL before deployment is safe.
+The owner applied and verified
+`packages/database/sql/updates/001-person-macro-targets.sql` in production on 17
+August 2026. It added four nullable columns and validation constraints to
+`person` without transforming existing data. Do not reapply it to production.
 
 The expected USD 2-6 monthly cost envelope is now live. The
 database-not-pausing failure case remains approximately USD 51 per month. Check

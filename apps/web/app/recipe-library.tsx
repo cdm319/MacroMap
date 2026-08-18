@@ -1,6 +1,7 @@
 'use client';
 
 import type { Recipe, RecipeInput, RecipeSummary } from '@macromap/contracts';
+import { estimateRecipeNutrition } from '@macromap/domain/nutrition';
 import { useEffect, useState } from 'react';
 import { CookingMode } from './cooking-mode';
 import {
@@ -453,6 +454,9 @@ function RecipeDetail({
               <Macro label="Fat" value={`${recipe.nutrition.fatGrams} g`} />
             </dl>
           )}
+          {recipe.nutritionProvenance === null ? null : (
+            <NutritionSource recipe={recipe} />
+          )}
         </section>
       </div>
 
@@ -502,12 +506,59 @@ function Macro({
   );
 }
 
+function NutritionSource({ recipe }: { readonly recipe: Recipe }) {
+  const provenance = recipe.nutritionProvenance;
+  if (provenance === null) return null;
+  if (provenance.source !== 'cofid') {
+    return (
+      <p className="nutrition-source">
+        {provenance.source === 'manual'
+          ? 'Confirmed manually'
+          : 'Imported and reviewed'}
+      </p>
+    );
+  }
+  return (
+    <div className="nutrition-source">
+      <p>
+        Estimated from CoFID {provenance.datasetVersion} ·{' '}
+        {capitalize(provenance.confidence)} confidence
+      </p>
+      <details>
+        <summary>Ingredient matches</summary>
+        <ul>
+          {provenance.matches.map((match) => (
+            <li key={match.ingredientIndex}>
+              {recipe.ingredients[match.ingredientIndex]?.name ?? 'Ingredient'}
+              {' → '}
+              {match.cofidName}
+            </li>
+          ))}
+        </ul>
+      </details>
+    </div>
+  );
+}
+
 function localRecipe(id: string, input: RecipeInput): Recipe {
+  const estimation =
+    input.nutrition === null
+      ? estimateRecipeNutrition(input.ingredients, input.servingCount)
+      : null;
+  const nutrition =
+    estimation?.kind === 'estimated' ? estimation.nutrition : input.nutrition;
   return {
     ...input,
     id,
+    nutrition,
+    nutritionProvenance:
+      estimation?.kind === 'estimated'
+        ? estimation.provenance
+        : nutrition === null
+          ? null
+          : { confidence: 'confirmed', source: 'manual' },
     photoUrl: null,
-    planningStatus: input.nutrition === null ? 'needs-nutrition' : 'ready',
+    planningStatus: nutrition === null ? 'needs-nutrition' : 'ready',
     updatedAt: new Date().toISOString(),
   };
 }
@@ -517,6 +568,7 @@ function summaryFrom(recipe: Recipe): RecipeSummary {
     id,
     mealTypes,
     nutrition,
+    nutritionProvenance,
     photoUrl,
     planningStatus,
     servingCount,
@@ -527,6 +579,7 @@ function summaryFrom(recipe: Recipe): RecipeSummary {
     id,
     mealTypes,
     nutrition,
+    nutritionProvenance,
     photoUrl,
     planningStatus,
     servingCount,

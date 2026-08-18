@@ -105,7 +105,9 @@ test('creates, cooks, edits, and archives a manual recipe', async ({
   await expect(
     page.getByRole('heading', { level: 1, name: 'Tomato pasta' }),
   ).toBeVisible();
-  await expect(page.getByText('Nutrition needed')).toBeVisible();
+  await expect(
+    page.getByText('Estimated from CoFID 2021 · Medium confidence'),
+  ).toBeVisible();
 
   await page.getByLabel('Add photo').setInputFiles({
     buffer: Buffer.from(
@@ -173,7 +175,7 @@ test('reviews Schema.org JSON before saving an imported recipe', async ({
       description: 'A quick imported dinner.',
       name: 'Imported tomato pasta',
       recipeCategory: 'Dinner',
-      recipeIngredient: ['200g pasta', '2 tomatoes, chopped'],
+      recipeIngredient: ['200g pasta', '400g tomatoes, chopped'],
       recipeInstructions: [{ '@type': 'HowToStep', text: 'Boil the pasta.' }],
       recipeYield: '2 servings',
       url: 'https://recipes.example.test/tomato-pasta',
@@ -189,6 +191,9 @@ test('reviews Schema.org JSON before saving an imported recipe', async ({
   await expect(page.getByLabel('Source name (optional)')).toHaveValue(
     'Example Cook',
   );
+  await expect(
+    page.getByText('Current CoFID medium confidence estimate'),
+  ).toBeVisible();
 
   await page.getByRole('button', { name: 'Save imported recipe' }).click();
   await expect(
@@ -197,6 +202,9 @@ test('reviews Schema.org JSON before saving an imported recipe', async ({
   await expect(
     page.getByRole('link', { name: 'Example Cook' }),
   ).toHaveAttribute('href', 'https://recipes.example.test/tomato-pasta');
+  await expect(
+    page.getByText('Estimated from CoFID 2021 · Medium confidence'),
+  ).toBeVisible();
 });
 
 test('keeps an unauthenticated household behind sign-in', async ({ page }) => {

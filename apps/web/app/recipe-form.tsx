@@ -90,8 +90,17 @@ export function RecipeForm({
   const [instructions, setInstructions] = useState<string[]>(
     initial?.instructions ?? [],
   );
+  const currentEstimate =
+    initial?.nutritionProvenance?.source === 'cofid'
+      ? {
+          nutrition: initial.nutrition,
+          provenance: initial.nutritionProvenance,
+        }
+      : undefined;
   const [hasNutrition, setHasNutrition] = useState(
-    initial !== undefined && initial.nutrition !== null,
+    initial !== undefined &&
+      initial.nutrition !== null &&
+      currentEstimate === undefined,
   );
   const [nutrition, setNutrition] = useState<NutritionDraft>({
     carbsGrams: String(initial?.nutrition?.carbsGrams ?? ''),
@@ -431,6 +440,20 @@ export function RecipeForm({
       </section>
 
       <section className="form-section">
+        {currentEstimate === undefined ||
+        currentEstimate.nutrition === null ||
+        hasNutrition ? null : (
+          <div className="nutrition-estimate">
+            <strong>
+              Current CoFID {currentEstimate.provenance.confidence} confidence
+              estimate
+            </strong>
+            <p>
+              {formatNutrition(currentEstimate.nutrition)} per serving. MacroMap
+              will recalculate it from the ingredients when you save.
+            </p>
+          </div>
+        )}
         <label className="nutrition-toggle">
           <input
             checked={hasNutrition}
@@ -438,7 +461,11 @@ export function RecipeForm({
             type="checkbox"
           />
           <span>
-            <strong>Add known nutrition</strong>
+            <strong>
+              {currentEstimate === undefined
+                ? 'Add known nutrition'
+                : 'Replace the estimate with known nutrition'}
+            </strong>
             <small>
               Enter values per serving. These will be treated as authoritative.
             </small>
@@ -470,8 +497,9 @@ export function RecipeForm({
           </div>
         ) : (
           <p className="notice">
-            This recipe can be cooked now, but it will need nutrition before
-            weekly planning can use it.
+            MacroMap will try to estimate nutrition from mass ingredients using
+            CoFID 2021. Unsupported or uncertain ingredients will stay flagged
+            for review.
           </p>
         )}
       </section>
@@ -515,4 +543,8 @@ function tagsFrom(value: string): string[] {
         .filter((tag) => tag !== ''),
     ),
   ];
+}
+
+function formatNutrition(nutrition: NonNullable<Recipe['nutrition']>): string {
+  return `${nutrition.kcal} kcal · ${nutrition.proteinGrams} g protein · ${nutrition.carbsGrams} g carbs · ${nutrition.fatGrams} g fat`;
 }

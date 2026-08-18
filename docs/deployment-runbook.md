@@ -41,6 +41,11 @@ August 2026. It added two nullable source-attribution columns to `recipe` and
 created an empty `recipe_import` preview table with its expected indexes. It did
 not transform existing recipe data. Do not reapply it to production.
 
+The owner applied and verified
+`packages/database/sql/updates/005-recipe-nutrition-provenance.sql` in
+production on 18 August 2026. It added one nullable JSONB column to `recipe`;
+both existing recipes remained unchanged. Do not reapply it to production.
+
 The expected USD 2-6 monthly cost envelope is now live. The
 database-not-pausing failure case remains approximately USD 51 per month. Check
 current official prices and the PR's cost classification before merging. The

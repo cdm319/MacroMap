@@ -18,6 +18,7 @@ import {
 } from '@macromap/database';
 import { parseSchemaOrgRecipe } from '@macromap/domain/schema-org-recipe';
 import { errorResponse, jsonResponse } from './http.js';
+import { prepareRecipeNutrition } from './nutrition.js';
 import type { RecipePhotoStore } from './recipe-photo-store.js';
 
 export async function handleRecipeImportRequest(
@@ -150,7 +151,13 @@ async function saveImport(
           );
     }
 
-    const saved = await recipes.save(subject, importId, input.data.recipe);
+    const prepared = prepareRecipeNutrition(input.data.recipe, preview.draft);
+    const saved = await recipes.save(
+      subject,
+      importId,
+      prepared.recipe,
+      prepared.nutritionProvenance,
+    );
     if (saved === undefined) return accountNotBootstrapped(requestId);
     if (!(await imports.markSaved(subject, importId, importId))) {
       return importConflict(requestId);

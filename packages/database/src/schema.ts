@@ -10,6 +10,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
+import type { RecipeNutritionProvenance } from '@macromap/contracts';
 
 const timestamps = {
   createdAt: timestamp('created_at', { withTimezone: true })
@@ -108,6 +109,9 @@ export const recipes = pgTable(
       precision: 9,
       scale: 2,
     }),
+    nutritionProvenance: jsonb(
+      'nutrition_provenance',
+    ).$type<RecipeNutritionProvenance>(),
     photoUpdatedAt: timestamp('photo_updated_at', { withTimezone: true }),
     sourceName: text('source_name'),
     sourceUrl: text('source_url'),

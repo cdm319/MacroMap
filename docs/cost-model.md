@@ -90,6 +90,8 @@ AI calls are limited by:
 
 Schema.org imports, manual entry, normal planning, grocery recalculation, and
 nutrition calculation continue to work when AI is unavailable or capped.
+The bundled CoFID dataset is used locally and adds no provider or runtime-call
+cost.
 
 The matching OpenAI project budget must be configured before live AI is
 enabled. The application ceiling blocks further optional AI calls for the

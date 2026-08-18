@@ -2,9 +2,12 @@ import type {
   MealType,
   RecipeImportDraft,
   RecipeImportWarning,
+  RecipeIngredient,
   RecipeNutrition,
+  RecipeNutritionProvenance,
   RecipeSource,
 } from '@macromap/contracts';
+import { estimateRecipeNutrition } from '@macromap/domain/nutrition';
 
 export type SchemaOrgRecipeResult =
   | {
@@ -199,7 +202,16 @@ function mapRecipe(
     );
   }
 
-  const nutrition = readNutrition(recipe.nutrition, warnings);
+  const importedNutrition = readNutrition(recipe.nutrition, warnings);
+  const estimated =
+    importedNutrition === null && servingCount !== null
+      ? estimateNutrition(ingredients, servingCount, warnings)
+      : null;
+  const nutrition = importedNutrition ?? estimated?.nutrition ?? null;
+  const nutritionProvenance: RecipeNutritionProvenance | null =
+    importedNutrition === null
+      ? (estimated?.provenance ?? null)
+      : { confidence: 'confirmed', source: 'schema_org' };
   const rawImage = recipe.image;
   const photoUrl = readImageUrl(rawImage);
   if (rawImage !== undefined && photoUrl === null) {
@@ -223,6 +235,7 @@ function mapRecipe(
       instructions: readInstructions(recipe.recipeInstructions),
       mealTypes,
       nutrition,
+      nutritionProvenance,
       photoUrl,
       servingCount,
       source: readSource(recipe),
@@ -236,6 +249,77 @@ function mapRecipe(
     kind: 'preview',
     warnings,
   };
+}
+
+function estimateNutrition(
+  ingredients: RecipeImportDraft['ingredients'],
+  servingCount: number,
+  warnings: RecipeImportWarning[],
+): {
+  readonly nutrition: RecipeNutrition;
+  readonly provenance: Extract<RecipeNutritionProvenance, { source: 'cofid' }>;
+} | null {
+  const complete = ingredients.every(
+    (ingredient) =>
+      ingredient.name !== '' &&
+      ingredient.quantity !== null &&
+      ingredient.unit !== '',
+  );
+  if (!complete || ingredients.length === 0) return null;
+
+  const estimation = estimateRecipeNutrition(
+    ingredients as RecipeIngredient[],
+    servingCount,
+  );
+  if (estimation.kind === 'incomplete') {
+    warn(
+      warnings,
+      'NUTRITION_ESTIMATION_INCOMPLETE',
+      `Nutrition could not be estimated safely. ${estimation.issues
+        .map(describeNutritionIssue)
+        .join(' ')}`,
+    );
+    return null;
+  }
+
+  warn(
+    warnings,
+    'NUTRITION_ESTIMATED',
+    'Nutrition was estimated from CoFID 2021. Check the ingredient matches and per-serving values.',
+  );
+  const reviewMatches = estimation.provenance.matches.filter(
+    ({ matchConfidence }) => matchConfidence !== 'high',
+  );
+  if (reviewMatches.length > 0) {
+    warn(
+      warnings,
+      'NUTRITION_MATCH_REVIEW_NEEDED',
+      `Review these CoFID matches: ${reviewMatches
+        .map(
+          ({ cofidName, ingredientIndex }) =>
+            `${ingredients[ingredientIndex]?.name ?? 'ingredient'} → ${cofidName}`,
+        )
+        .join('; ')}.`,
+    );
+  }
+  return estimation;
+}
+
+function describeNutritionIssue({
+  ingredientName,
+  reason,
+}: {
+  readonly ingredientName: string;
+  readonly reason:
+    'invalid_quantity' | 'no_energy' | 'no_match' | 'unsupported_unit';
+}): string {
+  if (reason === 'no_match') {
+    return `No safe CoFID match was found for ${ingredientName}.`;
+  }
+  if (reason === 'unsupported_unit') {
+    return `${ingredientName} needs a mass unit such as g, kg, oz, or lb.`;
+  }
+  return `${ingredientName} needs a usable quantity.`;
 }
 
 function parseIngredient(

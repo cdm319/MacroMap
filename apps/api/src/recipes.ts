@@ -20,6 +20,7 @@ import {
   type StoredRecipeSummary,
 } from '@macromap/database';
 import { errorResponse, jsonResponse } from './http.js';
+import { prepareRecipeNutrition } from './nutrition.js';
 import {
   InvalidRecipePhotoError,
   type RecipePhotoStore,
@@ -167,9 +168,15 @@ async function saveRecipe(
   }
   const input = recipeInputSchema.safeParse(body);
   if (!input.success) return invalidRecipe(requestId);
+  const prepared = prepareRecipeNutrition(input.data);
 
   try {
-    const recipe = await repository.save(subject, recipeId, input.data);
+    const recipe = await repository.save(
+      subject,
+      recipeId,
+      prepared.recipe,
+      prepared.nutritionProvenance,
+    );
     if (recipe === undefined) return accountNotBootstrapped(requestId);
     const response = recipeSchema.safeParse(
       await presentRecipe(recipe, photos),

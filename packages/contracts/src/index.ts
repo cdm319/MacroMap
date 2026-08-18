@@ -112,6 +112,35 @@ export const recipeNutritionSchema = z
   })
   .strict();
 
+export const recipeNutritionProvenanceSchema = z.discriminatedUnion('source', [
+  z
+    .object({
+      confidence: z.literal('confirmed'),
+      source: z.enum(['manual', 'schema_org']),
+    })
+    .strict(),
+  z
+    .object({
+      confidence: z.enum(['high', 'medium', 'low']),
+      datasetVersion: z.literal('2021'),
+      matches: z.array(
+        z
+          .object({
+            canonicalName: z.string().min(1),
+            cofidCode: z.string().min(1),
+            cofidName: z.string().min(1),
+            grams: z.number().positive(),
+            ingredientIndex: z.number().int().nonnegative(),
+            matchConfidence: z.enum(['high', 'medium', 'low']),
+            quantitySource: z.enum(['metric', 'avoirdupois']),
+          })
+          .strict(),
+      ),
+      source: z.literal('cofid'),
+    })
+    .strict(),
+]);
+
 const webUrlSchema = z
   .string()
   .url()
@@ -177,6 +206,9 @@ export const recipeImportWarningSchema = z
       'MISSING_MEAL_TYPE',
       'MISSING_TITLE',
       'MISSING_YIELD',
+      'NUTRITION_ESTIMATED',
+      'NUTRITION_ESTIMATION_INCOMPLETE',
+      'NUTRITION_MATCH_REVIEW_NEEDED',
       'PHOTO_NOT_COPIED',
     ]),
     message: z.string().min(1),
@@ -201,6 +233,9 @@ export const recipeImportDraftSchema = z
       .array(mealTypeSchema)
       .refine((values) => new Set(values).size === values.length),
     nutrition: recipeNutritionSchema.nullable(),
+    nutritionProvenance: recipeNutritionProvenanceSchema
+      .nullable()
+      .default(null),
     photoUrl: webUrlSchema.nullable(),
     servingCount: z.number().positive().nullable(),
     source: recipeSourceSchema.nullable(),
@@ -253,6 +288,7 @@ export const recipeImportSaveRequestSchema = z
 export const recipeSchema = recipeInputSchema
   .extend({
     id: opaqueIdSchema,
+    nutritionProvenance: recipeNutritionProvenanceSchema.nullable(),
     photoUrl: z.string().url().nullable(),
     planningStatus: z.enum(['ready', 'needs-nutrition']),
     updatedAt: z.string().datetime(),
@@ -263,6 +299,7 @@ export const recipeSummarySchema = recipeSchema.pick({
   id: true,
   mealTypes: true,
   nutrition: true,
+  nutritionProvenance: true,
   photoUrl: true,
   planningStatus: true,
   servingCount: true,
@@ -294,6 +331,9 @@ export type RecipeIngredient = z.infer<typeof recipeIngredientSchema>;
 export type RecipeInput = z.infer<typeof recipeInputSchema>;
 export type RecipeListResponse = z.infer<typeof recipeListResponseSchema>;
 export type RecipeNutrition = z.infer<typeof recipeNutritionSchema>;
+export type RecipeNutritionProvenance = z.infer<
+  typeof recipeNutritionProvenanceSchema
+>;
 export type RecipePhotoContentType = z.infer<
   typeof recipePhotoContentTypeSchema
 >;

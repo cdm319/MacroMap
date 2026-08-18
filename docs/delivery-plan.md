@@ -21,10 +21,10 @@ Current progress:
   on 17 August 2026.
 - Phase 2 is complete. Macro targets, snack reserve settings, the manual recipe
   library, private photos, and cooking mode are implemented.
-- Phase 3 is in progress. Direct Schema.org JSON/JSON-LD import is complete.
-  The current slice adds deterministic CoFID 2021 nutrition estimates, stored
-  ingredient matches, confidence, and review warnings. URL fetching, USDA, and
-  AI remain later Phase 3 slices.
+- Phase 3 is in progress. Direct JSON and URL-based Schema.org import,
+  mandatory review, primary-photo copying, and deterministic CoFID 2021
+  nutrition estimates are complete. USDA and AI fallback remain later Phase 3
+  slices.
 - Phases 4-6 have not started.
 
 ## Phase 0: Repository and contracts

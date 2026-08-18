@@ -91,6 +91,7 @@ const unicodeFractions: Readonly<Record<string, number>> = {
 export function parseSchemaOrgRecipe(
   content: string,
   recipeIndex?: number,
+  sourceUrl?: string,
 ): SchemaOrgRecipeResult {
   let document: unknown;
   try {
@@ -131,7 +132,7 @@ export function parseSchemaOrgRecipe(
     };
   }
 
-  return mapRecipe(selected);
+  return mapRecipe(selected, sourceUrl);
 }
 
 function findRecipes(document: unknown): JsonObject[] {
@@ -156,6 +157,7 @@ function findRecipes(document: unknown): JsonObject[] {
 
 function mapRecipe(
   recipe: JsonObject,
+  sourceUrl?: string,
 ): Extract<SchemaOrgRecipeResult, { kind: 'preview' }> {
   const warnings: RecipeImportWarning[] = [];
   const title = text(recipe.name);
@@ -213,7 +215,7 @@ function mapRecipe(
       ? (estimated?.provenance ?? null)
       : { confidence: 'confirmed', source: 'schema_org' };
   const rawImage = recipe.image;
-  const photoUrl = readImageUrl(rawImage);
+  const photoUrl = readImageUrl(rawImage, sourceUrl);
   if (rawImage !== undefined && photoUrl === null) {
     warn(
       warnings,
@@ -224,7 +226,7 @@ function mapRecipe(
     warn(
       warnings,
       'PHOTO_NOT_COPIED',
-      'A primary photo was found. Photo copying will be added in a later Phase 3 slice.',
+      'A primary photo was found. Add it after saving when importing pasted JSON.',
     );
   }
 
@@ -236,9 +238,10 @@ function mapRecipe(
       mealTypes,
       nutrition,
       nutritionProvenance,
+      photoStaged: false,
       photoUrl,
       servingCount,
-      source: readSource(recipe),
+      source: readSource(recipe, sourceUrl),
       tags: {
         cuisines: unique(strings(recipe.recipeCuisine, true)),
         flavours: [],
@@ -445,24 +448,32 @@ function readNutrition(
   return fields as RecipeNutrition;
 }
 
-function readSource(recipe: JsonObject): RecipeSource | null {
-  const url = httpUrl(recipe.url) ?? httpUrl(readId(recipe.mainEntityOfPage));
+function readSource(
+  recipe: JsonObject,
+  sourceUrl?: string,
+): RecipeSource | null {
+  const url =
+    httpUrl(recipe.url, sourceUrl) ??
+    httpUrl(readId(recipe.mainEntityOfPage), sourceUrl) ??
+    httpUrl(sourceUrl);
   const name = entityName(recipe.author) || entityName(recipe.publisher);
   return name === '' && url === null ? null : { name, url };
 }
 
-function readImageUrl(value: unknown): string | null {
+function readImageUrl(value: unknown, sourceUrl?: string): string | null {
   if (Array.isArray(value)) {
     for (const image of value) {
-      const url = readImageUrl(image);
+      const url = readImageUrl(image, sourceUrl);
       if (url !== null) return url;
     }
     return null;
   }
-  if (typeof value === 'string') return httpUrl(value);
+  if (typeof value === 'string') return httpUrl(value, sourceUrl);
   if (!isObject(value)) return null;
   return (
-    httpUrl(value.url) ?? httpUrl(value.contentUrl) ?? httpUrl(value['@id'])
+    httpUrl(value.url, sourceUrl) ??
+    httpUrl(value.contentUrl, sourceUrl) ??
+    httpUrl(value['@id'], sourceUrl)
   );
 }
 
@@ -519,10 +530,10 @@ function text(value: unknown): string {
     : '';
 }
 
-function httpUrl(value: unknown): string | null {
+function httpUrl(value: unknown, baseUrl?: string): string | null {
   if (typeof value !== 'string') return null;
   try {
-    const url = new URL(value);
+    const url = new URL(value, baseUrl);
     return url.protocol === 'http:' || url.protocol === 'https:'
       ? url.toString()
       : null;

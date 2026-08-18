@@ -59,6 +59,7 @@ describe('recipe nutrition preparation', () => {
         confidence: 'confirmed',
         source: 'schema_org',
       },
+      photoStaged: false,
       photoUrl: null,
     };
 

@@ -190,8 +190,11 @@ byte limits, validates content type, and sends no user cookies or credentials.
 It resolves and revalidates every redirect target and rejects loopback, private,
 link-local, metadata-service, and other non-public addresses. Uploaded images
 are checked by file signature rather than trusting the supplied extension or
-content type. The bucket blocks public access, uses S3-managed encryption, has
-no replication or versioning, and is retained during an ordinary rollback.
+content type. The MVP fetcher supports public IPv4 targets on standard ports,
+follows at most five redirects, and allows eight seconds, 512 KiB for a page,
+and 5 MiB for its primary image. The bucket blocks public access, uses
+S3-managed encryption, has no replication or versioning, and is retained during
+an ordinary rollback.
 
 ### Scheduling
 

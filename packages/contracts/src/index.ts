@@ -252,6 +252,7 @@ export const recipeImportDraftSchema = z
     nutritionProvenance: recipeNutritionProvenanceSchema
       .nullable()
       .default(null),
+    photoStaged: z.boolean().default(false),
     photoUrl: webUrlSchema.nullable(),
     servingCount: z.number().positive().nullable(),
     source: recipeSourceSchema.nullable(),
@@ -260,12 +261,20 @@ export const recipeImportDraftSchema = z
   })
   .strict();
 
-export const recipeImportPreviewRequestSchema = z
-  .object({
-    content: z.string().min(1).max(maxRecipeImportCharacters),
-    recipeIndex: z.number().int().nonnegative().optional(),
-  })
-  .strict();
+export const recipeImportPreviewRequestSchema = z.union([
+  z
+    .object({
+      content: z.string().min(1).max(maxRecipeImportCharacters),
+      recipeIndex: z.number().int().nonnegative().optional(),
+    })
+    .strict(),
+  z
+    .object({
+      recipeIndex: z.number().int().nonnegative().optional(),
+      url: webUrlSchema,
+    })
+    .strict(),
+]);
 
 export const recipeImportSelectionResponseSchema = z
   .object({

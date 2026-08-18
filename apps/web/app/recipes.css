@@ -222,7 +222,8 @@
 }
 
 .library-actions,
-.import-candidates {
+.import-candidates,
+.import-methods {
   display: flex;
   gap: 0.75rem;
   align-items: center;
@@ -230,8 +231,17 @@
 
 .library-actions .primary-button,
 .library-actions .secondary-button,
-.import-candidates .secondary-button {
+.import-candidates .secondary-button,
+.import-methods .secondary-button {
   margin-top: 0;
+}
+
+.import-methods {
+  margin-bottom: 1rem;
+}
+
+.import-methods [aria-pressed='true'] {
+  border-color: var(--color-ink);
 }
 
 .notice {
@@ -283,7 +293,8 @@
 }
 
 .recipe-detail-photo,
-.cooking-photo {
+.cooking-photo,
+.recipe-import-photo {
   width: 100%;
   aspect-ratio: 16 / 7;
   border-radius: 1.5rem;

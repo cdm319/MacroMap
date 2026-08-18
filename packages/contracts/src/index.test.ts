@@ -3,6 +3,7 @@ import {
   apiErrorSchema,
   householdSettingsSchema,
   recipeInputSchema,
+  recipeImportPreviewRequestSchema,
   recipeImportResponseSchema,
   recipeNutritionProvenanceSchema,
   recipePhotoUploadRequestSchema,
@@ -251,7 +252,10 @@ describe('shared API contracts', () => {
       ],
     };
 
-    expect(recipeImportResponseSchema.parse(preview)).toEqual(preview);
+    expect(recipeImportResponseSchema.parse(preview)).toEqual({
+      ...preview,
+      draft: { ...preview.draft, photoStaged: false },
+    });
     expect(() => recipeInputSchema.parse(preview.draft)).toThrow();
     expect(() =>
       recipeInputSchema.parse({
@@ -268,6 +272,20 @@ describe('shared API contracts', () => {
         servingCount: 2,
         source: { name: 'Unsafe', url: 'javascript:alert(1)' },
       }),
+    ).toThrow();
+  });
+
+  it('accepts either bounded JSON or an HTTP recipe URL for preview', () => {
+    expect(
+      recipeImportPreviewRequestSchema.parse({
+        url: 'https://recipes.example.test/tomato-pasta',
+      }),
+    ).toEqual({ url: 'https://recipes.example.test/tomato-pasta' });
+    expect(
+      recipeImportPreviewRequestSchema.parse({ content: '{"@type":"Recipe"}' }),
+    ).toEqual({ content: '{"@type":"Recipe"}' });
+    expect(() =>
+      recipeImportPreviewRequestSchema.parse({ url: 'file:///etc/passwd' }),
     ).toThrow();
   });
 });

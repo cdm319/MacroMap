@@ -11,6 +11,10 @@ import {
   InvalidRecipePhotoError,
   type RecipePhotoStore,
 } from './recipe-photo-store.js';
+import {
+  RemoteRecipeError,
+  type RecipeSourceFetcher,
+} from './recipe-source-fetcher.js';
 
 const session = {
   household: {
@@ -44,6 +48,7 @@ function createRepository(
   recipeOverrides: Partial<RecipeRepository> = {},
   photoOverrides: Partial<RecipePhotoStore> = {},
   importOverrides: Partial<RecipeImportRepository> = {},
+  sourceOverrides: Partial<RecipeSourceFetcher> = {},
 ): ApplicationDependencies {
   return {
     households: {
@@ -63,6 +68,8 @@ function createRepository(
         .fn()
         .mockResolvedValue('https://photos.example.test/upload'),
       delete: vi.fn(),
+      publishImport: vi.fn(),
+      stageImport: vi.fn(),
       viewUrl: vi.fn().mockResolvedValue('https://photos.example.test/recipe'),
       ...photoOverrides,
     },
@@ -73,6 +80,11 @@ function createRepository(
       save: vi.fn(),
       setPhoto: vi.fn().mockResolvedValue(true),
       ...recipeOverrides,
+    },
+    sources: {
+      page: vi.fn(),
+      photo: vi.fn(),
+      ...sourceOverrides,
     },
   };
 }
@@ -338,10 +350,107 @@ describe('authenticated household API', () => {
       expect.objectContaining({ title: 'Tomato pasta' }),
       expect.any(Array),
     );
+    expect(repository.sources.page).not.toHaveBeenCalled();
+    expect(repository.sources.photo).not.toHaveBeenCalled();
     expect(repository.recipes.save).not.toHaveBeenCalled();
   });
 
-  it('saves only a reviewed recipe import', async () => {
+  it('fetches a recipe URL and stages only its primary photo', async () => {
+    const photoBytes = Uint8Array.from([0xff, 0xd8, 0xff, 0x00]);
+    const repository = createRepository(
+      {},
+      {},
+      {},
+      {},
+      {
+        page: vi.fn().mockResolvedValue({
+          content: `<html><script type="application/ld+json">${JSON.stringify({
+            '@type': 'Recipe',
+            image: ['/primary.jpg', '/extra.jpg'],
+            name: 'Tomato pasta',
+            recipeCategory: 'Dinner',
+            recipeIngredient: ['200g pasta'],
+            recipeYield: '2 servings',
+          })}</script></html>`,
+          finalUrl: 'https://recipes.example.test/tomato-pasta',
+          kind: 'html',
+        }),
+        photo: vi.fn().mockResolvedValue({
+          bytes: photoBytes,
+          contentType: 'image/jpeg',
+        }),
+      },
+    );
+    const response = await handleRequest(
+      repository,
+      event('POST /v1/recipe-imports/preview', {
+        body: { url: 'https://recipes.example.test/tomato-pasta' },
+        subject: 'subject-1',
+      }),
+    );
+    const body = JSON.parse(response.body ?? '{}') as {
+      draft: { photoStaged: boolean; photoUrl: string; source: unknown };
+      importId: string;
+    };
+
+    expect(response.statusCode).toBe(201);
+    expect(body.draft).toMatchObject({
+      photoStaged: true,
+      photoUrl: 'https://recipes.example.test/primary.jpg',
+      source: { url: 'https://recipes.example.test/tomato-pasta' },
+    });
+    expect(repository.sources.photo).toHaveBeenCalledWith(
+      'https://recipes.example.test/primary.jpg',
+    );
+    expect(repository.photos.stageImport).toHaveBeenCalledWith(
+      body.importId,
+      photoBytes,
+      'image/jpeg',
+    );
+    expect(repository.imports.create).toHaveBeenCalledWith(
+      'subject-1',
+      body.importId,
+      expect.stringContaining('Tomato pasta'),
+      expect.objectContaining({ photoStaged: true }),
+      expect.not.arrayContaining([
+        expect.objectContaining({ code: 'PHOTO_NOT_COPIED' }),
+      ]),
+    );
+  });
+
+  it('returns a safe error when a recipe URL cannot be fetched', async () => {
+    const repository = createRepository(
+      {},
+      {},
+      {},
+      {},
+      {
+        page: vi
+          .fn()
+          .mockRejectedValue(
+            new RemoteRecipeError(
+              'REMOTE_URL_BLOCKED',
+              'That URL cannot be imported.',
+            ),
+          ),
+      },
+    );
+    const response = await handleRequest(
+      repository,
+      event('POST /v1/recipe-imports/preview', {
+        body: { url: 'http://127.0.0.1/recipe' },
+        subject: 'subject-1',
+      }),
+    );
+
+    expect(response.statusCode).toBe(422);
+    expect(JSON.parse(response.body ?? '{}')).toMatchObject({
+      error: { code: 'REMOTE_URL_BLOCKED' },
+    });
+    expect(repository.imports.create).not.toHaveBeenCalled();
+  });
+
+  it('saves a reviewed import and publishes its staged photo', async () => {
     const importId = '00000000-0000-4000-8000-000000000301';
     const recipeId = importId;
     const input = {
@@ -371,7 +480,8 @@ describe('authenticated household API', () => {
           draft: {
             ...input,
             nutritionProvenance: null,
-            photoUrl: null,
+            photoStaged: true,
+            photoUrl: 'https://images.example.test/pasta.jpg',
           },
           recipeId: null,
           warnings: [],
@@ -399,6 +509,18 @@ describe('authenticated household API', () => {
       importId,
       recipeId,
     );
+    expect(repository.photos.publishImport).toHaveBeenCalledWith(
+      recipeId,
+      importId,
+    );
+    expect(repository.recipes.setPhoto).toHaveBeenCalledWith(
+      'subject-1',
+      recipeId,
+      expect.any(Date),
+    );
+    expect(JSON.parse(response.body ?? '{}')).toMatchObject({
+      photoUrl: 'https://photos.example.test/recipe',
+    });
   });
 
   it('archives only a recipe owned by the authenticated household', async () => {

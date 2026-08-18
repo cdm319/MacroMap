@@ -7,7 +7,11 @@ import type {
 } from '@macromap/contracts';
 import { parseSchemaOrgRecipe } from '@macromap/domain/schema-org-recipe';
 import { useState, type FormEvent } from 'react';
-import { previewRecipeImport, type RecipeApiConfig } from './recipe-api';
+import {
+  previewRecipeImport,
+  previewRecipeUrl,
+  type RecipeApiConfig,
+} from './recipe-api';
 import { RecipeForm } from './recipe-form';
 
 export function RecipeImportView({
@@ -20,19 +24,34 @@ export function RecipeImportView({
   readonly onSave: (importId: string, recipe: RecipeInput) => Promise<void>;
 }) {
   const [content, setContent] = useState('');
+  const [method, setMethod] = useState<'json' | 'url'>(
+    api === undefined ? 'json' : 'url',
+  );
   const [result, setResult] = useState<RecipeImportResponse>();
+  const [url, setUrl] = useState('');
   const [message, setMessage] = useState<string>();
   const [loading, setLoading] = useState(false);
+
+  function chooseMethod(next: 'json' | 'url'): void {
+    setMethod(next);
+    setResult(undefined);
+    setMessage(undefined);
+  }
 
   async function review(recipeIndex?: number): Promise<void> {
     setLoading(true);
     setMessage(undefined);
     try {
-      setResult(
-        api === undefined
-          ? localPreview(content, recipeIndex)
-          : await previewRecipeImport(api, content, recipeIndex),
-      );
+      if (method === 'url') {
+        if (api === undefined) throw new Error('Sign in to import from a URL.');
+        setResult(await previewRecipeUrl(api, url, recipeIndex));
+      } else {
+        setResult(
+          api === undefined
+            ? localPreview(content, recipeIndex)
+            : await previewRecipeImport(api, content, recipeIndex),
+        );
+      }
     } catch (error) {
       setMessage(messageFrom(error));
     } finally {
@@ -41,6 +60,7 @@ export function RecipeImportView({
   }
 
   if (result?.kind === 'preview') {
+    const photoUrl = result.draft.photoStaged ? result.draft.photoUrl : null;
     return (
       <RecipeForm
         eyebrow="Recipe import"
@@ -49,6 +69,7 @@ export function RecipeImportView({
         notices={result.warnings.map(({ message }) => message)}
         onCancel={onCancel}
         onSave={(recipe) => onSave(result.importId, recipe)}
+        {...(photoUrl === null ? {} : { photoUrl })}
         submitLabel="Save imported recipe"
       />
     );
@@ -59,13 +80,31 @@ export function RecipeImportView({
       <div className="view-heading">
         <div>
           <p className="eyebrow">Recipe import</p>
-          <h1 id="recipe-import-title">Import recipe JSON</h1>
-          <p>
-            Paste Schema.org Recipe JSON or JSON-LD to create a review draft.
-          </p>
+          <h1 id="recipe-import-title">Import a recipe</h1>
+          <p>Start with a recipe webpage or paste Schema.org JSON.</p>
         </div>
         <button className="text-button" onClick={onCancel} type="button">
           Cancel
+        </button>
+      </div>
+
+      <div className="import-methods" aria-label="Import method">
+        <button
+          aria-pressed={method === 'url'}
+          className="secondary-button"
+          disabled={api === undefined}
+          onClick={() => chooseMethod('url')}
+          type="button"
+        >
+          From URL
+        </button>
+        <button
+          aria-pressed={method === 'json'}
+          className="secondary-button"
+          onClick={() => chooseMethod('json')}
+          type="button"
+        >
+          Paste JSON
         </button>
       </div>
 
@@ -90,6 +129,32 @@ export function RecipeImportView({
             ))}
           </div>
         </section>
+      ) : method === 'url' ? (
+        <form
+          className="form-section"
+          onSubmit={(event: FormEvent<HTMLFormElement>) => {
+            event.preventDefault();
+            void review();
+          }}
+        >
+          <label className="form-field">
+            <span>Recipe URL</span>
+            <input
+              onChange={(event) => setUrl(event.target.value)}
+              placeholder="https://example.com/recipe"
+              required
+              type="url"
+              value={url}
+            />
+          </label>
+          <button
+            className="primary-button"
+            disabled={loading || url.trim() === ''}
+            type="submit"
+          >
+            {loading ? 'Reading recipe…' : 'Review recipe'}
+          </button>
+        </form>
       ) : (
         <form
           className="form-section"

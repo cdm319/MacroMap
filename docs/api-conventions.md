@@ -166,10 +166,11 @@ reviewed Schema.org values, and CoFID estimates with their dataset version,
 confidence, converted mass, and selected ingredient matches.
 
 When nutrition is omitted, saving tries the bundled CoFID 2021 dataset using
-exact or explicit alias matches. Direct weights, common household measures, and
-a small set of explicit item weights are supported. The response records every
-converted or assumed weight; bounded negligible seasonings may be omitted and
-are recorded too. A complete estimate is stored with the recipe. Otherwise
+exact or explicit alias matches. Nutrition-relevant qualifiers such as fresh,
+dried, and cooked are not discarded. Direct weights, common household measures,
+and a small set of explicit item weights are supported. The response records
+every converted or assumed weight; bounded negligible seasonings may be omitted
+and are recorded too. A complete estimate is stored with the recipe. Otherwise
 nutrition stays absent and the recipe remains unavailable to the future
 planner. Confirmed manual or valid imported nutrition is retained. Missing
 instructions remain valid for storage, planning, and cooking. The editor and

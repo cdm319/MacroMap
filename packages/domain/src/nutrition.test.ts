@@ -154,6 +154,53 @@ describe('CoFID nutrition estimation', () => {
     });
   });
 
+  it('distinguishes fresh and dried egg noodles from eggs', () => {
+    const fresh = estimateRecipeNutrition(
+      [ingredient(300, 'g', 'fresh egg noodles')],
+      1,
+    );
+    const dried = estimateRecipeNutrition(
+      [ingredient(300, 'g', 'dried egg noodles')],
+      1,
+    );
+
+    expect(fresh).toMatchObject({
+      kind: 'estimated',
+      nutrition: {
+        carbsGrams: 82.5,
+        fatGrams: 2.4,
+        kcal: 387,
+        proteinGrams: 14.1,
+      },
+      provenance: { matches: [{ cofidCode: '11-941' }] },
+    });
+    expect(dried).toMatchObject({
+      kind: 'estimated',
+      nutrition: {
+        carbsGrams: 217.8,
+        fatGrams: 6,
+        kcal: 1014,
+        proteinGrams: 36,
+      },
+      provenance: { matches: [{ cofidCode: '11-719' }] },
+    });
+  });
+
+  it('does not collapse compound foods into a shorter alias', () => {
+    for (const name of ['egg noodles', 'avocado oil', 'banana bread']) {
+      expect(estimateRecipeNutrition([ingredient(300, 'g', name)], 1)).toEqual({
+        issues: [
+          {
+            ingredientIndex: 0,
+            ingredientName: name,
+            reason: 'no_match',
+          },
+        ],
+        kind: 'incomplete',
+      });
+    }
+  });
+
   it('estimates the reviewed BBC lemon chicken ingredients', () => {
     const result = estimateRecipeNutrition(
       [

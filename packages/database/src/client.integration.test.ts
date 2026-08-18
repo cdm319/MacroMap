@@ -18,6 +18,7 @@ if (databaseUrl === undefined) {
         'updates/001-person-macro-targets.sql',
         'updates/002-recipe-library.sql',
         'updates/003-recipe-photos.sql',
+        'updates/004-recipe-imports.sql',
       ]) {
         const sql = await readFile(
           new URL(`../sql/${filename}`, import.meta.url),
@@ -114,6 +115,34 @@ if (databaseUrl === undefined) {
       ]);
       expect(result.rows).toEqual([
         { photo_updated_at: null, title: 'Tomato pasta' },
+      ]);
+    });
+
+    it('stores recipe import previews separately from saved recipes', async () => {
+      await client.pool.query(
+        `insert into recipe_import (
+           id, household_id, source_kind, original_content, draft, warnings
+         ) values ($1, $2, 'schema_org_json', $3, $4, $5)`,
+        [
+          '00000000-0000-4000-8000-000000000301',
+          '00000000-0000-4000-8000-000000000001',
+          '{"@type":"Recipe"}',
+          { title: 'Imported recipe' },
+          [],
+        ],
+      );
+
+      const result = await client.pool.query<{
+        recipe_id: string | null;
+        source_kind: string;
+      }>(
+        `select recipe_id, source_kind
+         from recipe_import
+         where id = $1`,
+        ['00000000-0000-4000-8000-000000000301'],
+      );
+      expect(result.rows).toEqual([
+        { recipe_id: null, source_kind: 'schema_org_json' },
       ]);
     });
   });

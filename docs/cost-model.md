@@ -72,11 +72,11 @@ at roughly USD 5. The existing USD 8 and USD 15 budgets remain the guardrail.
 
 ## AI budget
 
-The default model is `gpt-5.6-luna`, subject to verification against current
-official OpenAI documentation immediately before implementation or any model
-change. At prices checked on 2026-08-15, 5,000 input tokens and 1,000 output
-tokens cost approximately USD 0.0022. One hundred imports of that size would
-cost approximately USD 0.22.
+The owner approved `gpt-5.6-luna` on 18 August 2026. Current official pricing
+was checked that day at USD 0.20 per million input tokens and USD 1.20 per
+million output tokens. At 5,000 input tokens and 1,000 output tokens, one call
+costs approximately USD 0.0022. One hundred imports of that size cost
+approximately USD 0.22 before any validation retries.
 
 AI calls are limited by:
 
@@ -84,16 +84,16 @@ AI calls are limited by:
 - task-specific output token limits;
 - exactly one validation retry;
 - no higher-priced automatic fallback model;
-- an application-level monthly AI ceiling approved before enabling live calls;
+- a USD 5 application-enforced monthly AI ceiling;
 - a clear message when the optional AI ceiling is reached; and
 - recorded model, token usage, prompt version, and estimated cost for each call.
 
 Schema.org imports, manual entry, normal planning, grocery recalculation, and
 nutrition calculation continue to work when AI is unavailable or capped.
 
-The OpenAI project budget and application ceiling must be chosen together
-before live AI is enabled. An agent must not invent or silently raise either
-value.
+The matching OpenAI project budget must be configured before live AI is
+enabled. The application ceiling blocks further optional AI calls for the
+month; it must never be silently raised.
 
 Reference: [official OpenAI model documentation](https://developers.openai.com/api/docs/models).
 

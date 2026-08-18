@@ -249,6 +249,8 @@ export function createDataApiRecipeRepository(
           nutritionKcal: numeric(input.nutrition?.kcal),
           nutritionProteinGrams: numeric(input.nutrition?.proteinGrams),
           servingCount: String(input.servingCount),
+          sourceName: input.source?.name ?? null,
+          sourceUrl: input.source?.url ?? null,
           title: input.title,
           updatedAt,
         };
@@ -359,6 +361,8 @@ const recipeColumns = {
   nutritionProteinGrams: recipes.nutritionProteinGrams,
   photoUpdatedAt: recipes.photoUpdatedAt,
   servingCount: recipes.servingCount,
+  sourceName: recipes.sourceName,
+  sourceUrl: recipes.sourceUrl,
   title: recipes.title,
   updatedAt: recipes.updatedAt,
 };
@@ -372,6 +376,8 @@ interface RecipeRow {
   readonly nutritionProteinGrams: string | null;
   readonly photoUpdatedAt: Date | null;
   readonly servingCount: string;
+  readonly sourceName: string | null;
+  readonly sourceUrl: string | null;
   readonly title: string;
   readonly updatedAt: Date;
 }
@@ -434,6 +440,10 @@ function readRecipe(
     })),
     instructions: steps.map(({ instruction }) => instruction),
     mealTypes: tagValues(tags, 'meal_type') as MealType[],
+    source:
+      recipe.sourceName === null && recipe.sourceUrl === null
+        ? null
+        : { name: recipe.sourceName ?? '', url: recipe.sourceUrl },
     tags: {
       cuisines: tagValues(tags, 'cuisine'),
       flavours: tagValues(tags, 'flavour'),

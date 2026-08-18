@@ -24,3 +24,5 @@ export function reserveForPlannedMeals(
     proteinGrams: target.proteinGrams * plannedShare,
   };
 }
+
+export * from './schema-org-recipe.js';

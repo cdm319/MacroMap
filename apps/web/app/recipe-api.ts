@@ -1,5 +1,7 @@
 import {
   apiErrorSchema,
+  recipeImportResponseSchema,
+  recipeImportSaveRequestSchema,
   recipePhotoResponseSchema,
   recipePhotoUploadRequestSchema,
   recipePhotoUploadResponseSchema,
@@ -7,6 +9,7 @@ import {
   recipeSchema,
   type Recipe,
   type RecipeInput,
+  type RecipeImportResponse,
   type RecipeListResponse,
 } from '@macromap/contracts';
 
@@ -48,6 +51,41 @@ export async function saveRecipe(
       body: JSON.stringify(input),
       headers: { 'content-type': 'application/json' },
       method: 'PUT',
+    },
+  );
+  return recipeSchema.parse(await response.json());
+}
+
+export async function previewRecipeImport(
+  config: RecipeApiConfig,
+  content: string,
+  recipeIndex?: number,
+): Promise<RecipeImportResponse> {
+  const response = await request(
+    config,
+    `${config.baseUrl}/v1/recipe-imports/preview`,
+    {
+      body: JSON.stringify({ content, recipeIndex }),
+      headers: { 'content-type': 'application/json' },
+      method: 'POST',
+    },
+  );
+  return recipeImportResponseSchema.parse(await response.json());
+}
+
+export async function saveRecipeImport(
+  config: RecipeApiConfig,
+  importId: string,
+  recipe: RecipeInput,
+): Promise<Recipe> {
+  const body = recipeImportSaveRequestSchema.parse({ recipe });
+  const response = await request(
+    config,
+    `${config.baseUrl}/v1/recipe-imports/${importId}/save`,
+    {
+      body: JSON.stringify(body),
+      headers: { 'content-type': 'application/json' },
+      method: 'POST',
     },
   );
   return recipeSchema.parse(await response.json());

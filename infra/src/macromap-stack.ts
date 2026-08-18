@@ -218,6 +218,24 @@ export class MacroMapStack extends Stack {
     api.addRoutes({
       authorizer,
       integration: new HttpLambdaIntegration(
+        'RecipeImportPreviewIntegration',
+        sessionFunction,
+      ),
+      methods: [HttpMethod.POST],
+      path: '/v1/recipe-imports/preview',
+    });
+    api.addRoutes({
+      authorizer,
+      integration: new HttpLambdaIntegration(
+        'RecipeImportSaveIntegration',
+        sessionFunction,
+      ),
+      methods: [HttpMethod.POST],
+      path: '/v1/recipe-imports/{importId}/save',
+    });
+    api.addRoutes({
+      authorizer,
+      integration: new HttpLambdaIntegration(
         'RecipeListIntegration',
         sessionFunction,
       ),

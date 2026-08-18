@@ -112,6 +112,19 @@ export const recipeNutritionSchema = z
   })
   .strict();
 
+const webUrlSchema = z
+  .string()
+  .url()
+  .refine((value) => ['http:', 'https:'].includes(new URL(value).protocol));
+
+export const recipeSourceSchema = z
+  .object({
+    name: z.string().trim(),
+    url: webUrlSchema.nullable(),
+  })
+  .strict()
+  .refine(({ name, url }) => name !== '' || url !== null);
+
 export const recipeIngredientSchema = z
   .object({
     name: z.string().trim().min(1),
@@ -146,8 +159,94 @@ export const recipeInputSchema = z
       .refine((values) => new Set(values).size === values.length),
     nutrition: recipeNutritionSchema.nullable(),
     servingCount: z.number().positive(),
+    source: recipeSourceSchema.nullable(),
     tags: recipeTagsSchema,
     title: z.string().trim().min(1),
+  })
+  .strict();
+
+export const maxRecipeImportCharacters = 512 * 1024;
+
+export const recipeImportWarningSchema = z
+  .object({
+    code: z.enum([
+      'INGREDIENT_REVIEW_NEEDED',
+      'INVALID_NUTRITION',
+      'INVALID_PHOTO',
+      'MISSING_INGREDIENTS',
+      'MISSING_MEAL_TYPE',
+      'MISSING_TITLE',
+      'MISSING_YIELD',
+      'PHOTO_NOT_COPIED',
+    ]),
+    message: z.string().min(1),
+  })
+  .strict();
+
+export const recipeImportIngredientDraftSchema = z
+  .object({
+    name: z.string().trim(),
+    preparationNote: z.string().trim(),
+    quantity: z.number().positive().nullable(),
+    unit: z.string().trim(),
+  })
+  .strict();
+
+export const recipeImportDraftSchema = z
+  .object({
+    description: z.string().trim(),
+    ingredients: z.array(recipeImportIngredientDraftSchema),
+    instructions: z.array(z.string().trim().min(1)),
+    mealTypes: z
+      .array(mealTypeSchema)
+      .refine((values) => new Set(values).size === values.length),
+    nutrition: recipeNutritionSchema.nullable(),
+    photoUrl: webUrlSchema.nullable(),
+    servingCount: z.number().positive().nullable(),
+    source: recipeSourceSchema.nullable(),
+    tags: recipeTagsSchema,
+    title: z.string().trim(),
+  })
+  .strict();
+
+export const recipeImportPreviewRequestSchema = z
+  .object({
+    content: z.string().min(1).max(maxRecipeImportCharacters),
+    recipeIndex: z.number().int().nonnegative().optional(),
+  })
+  .strict();
+
+export const recipeImportSelectionResponseSchema = z
+  .object({
+    candidates: z.array(
+      z
+        .object({
+          index: z.number().int().nonnegative(),
+          title: z.string().min(1),
+        })
+        .strict(),
+    ),
+    kind: z.literal('selection'),
+  })
+  .strict();
+
+export const recipeImportPreviewResponseSchema = z
+  .object({
+    draft: recipeImportDraftSchema,
+    importId: opaqueIdSchema,
+    kind: z.literal('preview'),
+    warnings: z.array(recipeImportWarningSchema),
+  })
+  .strict();
+
+export const recipeImportResponseSchema = z.discriminatedUnion('kind', [
+  recipeImportSelectionResponseSchema,
+  recipeImportPreviewResponseSchema,
+]);
+
+export const recipeImportSaveRequestSchema = z
+  .object({
+    recipe: recipeInputSchema,
   })
   .strict();
 
@@ -185,6 +284,12 @@ export type MacroTargets = z.infer<typeof macroTargetsSchema>;
 export type MealType = z.infer<typeof mealTypeSchema>;
 export type PersonSummary = z.infer<typeof personSummarySchema>;
 export type Recipe = z.infer<typeof recipeSchema>;
+export type RecipeImportDraft = z.infer<typeof recipeImportDraftSchema>;
+export type RecipeImportPreview = z.infer<
+  typeof recipeImportPreviewResponseSchema
+>;
+export type RecipeImportResponse = z.infer<typeof recipeImportResponseSchema>;
+export type RecipeImportWarning = z.infer<typeof recipeImportWarningSchema>;
 export type RecipeIngredient = z.infer<typeof recipeIngredientSchema>;
 export type RecipeInput = z.infer<typeof recipeInputSchema>;
 export type RecipeListResponse = z.infer<typeof recipeListResponseSchema>;
@@ -199,5 +304,6 @@ export type RecipePhotoUploadResponse = z.infer<
   typeof recipePhotoUploadResponseSchema
 >;
 export type RecipeSummary = z.infer<typeof recipeSummarySchema>;
+export type RecipeSource = z.infer<typeof recipeSourceSchema>;
 export type RuntimeConfig = z.infer<typeof runtimeConfigSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;

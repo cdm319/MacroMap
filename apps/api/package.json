@@ -10,6 +10,7 @@
     "@aws-sdk/client-s3": "^3.1112.0",
     "@aws-sdk/s3-request-presigner": "^3.1112.0",
     "@macromap/contracts": "*",
-    "@macromap/database": "*"
+    "@macromap/database": "*",
+    "@macromap/domain": "*"
   }
 }

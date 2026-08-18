@@ -8,12 +8,14 @@ import {
   deleteRecipePhoto,
   getRecipe,
   listRecipes,
+  saveRecipeImport,
   saveRecipe,
   uploadRecipePhoto,
   validateRecipePhoto,
   type RecipeApiConfig,
 } from './recipe-api';
 import { RecipeForm } from './recipe-form';
+import { RecipeImportView } from './recipe-import';
 import { RecipePhoto } from './recipe-photo';
 
 interface RecipeLibraryProps {
@@ -22,6 +24,7 @@ interface RecipeLibraryProps {
 
 type LibraryView =
   | { readonly kind: 'list' }
+  | { readonly kind: 'import' }
   | { readonly kind: 'new' }
   | { readonly kind: 'view'; readonly recipe: Recipe }
   | { readonly kind: 'edit'; readonly recipe: Recipe }
@@ -94,15 +97,30 @@ export function RecipeLibrary({ api }: RecipeLibraryProps) {
       api === undefined
         ? localRecipe(recipeId, input)
         : await saveRecipe(api, recipeId, input);
+    showSaved(saved);
+  }
+
+  async function persistImportedRecipe(
+    importId: string,
+    input: RecipeInput,
+  ): Promise<void> {
+    const saved =
+      api === undefined
+        ? localRecipe(importId, input)
+        : await saveRecipeImport(api, importId, input);
+    showSaved(saved);
+  }
+
+  function showSaved(saved: Recipe): void {
     if (api === undefined) {
       setLocalRecipes((current) => [
         saved,
-        ...current.filter(({ id }) => id !== recipeId),
+        ...current.filter(({ id }) => id !== saved.id),
       ]);
     } else {
       setRecipes((current) => [
         summaryFrom(saved),
-        ...current.filter(({ id }) => id !== recipeId),
+        ...current.filter(({ id }) => id !== saved.id),
       ]);
     }
     setView({ kind: 'view', recipe: saved });
@@ -163,12 +181,21 @@ export function RecipeLibrary({ api }: RecipeLibraryProps) {
       />
     );
   }
+  if (view.kind === 'import') {
+    return (
+      <RecipeImportView
+        api={api}
+        onCancel={() => setView({ kind: 'list' })}
+        onSave={persistImportedRecipe}
+      />
+    );
+  }
   if (view.kind === 'edit') {
     return (
       <RecipeForm
         onCancel={() => setView({ kind: 'view', recipe: view.recipe })}
+        initial={view.recipe}
         onSave={(input) => persistRecipe(view.recipe.id, input)}
-        recipe={view.recipe}
       />
     );
   }
@@ -202,12 +229,20 @@ export function RecipeLibrary({ api }: RecipeLibraryProps) {
           <h1 id="recipe-library-title">Recipe library</h1>
           <p>Store the meals MacroMap can use when it plans your week.</p>
         </div>
-        <button
-          className="primary-button"
-          onClick={() => setView({ kind: 'new' })}
-        >
-          Add recipe
-        </button>
+        <div className="library-actions">
+          <button
+            className="secondary-button"
+            onClick={() => setView({ kind: 'import' })}
+          >
+            Import JSON
+          </button>
+          <button
+            className="primary-button"
+            onClick={() => setView({ kind: 'new' })}
+          >
+            Add recipe
+          </button>
+        </div>
       </div>
 
       {message === undefined ? null : (
@@ -433,6 +468,18 @@ function RecipeDetail({
           </ol>
         )}
       </section>
+      {recipe.source === null ? null : (
+        <p className="recipe-source">
+          Source:{' '}
+          {recipe.source.url === null ? (
+            recipe.source.name
+          ) : (
+            <a href={recipe.source.url} rel="noreferrer" target="_blank">
+              {recipe.source.name || recipe.source.url}
+            </a>
+          )}
+        </p>
+      )}
       <button className="danger-button" onClick={onArchive}>
         Archive recipe
       </button>

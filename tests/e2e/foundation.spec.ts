@@ -160,6 +160,45 @@ test('saves a recipe without instructions and adds them later', async ({
   await expect(page.getByText('Fry until golden on both sides.')).toBeVisible();
 });
 
+test('reviews Schema.org JSON before saving an imported recipe', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Import JSON' }).click();
+  await page.getByLabel('Schema.org Recipe JSON').fill(
+    JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'Recipe',
+      author: { '@type': 'Person', name: 'Example Cook' },
+      description: 'A quick imported dinner.',
+      name: 'Imported tomato pasta',
+      recipeCategory: 'Dinner',
+      recipeIngredient: ['200g pasta', '2 tomatoes, chopped'],
+      recipeInstructions: [{ '@type': 'HowToStep', text: 'Boil the pasta.' }],
+      recipeYield: '2 servings',
+      url: 'https://recipes.example.test/tomato-pasta',
+    }),
+  );
+  await page.getByRole('button', { name: 'Review recipe' }).click();
+
+  await expect(
+    page.getByRole('heading', { name: 'Review imported recipe' }),
+  ).toBeVisible();
+  await expect(page.getByLabel('Title')).toHaveValue('Imported tomato pasta');
+  await expect(page.getByLabel('Ingredient 1 amount')).toHaveValue('200');
+  await expect(page.getByLabel('Source name (optional)')).toHaveValue(
+    'Example Cook',
+  );
+
+  await page.getByRole('button', { name: 'Save imported recipe' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Imported tomato pasta' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('link', { name: 'Example Cook' }),
+  ).toHaveAttribute('href', 'https://recipes.example.test/tomato-pasta');
+});
+
 test('keeps an unauthenticated household behind sign-in', async ({ page }) => {
   await useCognitoConfig(page);
 

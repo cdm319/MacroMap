@@ -61,7 +61,7 @@ for (const food of foods) {
 const ingredientRules: ReadonlyArray<IngredientRule> = [
   { aliases: ['apple'], cofidCode: '14-319', countGrams: 150 },
   { aliases: ['avocado'], cofidCode: '14-386', countGrams: 150 },
-  { aliases: ['baked beans'], cofidCode: '13-532' },
+  { aliases: ['baked beans', 'heinz baked beans'], cofidCode: '13-532' },
   { aliases: ['baking potato'], cofidCode: '13-489', countGrams: 250 },
   { aliases: ['banana'], cofidCode: '14-318', countGrams: 120 },
   { aliases: ['basmati rice'], cofidCode: '11-857' },
@@ -140,6 +140,15 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
   },
   { aliases: ['egg'], cofidCode: '12-937', countGrams: 50 },
   { aliases: ['large egg'], cofidCode: '12-937', countGrams: 60 },
+  // A hydrated noodle is the closest CoFID profile to chilled fresh noodles.
+  {
+    aliases: ['fresh egg noodle'],
+    cofidCode: '11-941',
+  },
+  {
+    aliases: ['dried egg noodle'],
+    cofidCode: '11-719',
+  },
   {
     aliases: ['garam masala'],
     cofidCode: '13-829',
@@ -308,10 +317,8 @@ const ignoredNameWords = new Set([
   'crushed',
   'cut',
   'diced',
-  'drained',
   'extra',
   'finely',
-  'fresh',
   'grated',
   'into',
   'juiced',
@@ -330,7 +337,7 @@ const ignoredNameWords = new Set([
 const aliases = new Map<string, IngredientRule>();
 for (const rule of ingredientRules) {
   for (const alias of rule.aliases) {
-    aliases.set(normaliseIngredientName(alias), rule);
+    aliases.set(normaliseName(alias), rule);
   }
 }
 
@@ -558,7 +565,7 @@ function readFood(row: string): CofidFood {
 
 function matchFood(ingredientName: string): FoodMatch | null {
   const name = normaliseName(ingredientName);
-  const rule = findIngredientRule(normaliseIngredientName(ingredientName));
+  const rule = findIngredientRule(ingredientName);
   const exact = foodsByName.get(name);
   if (exact?.length === 1) {
     return {
@@ -573,17 +580,12 @@ function matchFood(ingredientName: string): FoodMatch | null {
   return food === undefined ? null : { confidence: 'medium', food, rule };
 }
 
-function findIngredientRule(name: string): IngredientRule | undefined {
-  const direct = aliases.get(name);
+function findIngredientRule(
+  ingredientName: string,
+): IngredientRule | undefined {
+  const direct = aliases.get(normaliseName(ingredientName));
   if (direct !== undefined) return direct;
-
-  const phraseMatches = new Set<IngredientRule>();
-  for (const [alias, rule] of aliases) {
-    if (name.startsWith(`${alias} `) || name.endsWith(` ${alias}`)) {
-      phraseMatches.add(rule);
-    }
-  }
-  return phraseMatches.size === 1 ? [...phraseMatches][0] : undefined;
+  return aliases.get(normaliseIngredientName(ingredientName));
 }
 
 function normaliseQuantity(
@@ -690,10 +692,17 @@ function normaliseName(value: string): string {
 }
 
 function normaliseIngredientName(value: string): string {
-  return normaliseName(value)
+  const words = normaliseName(value)
     .split(' ')
-    .filter((word) => !ignoredNameWords.has(word))
-    .join(' ');
+    .filter(
+      (word) =>
+        !ignoredNameWords.has(word) &&
+        !/^\d+(?:\.\d+)?(?:cm|mm|in)$/u.test(word),
+    );
+
+  while (words[0] === 'and' || words[0] === 'or') words.shift();
+  while (words.at(-1) === 'and' || words.at(-1) === 'or') words.pop();
+  return words.join(' ');
 }
 
 function singular(value: string): string {

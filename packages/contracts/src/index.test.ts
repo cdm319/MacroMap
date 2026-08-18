@@ -4,6 +4,7 @@ import {
   householdSettingsSchema,
   recipeInputSchema,
   recipeImportResponseSchema,
+  recipeNutritionProvenanceSchema,
   recipePhotoUploadRequestSchema,
   recipeSchema,
   runtimeConfigSchema,
@@ -149,6 +150,36 @@ describe('shared API contracts', () => {
         updatedAt: '2026-08-17T12:00:00.000Z',
       }),
     ).toMatchObject({ title: 'Tomato pasta' });
+  });
+
+  it('records nutrition quantity assumptions and negligible omissions', () => {
+    const provenance = {
+      confidence: 'low',
+      datasetVersion: '2021',
+      matches: [
+        {
+          canonicalName: 'baking potato',
+          cofidCode: '13-489',
+          cofidName: 'Potatoes, old, raw',
+          grams: 250,
+          ingredientIndex: 0,
+          matchConfidence: 'medium',
+          quantitySource: 'estimated_count',
+        },
+      ],
+      omissions: [
+        {
+          ingredientIndex: 1,
+          ingredientName: 'salt',
+          reason: 'negligible_seasoning',
+        },
+      ],
+      source: 'cofid',
+    } as const;
+
+    expect(recipeNutritionProvenanceSchema.parse(provenance)).toEqual(
+      provenance,
+    );
   });
 
   it('accepts only bounded supported recipe photos', () => {

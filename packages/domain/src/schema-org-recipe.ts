@@ -288,18 +288,26 @@ function estimateNutrition(
     'Nutrition was estimated from CoFID 2021. Check the ingredient matches and per-serving values.',
   );
   const reviewMatches = estimation.provenance.matches.filter(
-    ({ matchConfidence }) => matchConfidence !== 'high',
+    ({ matchConfidence, quantitySource }) =>
+      matchConfidence !== 'high' ||
+      quantitySource === 'household_measure' ||
+      quantitySource === 'estimated_count',
   );
-  if (reviewMatches.length > 0) {
+  const omissions = estimation.provenance.omissions ?? [];
+  if (reviewMatches.length > 0 || omissions.length > 0) {
     warn(
       warnings,
       'NUTRITION_MATCH_REVIEW_NEEDED',
-      `Review these CoFID matches: ${reviewMatches
-        .map(
-          ({ cofidName, ingredientIndex }) =>
-            `${ingredients[ingredientIndex]?.name ?? 'ingredient'} → ${cofidName}`,
-        )
-        .join('; ')}.`,
+      `${[
+        ...reviewMatches.map(
+          ({ cofidName, grams, ingredientIndex }) =>
+            `${ingredients[ingredientIndex]?.name ?? 'ingredient'} → ${cofidName} (${Math.round(grams * 10) / 10} g)`,
+        ),
+        ...omissions.map(
+          ({ ingredientName }) =>
+            `${ingredientName} was omitted as a negligible seasoning`,
+        ),
+      ].join('; ')}.`,
     );
   }
   return estimation;
@@ -317,7 +325,7 @@ function describeNutritionIssue({
     return `No safe CoFID match was found for ${ingredientName}.`;
   }
   if (reason === 'unsupported_unit') {
-    return `${ingredientName} needs a mass unit such as g, kg, oz, or lb.`;
+    return `${ingredientName} needs a supported unit or an explicit weight.`;
   }
   return `${ingredientName} needs a usable quantity.`;
 }

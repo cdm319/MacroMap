@@ -60,15 +60,92 @@ describe('CoFID nutrition estimation', () => {
     });
   });
 
-  it('does not guess unsupported volumes or unknown foods', () => {
+  it('estimates the reported everyday recipe and records its assumptions', () => {
+    const result = estimateRecipeNutrition(
+      [
+        ingredient(1, 'unit', 'baking potatoes'),
+        ingredient(100, 'g', 'chicken breast'),
+        ingredient(1, 'tbsp', 'butter'),
+        ingredient(0.5, 'tsp', 'extra virgin olive oil'),
+        ingredient(30, 'g', 'grated cheddar cheese'),
+        ingredient(415, 'g', 'Heinz baked beans'),
+      ],
+      1,
+    );
+
+    expect(result).toMatchObject({
+      kind: 'estimated',
+      nutrition: {
+        carbsGrams: 111.37,
+        fatGrams: 28,
+        kcal: 899.54,
+        proteinGrams: 57.21,
+      },
+      provenance: {
+        confidence: 'low',
+        matches: [
+          {
+            grams: 250,
+            ingredientIndex: 0,
+            quantitySource: 'estimated_count',
+          },
+          { ingredientIndex: 1, quantitySource: 'metric' },
+          {
+            grams: 14.4,
+            ingredientIndex: 2,
+            quantitySource: 'household_measure',
+          },
+          {
+            grams: 2.275,
+            ingredientIndex: 3,
+            quantitySource: 'household_measure',
+          },
+          { ingredientIndex: 4, quantitySource: 'metric' },
+          { ingredientIndex: 5, quantitySource: 'metric' },
+        ],
+      },
+    });
+  });
+
+  it('covers common Paprika measures and flags omitted seasonings', () => {
+    const result = estimateRecipeNutrition(
+      [
+        ingredient(1, 'tbsp', 'coconut oil'),
+        ingredient(2, 'clove', 'garlic'),
+        ingredient(200, 'ml', 'chicken stock'),
+        ingredient(1, 'tsp', 'smoked paprika'),
+      ],
+      2,
+    );
+
+    expect(result).toMatchObject({
+      kind: 'estimated',
+      provenance: {
+        confidence: 'low',
+        matches: [
+          { grams: 13.8, quantitySource: 'household_measure' },
+          { grams: 6, quantitySource: 'household_measure' },
+          { grams: 200, quantitySource: 'household_measure' },
+        ],
+        omissions: [
+          {
+            ingredientName: 'smoked paprika',
+            reason: 'negligible_seasoning',
+          },
+        ],
+      },
+    });
+  });
+
+  it('does not guess unknown foods or unsupported measures', () => {
     expect(
       estimateRecipeNutrition(
         [
           {
             name: 'whole milk',
             preparationNote: '',
-            quantity: 250,
-            unit: 'ml',
+            quantity: 1,
+            unit: 'scoop',
           },
           {
             name: 'mystery powder',
@@ -96,3 +173,7 @@ describe('CoFID nutrition estimation', () => {
     });
   });
 });
+
+function ingredient(quantity: number, unit: string, name: string) {
+  return { name, preparationNote: '', quantity, unit };
+}

@@ -132,10 +132,26 @@ export const recipeNutritionProvenanceSchema = z.discriminatedUnion('source', [
             grams: z.number().positive(),
             ingredientIndex: z.number().int().nonnegative(),
             matchConfidence: z.enum(['high', 'medium', 'low']),
-            quantitySource: z.enum(['metric', 'avoirdupois']),
+            quantitySource: z.enum([
+              'metric',
+              'avoirdupois',
+              'household_measure',
+              'estimated_count',
+            ]),
           })
           .strict(),
       ),
+      omissions: z
+        .array(
+          z
+            .object({
+              ingredientIndex: z.number().int().nonnegative(),
+              ingredientName: z.string().min(1),
+              reason: z.literal('negligible_seasoning'),
+            })
+            .strict(),
+        )
+        .optional(),
       source: z.literal('cofid'),
     })
     .strict(),

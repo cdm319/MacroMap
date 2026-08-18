@@ -47,6 +47,18 @@ async function useCognitoConfig(page: Page): Promise<void> {
   );
 }
 
+async function fillIngredient(
+  page: Page,
+  index: number,
+  amount: string,
+  unit: string,
+  name: string,
+): Promise<void> {
+  await page.getByLabel(`Ingredient ${index} amount`).fill(amount);
+  await page.getByLabel(`Ingredient ${index} unit`).fill(unit);
+  await page.getByLabel(`Ingredient ${index} name`).fill(name);
+}
+
 test('shows the private household foundation', async ({ page }) => {
   await page.goto('/');
 
@@ -136,6 +148,45 @@ test('creates, cooks, edits, and archives a manual recipe', async ({
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Archive recipe' }).click();
   await expect(page.getByText('Your recipe book is empty')).toBeVisible();
+});
+
+test('estimates an everyday recipe after known nutrition is removed', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Add recipe' }).click();
+
+  await page.getByLabel('Title').fill('Chicken jacket potato');
+  await page.getByLabel('Servings').fill('1');
+  for (let index = 0; index < 5; index += 1) {
+    await page.getByRole('button', { name: 'Add ingredient' }).click();
+  }
+  for (const [index, amount, unit, name] of [
+    [1, '1', 'unit', 'baking potatoes'],
+    [2, '100', 'g', 'chicken breast'],
+    [3, '1', 'tbsp', 'butter'],
+    [4, '0.5', 'tsp', 'extra virgin olive oil'],
+    [5, '30', 'g', 'grated cheddar cheese'],
+    [6, '415', 'g', 'Heinz baked beans'],
+  ] as const) {
+    await fillIngredient(page, index, amount, unit, name);
+  }
+  await page.getByLabel('Add known nutrition').check();
+  await page.getByLabel('Per serving Calories').fill('900');
+  await page.getByLabel('Per serving Protein').fill('57');
+  await page.getByLabel('Per serving Carbs').fill('111');
+  await page.getByLabel('Per serving Fat').fill('28');
+  await page.getByRole('button', { name: 'Save recipe' }).click();
+
+  await page.getByRole('button', { name: 'Edit' }).click();
+  await page.getByLabel('Add known nutrition').uncheck();
+  await page.getByRole('button', { name: 'Save recipe' }).click();
+
+  await expect(
+    page.getByText('Estimated from CoFID 2021 · Low confidence'),
+  ).toBeVisible();
+  await page.getByText('How this was estimated').click();
+  await expect(page.getByText(/baking potatoes.*250 g assumed/u)).toBeVisible();
 });
 
 test('saves a recipe without instructions and adds them later', async ({

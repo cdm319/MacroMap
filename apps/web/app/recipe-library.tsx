@@ -1,6 +1,11 @@
 'use client';
 
-import type { Recipe, RecipeInput, RecipeSummary } from '@macromap/contracts';
+import type {
+  Recipe,
+  RecipeInput,
+  RecipeNutritionProvenance,
+  RecipeSummary,
+} from '@macromap/contracts';
 import { estimateRecipeNutrition } from '@macromap/domain/nutrition';
 import { useEffect, useState } from 'react';
 import { CookingMode } from './cooking-mode';
@@ -525,13 +530,18 @@ function NutritionSource({ recipe }: { readonly recipe: Recipe }) {
         {capitalize(provenance.confidence)} confidence
       </p>
       <details>
-        <summary>Ingredient matches</summary>
+        <summary>How this was estimated</summary>
         <ul>
           {provenance.matches.map((match) => (
             <li key={match.ingredientIndex}>
               {recipe.ingredients[match.ingredientIndex]?.name ?? 'Ingredient'}
               {' → '}
-              {match.cofidName}
+              {match.cofidName} · {quantityDescription(match)}
+            </li>
+          ))}
+          {provenance.omissions?.map((omission) => (
+            <li key={`omission-${omission.ingredientIndex}`}>
+              {omission.ingredientName} · omitted as a negligible seasoning
             </li>
           ))}
         </ul>
@@ -561,6 +571,20 @@ function localRecipe(id: string, input: RecipeInput): Recipe {
     planningStatus: nutrition === null ? 'needs-nutrition' : 'ready',
     updatedAt: new Date().toISOString(),
   };
+}
+
+function quantityDescription(
+  match: Extract<
+    RecipeNutritionProvenance,
+    { source: 'cofid' }
+  >['matches'][number],
+): string {
+  const grams = `${Math.round(match.grams * 10) / 10} g`;
+  if (match.quantitySource === 'estimated_count') return `${grams} assumed`;
+  if (match.quantitySource === 'household_measure') {
+    return `${grams} converted`;
+  }
+  return grams;
 }
 
 function summaryFrom(recipe: Recipe): RecipeSummary {

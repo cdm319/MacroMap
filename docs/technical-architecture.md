@@ -282,9 +282,13 @@ The current CoFID slice stores:
 - the selected CoFID code and food name; and
 - the dataset version, conversion source, and match confidence.
 
-Only metric and avoirdupois mass units are estimated in this slice. Volume,
-count, unknown, or ambiguous ingredients remain without estimated nutrition and
-are shown for review instead of using an assumed density or portion weight.
+Metric and avoirdupois weights are converted directly. Common household
+measures use explicit ingredient densities, and a small set of common item
+units use explicit assumed weights. Assumed item weights make the overall
+estimate low confidence and are shown to the user. Small, explicitly allowlisted
+seasonings may be omitted as negligible; those omissions are also shown and
+make the estimate low confidence. Unknown or ambiguous ingredients remain
+without estimated nutrition and are shown for review.
 
 Only compatible dimensions and confidently equivalent ingredients are merged
 in the grocery list. Ambiguous count-to-weight conversions remain separate and

@@ -497,9 +497,9 @@ export function RecipeForm({
           </div>
         ) : (
           <p className="notice">
-            MacroMap will try to estimate nutrition from mass ingredients using
-            CoFID 2021. Unsupported or uncertain ingredients will stay flagged
-            for review.
+            MacroMap will try to estimate nutrition from your ingredients using
+            CoFID 2021. Any assumed weights or household-measure conversions
+            will be shown with the result.
           </p>
         )}
       </section>

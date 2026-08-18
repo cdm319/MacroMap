@@ -1,6 +1,6 @@
 # API conventions
 
-Status: Phase 2 complete
+Status: Phase 3 in progress
 
 ## Phase 1 session endpoint
 
@@ -159,11 +159,18 @@ requirements.
 
 A recipe document contains its title, description, serving count, ordered
 structured ingredients, zero or more ordered instructions, explicit meal types,
-editable cuisine/protein/flavour tags, and optional authoritative per-serving
-kcal, protein, carbohydrate, and fat. Responses include a nullable signed
-`photoUrl`. Missing instructions are valid for storage, planning, and cooking.
-Missing nutrition is valid for storage and cooking but marks the recipe as
-unavailable to the future planner.
+editable cuisine/protein/flavour tags, and optional per-serving kcal, protein,
+carbohydrate, and fat. Responses include nullable `nutritionProvenance` and a
+nullable signed `photoUrl`. Provenance distinguishes confirmed manual values,
+reviewed Schema.org values, and CoFID estimates with their dataset version,
+confidence, converted mass, and selected ingredient matches.
+
+When nutrition is omitted, saving tries the bundled CoFID 2021 dataset using
+only safe mass conversions and exact or explicit alias matches. A complete
+estimate is stored with the recipe. Otherwise nutrition stays absent and the
+recipe remains unavailable to the future planner. Confirmed manual or valid
+imported nutrition is retained. Missing instructions remain valid for storage,
+planning, and cooking.
 
 Recipe edits are whole-document, last-write-wins operations for the single-login
 MVP. The Cognito `sub` determines ownership; recipe requests never accept a
@@ -187,5 +194,7 @@ validated its actual bytes. Unfinished staging objects expire after one day.
 - The original JSON, extracted draft, warnings, and reviewed recipe link are
   retained. Reusing an import for another recipe returns `409`.
 
-Direct JSON importing performs no network or AI call. Remote URL and primary
-photo fetching are introduced by their later Phase 3 slice.
+Direct JSON importing performs no network or AI call. Valid supplied nutrition
+is retained; otherwise a structurally complete recipe receives the same CoFID
+attempt and review warnings before saving. Remote URL and primary photo fetching
+are introduced by their later Phase 3 slice.

@@ -51,6 +51,10 @@ describe('Schema.org recipe imports', () => {
           kcal: 520,
           proteinGrams: 20,
         },
+        nutritionProvenance: {
+          confidence: 'confirmed',
+          source: 'schema_org',
+        },
         photoUrl: 'https://images.example.test/pasta-primary.jpg',
         servingCount: 2,
         source: {
@@ -126,6 +130,36 @@ describe('Schema.org recipe imports', () => {
     expect(result.warnings).toContainEqual(
       expect.objectContaining({ code: 'INGREDIENT_REVIEW_NEEDED' }),
     );
+  });
+
+  it('estimates missing nutrition from complete mass ingredients', () => {
+    const result = parseSchemaOrgRecipe(
+      JSON.stringify({
+        ...recipe,
+        nutrition: undefined,
+        recipeIngredient: ['200g pasta', '400g tomatoes'],
+      }),
+    );
+
+    if (result.kind !== 'preview') throw new Error('Expected a preview.');
+    expect(result.draft).toMatchObject({
+      nutrition: {
+        carbsGrams: 81.6,
+        fatGrams: 1.8,
+        kcal: 371,
+        proteinGrams: 12.3,
+      },
+      nutritionProvenance: {
+        confidence: 'medium',
+        datasetVersion: '2021',
+        source: 'cofid',
+      },
+    });
+    expect(result.warnings.map(({ code }) => code)).toEqual([
+      'NUTRITION_ESTIMATED',
+      'NUTRITION_MATCH_REVIEW_NEEDED',
+      'PHOTO_NOT_COPIED',
+    ]);
   });
 
   it('treats prompt-like recipe text only as imported content', () => {

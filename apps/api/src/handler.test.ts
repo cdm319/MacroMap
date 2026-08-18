@@ -255,7 +255,7 @@ describe('authenticated household API', () => {
     });
   });
 
-  it('validates and saves a recipe without instructions', async () => {
+  it('estimates missing nutrition before saving a recipe', async () => {
     const recipeId = '00000000-0000-4000-8000-000000000201';
     const input = {
       description: 'A quick dinner.',
@@ -281,8 +281,10 @@ describe('authenticated household API', () => {
         save: vi.fn().mockResolvedValue({
           ...input,
           id: recipeId,
+          nutrition: pastaNutrition,
+          nutritionProvenance: pastaProvenance,
           photoUpdatedAt: null,
-          planningStatus: 'needs-nutrition',
+          planningStatus: 'ready',
           updatedAt: '2026-08-17T12:00:00.000Z',
         }),
       },
@@ -299,7 +301,8 @@ describe('authenticated household API', () => {
     expect(repository.recipes.save).toHaveBeenCalledWith(
       'subject-1',
       recipeId,
-      input,
+      { ...input, nutrition: pastaNutrition },
+      pastaProvenance,
     );
     expect(response.statusCode).toBe(200);
   });
@@ -365,7 +368,11 @@ describe('authenticated household API', () => {
       {},
       {
         find: vi.fn().mockResolvedValue({
-          draft: { ...input, photoUrl: null },
+          draft: {
+            ...input,
+            nutritionProvenance: null,
+            photoUrl: null,
+          },
           recipeId: null,
           warnings: [],
         }),
@@ -384,7 +391,8 @@ describe('authenticated household API', () => {
     expect(repository.recipes.save).toHaveBeenCalledWith(
       'subject-1',
       recipeId,
-      input,
+      { ...input, nutrition: pastaNutrition },
+      pastaProvenance,
     );
     expect(repository.imports.markSaved).toHaveBeenCalledWith(
       'subject-1',
@@ -534,6 +542,7 @@ function storedRecipe(recipeId: string) {
     instructions: ['Boil the pasta.'],
     mealTypes: ['dinner'] as const,
     nutrition: null,
+    nutritionProvenance: null,
     photoUpdatedAt: null,
     planningStatus: 'needs-nutrition' as const,
     servingCount: 2,
@@ -543,3 +552,27 @@ function storedRecipe(recipeId: string) {
     updatedAt: '2026-08-17T12:00:00.000Z',
   };
 }
+
+const pastaNutrition = {
+  carbsGrams: 75.6,
+  fatGrams: 1.6,
+  kcal: 343,
+  proteinGrams: 11.3,
+};
+
+const pastaProvenance = {
+  confidence: 'medium' as const,
+  datasetVersion: '2021' as const,
+  matches: [
+    {
+      canonicalName: 'pasta',
+      cofidCode: '11-716',
+      cofidName: 'Pasta, white, dried, raw',
+      grams: 200,
+      ingredientIndex: 0,
+      matchConfidence: 'medium' as const,
+      quantitySource: 'metric' as const,
+    },
+  ],
+  source: 'cofid' as const,
+};

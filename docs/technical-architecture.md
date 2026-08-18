@@ -231,19 +231,21 @@ is stored as household planning configuration and defaults to `0.15`.
 ### Recipes
 
 - `recipe`: editable title, description, yield, archive state, optional source
-  attribution, optional authoritative per-serving nutrition, and a nullable
-  marker for its private photo. Nutrition provenance is added with estimation.
+  attribution, optional per-serving nutrition and its provenance, and a
+  nullable marker for its private photo.
 - `recipe_ingredient`: ordered structured ingredient, amount, unit, and
   preparation note. Imported source text is added with recipe imports.
 - `recipe_step`: zero or more ordered cooking instructions.
 - `recipe_tag`: explicit meal types and editable inferred descriptors.
-- estimated nutrition provenance and confidence are introduced with nutrition
-  estimation rather than modelled speculatively in the manual-entry slice.
 - `ingredient`: canonical identity used for nutrition matching and grocery
-  consolidation.
-- `ingredient_nutrition_match`: the selected CoFID or USDA match and confidence.
+  consolidation in later planning work.
 - `recipe_import`: the original import content, extracted draft, review
   warnings, and nullable link to the recipe created after explicit review.
+
+The MVP stores a compact snapshot of accepted CoFID matches, converted gram
+amounts, dataset version, and confidence in `recipe.nutrition_provenance`. That
+keeps each estimate reproducible without introducing canonical-ingredient or
+match tables before grocery planning needs them.
 
 Original ingredient text and source attribution are preserved even after
 normalisation. Imported or inferred data never bypasses the mandatory review
@@ -273,12 +275,16 @@ that cannot be matched with sufficient confidence. USDA responses and accepted
 matches are cached so ordinary planning does not require an external nutrition
 request.
 
-The system stores:
+The current CoFID slice stores:
 
 - the user's original quantity and unit;
-- a normalised decimal quantity where conversion is reliable;
-- a measurement dimension such as mass, volume, or count; and
-- the conversion/match source and confidence.
+- the converted mass for each accepted match;
+- the selected CoFID code and food name; and
+- the dataset version, conversion source, and match confidence.
+
+Only metric and avoirdupois mass units are estimated in this slice. Volume,
+count, unknown, or ambiguous ingredients remain without estimated nutrition and
+are shown for review instead of using an assumed density or portion weight.
 
 Only compatible dimensions and confidently equivalent ingredients are merged
 in the grocery list. Ambiguous count-to-weight conversions remain separate and

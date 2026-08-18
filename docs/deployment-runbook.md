@@ -41,6 +41,12 @@ August 2026. It added two nullable source-attribution columns to `recipe` and
 created an empty `recipe_import` preview table with its expected indexes. It did
 not transform existing recipe data. Do not reapply it to production.
 
+Before the CoFID nutrition slice is merged, the owner must apply and verify
+`packages/database/sql/updates/005-recipe-nutrition-provenance.sql` once. It
+adds one nullable JSONB column to `recipe`; existing recipes remain unchanged.
+After the owner confirms the result, replace this paragraph with the completed
+application date and do not reapply the update.
+
 The expected USD 2-6 monthly cost envelope is now live. The
 database-not-pausing failure case remains approximately USD 51 per month. Check
 current official prices and the PR's cost classification before merging. The

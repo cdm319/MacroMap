@@ -611,6 +611,26 @@
   margin-top: 1.25rem;
 }
 
+.nutrition-estimate,
+.nutrition-source {
+  margin: 0 0 1rem;
+  color: #526159;
+  line-height: 1.5;
+}
+
+.nutrition-estimate p,
+.nutrition-source p {
+  margin: 0.35rem 0 0;
+}
+
+.nutrition-source details {
+  margin-top: 0.5rem;
+}
+
+.nutrition-source ul {
+  margin-bottom: 0;
+}
+
 .form-actions {
   justify-content: start;
   margin-top: 1.5rem;

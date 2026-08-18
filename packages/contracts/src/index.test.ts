@@ -143,6 +143,7 @@ describe('shared API contracts', () => {
       recipeSchema.parse({
         ...input,
         id: '00000000-0000-4000-8000-000000000201',
+        nutritionProvenance: null,
         photoUrl: null,
         planningStatus: 'needs-nutrition',
         updatedAt: '2026-08-17T12:00:00.000Z',
@@ -202,6 +203,7 @@ describe('shared API contracts', () => {
         instructions: [],
         mealTypes: [],
         nutrition: null,
+        nutritionProvenance: null,
         photoUrl: null,
         servingCount: null,
         source: null,

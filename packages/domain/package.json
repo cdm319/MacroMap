@@ -5,6 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./cofid-2021-data": "./src/cofid-2021-data.ts",
+    "./nutrition": "./src/nutrition.ts",
     "./schema-org-recipe": "./src/schema-org-recipe.ts"
   },
   "scripts": {

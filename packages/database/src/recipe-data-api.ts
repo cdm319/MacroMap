@@ -1,8 +1,10 @@
 import { RDSDataClient } from '@aws-sdk/client-rds-data';
-import type {
-  MealType,
-  RecipeInput,
-  RecipeNutrition,
+import {
+  recipeNutritionProvenanceSchema,
+  type MealType,
+  type RecipeInput,
+  type RecipeNutrition,
+  type RecipeNutritionProvenance,
 } from '@macromap/contracts';
 import { and, asc, desc, eq, inArray, isNull, lt, or } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/aws-data-api/pg';
@@ -29,6 +31,7 @@ export interface StoredRecipeSummary {
   readonly id: string;
   readonly mealTypes: ReadonlyArray<MealType>;
   readonly nutrition: RecipeNutrition | null;
+  readonly nutritionProvenance: RecipeNutritionProvenance | null;
   readonly photoUpdatedAt: string | null;
   readonly planningStatus: 'needs-nutrition' | 'ready';
   readonly servingCount: number;
@@ -49,6 +52,7 @@ export interface RecipeRepository {
     subject: string,
     recipeId: string,
     recipe: RecipeInput,
+    nutritionProvenance: RecipeNutritionProvenance | null,
   ): Promise<StoredRecipe | undefined>;
   setPhoto(
     subject: string,
@@ -216,7 +220,12 @@ export function createDataApiRecipeRepository(
       };
     },
 
-    async save(subject, recipeId, input) {
+    async save(subject, recipeId, input, nutritionProvenance) {
+      if ((input.nutrition === null) !== (nutritionProvenance === null)) {
+        throw new Error(
+          'Recipe nutrition and provenance must be saved together.',
+        );
+      }
       return database.transaction(async (transaction) => {
         const [identity] = await transaction
           .select({ householdId: accountIdentities.householdId })
@@ -248,6 +257,7 @@ export function createDataApiRecipeRepository(
           nutritionFatGrams: numeric(input.nutrition?.fatGrams),
           nutritionKcal: numeric(input.nutrition?.kcal),
           nutritionProteinGrams: numeric(input.nutrition?.proteinGrams),
+          nutritionProvenance,
           servingCount: String(input.servingCount),
           sourceName: input.source?.name ?? null,
           sourceUrl: input.source?.url ?? null,
@@ -321,6 +331,7 @@ export function createDataApiRecipeRepository(
           ...input,
           id: recipeId,
           mealTypes: input.mealTypes,
+          nutritionProvenance,
           photoUpdatedAt: existing?.photoUpdatedAt?.toISOString() ?? null,
           planningStatus:
             input.nutrition === null ? 'needs-nutrition' : 'ready',
@@ -359,6 +370,7 @@ const recipeColumns = {
   nutritionFatGrams: recipes.nutritionFatGrams,
   nutritionKcal: recipes.nutritionKcal,
   nutritionProteinGrams: recipes.nutritionProteinGrams,
+  nutritionProvenance: recipes.nutritionProvenance,
   photoUpdatedAt: recipes.photoUpdatedAt,
   servingCount: recipes.servingCount,
   sourceName: recipes.sourceName,
@@ -374,6 +386,7 @@ interface RecipeRow {
   readonly nutritionFatGrams: string | null;
   readonly nutritionKcal: string | null;
   readonly nutritionProteinGrams: string | null;
+  readonly nutritionProvenance: unknown;
   readonly photoUpdatedAt: Date | null;
   readonly servingCount: string;
   readonly sourceName: string | null;
@@ -393,6 +406,12 @@ function readRecipeSummary(
   return {
     id: recipe.id,
     nutrition,
+    nutritionProvenance:
+      nutrition === null
+        ? null
+        : recipe.nutritionProvenance === null
+          ? { confidence: 'confirmed', source: 'manual' }
+          : recipeNutritionProvenanceSchema.parse(recipe.nutritionProvenance),
     photoUpdatedAt: recipe.photoUpdatedAt?.toISOString() ?? null,
     planningStatus: nutrition === null ? 'needs-nutrition' : 'ready',
     servingCount: Number(recipe.servingCount),

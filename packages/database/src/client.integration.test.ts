@@ -19,6 +19,7 @@ if (databaseUrl === undefined) {
         'updates/002-recipe-library.sql',
         'updates/003-recipe-photos.sql',
         'updates/004-recipe-imports.sql',
+        'updates/005-recipe-nutrition-provenance.sql',
       ]) {
         const sql = await readFile(
           new URL(`../sql/${filename}`, import.meta.url),
@@ -108,13 +109,19 @@ if (databaseUrl === undefined) {
       );
 
       const result = await client.pool.query<{
+        nutrition_provenance: unknown;
         photo_updated_at: Date | null;
         title: string;
-      }>(`select photo_updated_at, title from recipe where id = $1`, [
-        '00000000-0000-4000-8000-000000000201',
-      ]);
+      }>(
+        `select nutrition_provenance, photo_updated_at, title from recipe where id = $1`,
+        ['00000000-0000-4000-8000-000000000201'],
+      );
       expect(result.rows).toEqual([
-        { photo_updated_at: null, title: 'Tomato pasta' },
+        {
+          nutrition_provenance: null,
+          photo_updated_at: null,
+          title: 'Tomato pasta',
+        },
       ]);
     });
 

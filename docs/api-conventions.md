@@ -203,7 +203,7 @@ Direct JSON importing performs no network or AI call. Valid supplied nutrition
 is retained; otherwise a structurally complete recipe receives the same CoFID
 attempt and review warnings before saving. Direct JSON previews identify a
 primary photo but do not copy it. URL imports are limited to public IPv4 HTTP(S)
-targets on standard ports, five redirects, eight seconds, and 512 KiB. Every
+targets on standard ports, five redirects, eight seconds, and 1 MiB. Every
 redirect is resolved and checked again. Photos are limited to 5 MiB and JPEG,
 PNG, or WebP content whose bytes match its declared type. Imported photos are
 published only when the reviewed recipe is saved.

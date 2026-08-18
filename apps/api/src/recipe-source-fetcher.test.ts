@@ -1,13 +1,47 @@
-import { maxRecipeImportCharacters } from '@macromap/contracts';
+import { once } from 'node:events';
+import { createServer } from 'node:http';
 import { describe, expect, it, vi } from 'vitest';
 import {
   createRecipeSourceFetcher,
+  download,
+  maxRecipePageBytes,
   RemoteRecipeError,
 } from './recipe-source-fetcher.js';
 
 const publicAddress = '93.184.216.34';
 
 describe('remote recipe fetching', () => {
+  it('downloads through Node when lookup requests all addresses', async () => {
+    const server = createServer((_request, response) => {
+      response.writeHead(200, { 'content-type': 'text/html' });
+      response.end('<html>recipe</html>');
+    });
+    server.listen(0, '127.0.0.1');
+    await once(server, 'listening');
+    const address = server.address();
+    if (address === null || typeof address === 'string') {
+      throw new Error('Test server did not open a TCP port.');
+    }
+
+    try {
+      await expect(
+        download(
+          new URL(`http://recipes.example:${address.port}/recipe`),
+          '127.0.0.1',
+          'text/html',
+          1_024,
+          1_000,
+        ),
+      ).resolves.toMatchObject({
+        contentType: 'text/html',
+        status: 200,
+      });
+    } finally {
+      server.close();
+      await once(server, 'close');
+    }
+  });
+
   it('pins requests to a resolved public IPv4 address', async () => {
     const request = vi.fn().mockResolvedValue(response('<html></html>'));
     const fetcher = createRecipeSourceFetcher(
@@ -24,7 +58,7 @@ describe('remote recipe fetching', () => {
       new URL('https://recipes.example/one'),
       publicAddress,
       expect.any(String),
-      maxRecipeImportCharacters,
+      maxRecipePageBytes,
       expect.any(Number),
     );
   });
@@ -97,9 +131,7 @@ describe('remote recipe fetching', () => {
     const resolve = vi.fn().mockResolvedValue([publicAddress]);
     const oversized = createRecipeSourceFetcher(
       resolve,
-      vi
-        .fn()
-        .mockResolvedValue(response('x'.repeat(maxRecipeImportCharacters + 1))),
+      vi.fn().mockResolvedValue(response('x'.repeat(maxRecipePageBytes + 1))),
     );
     const inaccessible = createRecipeSourceFetcher(
       resolve,

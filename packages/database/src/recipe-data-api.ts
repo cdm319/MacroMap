@@ -283,13 +283,15 @@ export function createDataApiRecipeRepository(
             sortOrder,
           })),
         );
-        await transaction.insert(recipeSteps).values(
-          input.instructions.map((instruction, sortOrder) => ({
-            instruction,
-            recipeId,
-            sortOrder,
-          })),
-        );
+        if (input.instructions.length > 0) {
+          await transaction.insert(recipeSteps).values(
+            input.instructions.map((instruction, sortOrder) => ({
+              instruction,
+              recipeId,
+              sortOrder,
+            })),
+          );
+        }
         await transaction.insert(recipeTags).values([
           ...input.mealTypes.map((value) => ({
             category: 'meal_type',

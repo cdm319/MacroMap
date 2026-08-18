@@ -124,28 +124,35 @@ export function CookingMode({ onExit, recipe }: CookingModeProps) {
         </ul>
       </section>
 
-      <section className="cooking-card cooking-step" aria-live="polite">
-        <p className="card-label">
-          Step {step + 1} of {recipe.instructions.length}
-        </p>
-        <p>{instruction}</p>
-        <div className="step-actions">
-          <button
-            className="secondary-button compact-button"
-            disabled={step === 0}
-            onClick={() => setStep((current) => current - 1)}
-          >
-            Previous
-          </button>
-          <button
-            className="primary-button compact-button"
-            disabled={step === recipe.instructions.length - 1}
-            onClick={() => setStep((current) => current + 1)}
-          >
-            Next step
-          </button>
-        </div>
-      </section>
+      {recipe.instructions.length === 0 ? (
+        <section className="cooking-card cooking-step">
+          <p className="card-label">Method</p>
+          <p>No instructions added yet.</p>
+        </section>
+      ) : (
+        <section className="cooking-card cooking-step" aria-live="polite">
+          <p className="card-label">
+            Step {step + 1} of {recipe.instructions.length}
+          </p>
+          <p>{instruction}</p>
+          <div className="step-actions">
+            <button
+              className="secondary-button compact-button"
+              disabled={step === 0}
+              onClick={() => setStep((current) => current - 1)}
+            >
+              Previous
+            </button>
+            <button
+              className="primary-button compact-button"
+              disabled={step === recipe.instructions.length - 1}
+              onClick={() => setStep((current) => current + 1)}
+            >
+              Next step
+            </button>
+          </div>
+        </section>
+      )}
     </section>
   );
 }

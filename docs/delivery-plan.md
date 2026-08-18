@@ -87,14 +87,15 @@ Deliverables:
 - editable per-person kcal, protein, carbohydrate, and fat targets;
 - snack reserve configuration defaulted to 15%;
 - recipe list, detail, create, edit, and archive flows;
-- structured ingredients and instructions;
+- structured ingredients and optional instructions;
 - explicit meal-type and editable inferred tags;
 - optional private recipe-photo upload; and
 - mobile-friendly cooking mode without timers or offline support.
 
 Exit criteria:
 
-- a complete recipe can be created manually and cooked at a selected scale;
+- a recipe can be created manually and cooked at a selected scale, with a clear
+  placeholder when instructions have not been added;
 - recipes missing a usable yield or quantities cannot enter automatic planning;
 - authoritative nutrition survives ingredient edits until the user explicitly
   chooses re-estimation; and

@@ -158,9 +158,10 @@ requirements.
   `204`.
 
 A recipe document contains its title, description, serving count, ordered
-structured ingredients, ordered instructions, explicit meal types, editable
-cuisine/protein/flavour tags, and optional authoritative per-serving kcal,
-protein, carbohydrate, and fat. Responses include a nullable signed `photoUrl`.
+structured ingredients, zero or more ordered instructions, explicit meal types,
+editable cuisine/protein/flavour tags, and optional authoritative per-serving
+kcal, protein, carbohydrate, and fat. Responses include a nullable signed
+`photoUrl`. Missing instructions are valid for storage, planning, and cooking.
 Missing nutrition is valid for storage and cooking but marks the recipe as
 unavailable to the future planner.
 

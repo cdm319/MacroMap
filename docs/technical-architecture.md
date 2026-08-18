@@ -236,7 +236,7 @@ is stored as household planning configuration and defaults to `0.15`.
   them.
 - `recipe_ingredient`: ordered structured ingredient, amount, unit, and
   preparation note. Imported source text is added with recipe imports.
-- `recipe_step`: ordered cooking instructions.
+- `recipe_step`: zero or more ordered cooking instructions.
 - `recipe_tag`: explicit meal types and editable inferred descriptors.
 - estimated nutrition provenance and confidence are introduced with nutrition
   estimation rather than modelled speculatively in the manual-entry slice.
@@ -352,10 +352,10 @@ machine-readable code and a safe human-readable message.
 Recipes use a client-generated UUID and a whole-document `PUT`, making creation
 and retries idempotent without another key mechanism. `GET /v1/recipes` uses an
 opaque cursor and returns active recipe summaries; the item endpoint reads,
-replaces, or soft-archives one recipe. Ingredient, instruction, tag, and recipe
-rows are saved in one transaction. Every query derives the household from the
-validated Cognito `sub`; an identifier owned by another household is reported
-as absent.
+replaces, or soft-archives one recipe. Ingredient, optional instruction, tag,
+and recipe rows are saved in one transaction. Every query derives the household
+from the validated Cognito `sub`; an identifier owned by another household is
+reported as absent.
 
 ## Security and observability
 

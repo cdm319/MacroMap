@@ -73,7 +73,7 @@ export function RecipeForm({ onCancel, onSave, recipe }: RecipeFormProps) {
     })) ?? [{ ...emptyIngredient }],
   );
   const [instructions, setInstructions] = useState<string[]>(
-    recipe?.instructions ?? [''],
+    recipe?.instructions ?? [],
   );
   const [hasNutrition, setHasNutrition] = useState(
     recipe !== undefined && recipe.nutrition !== null,
@@ -146,7 +146,7 @@ export function RecipeForm({ onCancel, onSave, recipe }: RecipeFormProps) {
     });
     if (!input.success) {
       setMessage(
-        'Add a title, serving count, meal type, and complete ingredients and instructions.',
+        'Add a title, serving count, meal type, and complete ingredients. Instructions are optional, but added steps cannot be blank.',
       );
       return;
     }
@@ -318,19 +318,24 @@ export function RecipeForm({ onCancel, onSave, recipe }: RecipeFormProps) {
             Add step
           </button>
         </div>
-        <ol className="instruction-editor">
-          {instructions.map((instruction, index) => (
-            <li key={index}>
-              <textarea
-                aria-label={`Step ${index + 1}`}
-                onChange={(event) =>
-                  updateInstruction(index, event.target.value)
-                }
-                rows={3}
-                value={instruction}
-              />
-              {instructions.length > 1 ? (
+        {instructions.length === 0 ? (
+          <p className="section-help">
+            No instructions yet. You can add them later.
+          </p>
+        ) : (
+          <ol className="instruction-editor">
+            {instructions.map((instruction, index) => (
+              <li key={index}>
+                <textarea
+                  aria-label={`Step ${index + 1}`}
+                  onChange={(event) =>
+                    updateInstruction(index, event.target.value)
+                  }
+                  rows={3}
+                  value={instruction}
+                />
                 <button
+                  aria-label={`Remove instruction ${index + 1}`}
                   className="remove-button"
                   onClick={() =>
                     setInstructions((current) =>
@@ -343,10 +348,10 @@ export function RecipeForm({ onCancel, onSave, recipe }: RecipeFormProps) {
                 >
                   Remove
                 </button>
-              ) : null}
-            </li>
-          ))}
-        </ol>
+              </li>
+            ))}
+          </ol>
+        )}
       </section>
 
       <section className="form-section">

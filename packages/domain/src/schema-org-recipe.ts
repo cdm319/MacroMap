@@ -7,7 +7,10 @@ import type {
   RecipeNutritionProvenance,
   RecipeSource,
 } from '@macromap/contracts';
-import { estimateRecipeNutrition } from '@macromap/domain/nutrition';
+import {
+  describeNutritionEstimationIssue,
+  estimateRecipeNutrition,
+} from '@macromap/domain/nutrition';
 
 export type SchemaOrgRecipeResult =
   | {
@@ -262,13 +265,21 @@ function estimateNutrition(
   readonly nutrition: RecipeNutrition;
   readonly provenance: Extract<RecipeNutritionProvenance, { source: 'cofid' }>;
 } | null {
-  const complete = ingredients.every(
-    (ingredient) =>
-      ingredient.name !== '' &&
-      ingredient.quantity !== null &&
-      ingredient.unit !== '',
+  const incomplete = ingredients.filter(
+    ({ name, quantity, unit }) =>
+      name === '' || quantity === null || unit === '',
   );
-  if (!complete || ingredients.length === 0) return null;
+  if (incomplete.length > 0) {
+    warn(
+      warnings,
+      'NUTRITION_ESTIMATION_INCOMPLETE',
+      `Nutrition could not be estimated until these ingredients have a quantity and unit: ${incomplete
+        .map(({ name }) => name || 'unnamed ingredient')
+        .join(', ')}.`,
+    );
+    return null;
+  }
+  if (ingredients.length === 0) return null;
 
   const estimation = estimateRecipeNutrition(
     ingredients as RecipeIngredient[],
@@ -279,7 +290,7 @@ function estimateNutrition(
       warnings,
       'NUTRITION_ESTIMATION_INCOMPLETE',
       `Nutrition could not be estimated safely. ${estimation.issues
-        .map(describeNutritionIssue)
+        .map(describeNutritionEstimationIssue)
         .join(' ')}`,
     );
     return null;
@@ -314,23 +325,6 @@ function estimateNutrition(
     );
   }
   return estimation;
-}
-
-function describeNutritionIssue({
-  ingredientName,
-  reason,
-}: {
-  readonly ingredientName: string;
-  readonly reason:
-    'invalid_quantity' | 'no_energy' | 'no_match' | 'unsupported_unit';
-}): string {
-  if (reason === 'no_match') {
-    return `No safe CoFID match was found for ${ingredientName}.`;
-  }
-  if (reason === 'unsupported_unit') {
-    return `${ingredientName} needs a supported unit or an explicit weight.`;
-  }
-  return `${ingredientName} needs a usable quantity.`;
 }
 
 function parseIngredient(

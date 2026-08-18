@@ -96,6 +96,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     cofidCode: '12-346',
     gramsPerMillilitre: 0.46,
   },
+  { aliases: ['halloumi', 'halloumi cheese'], cofidCode: '12-496' },
   {
     aliases: ['chicken breast', 'chicken breast fillet'],
     cofidCode: '18-290',
@@ -254,6 +255,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     cofidCode: '13-521',
     measures: { handful: 30 },
   },
+  { aliases: ['spring onion'], cofidCode: '13-352', countGrams: 15 },
   {
     aliases: ['strawberry', 'strawberries'],
     cofidCode: '14-324',
@@ -277,7 +279,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     gramsPerMillilitre: 1.05,
   },
   {
-    aliases: ['vegetable oil'],
+    aliases: ['vegetable oil', 'sunflower or vegetable oil for frying'],
     cofidCode: '17-686',
     gramsPerMillilitre: 0.91,
   },
@@ -300,22 +302,29 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
 ];
 
 const ignoredNameWords = new Set([
+  'beaten',
   'boneless',
   'chopped',
   'crushed',
+  'cut',
   'diced',
   'drained',
   'extra',
   'finely',
   'fresh',
   'grated',
+  'into',
+  'juiced',
   'organic',
   'peeled',
+  'piece',
   'roughly',
   'skinless',
   'sliced',
   'trimmed',
+  'unwaxed',
   'virgin',
+  'zested',
 ]);
 
 const aliases = new Map<string, IngredientRule>();
@@ -327,6 +336,7 @@ for (const rule of ingredientRules) {
 
 const negligibleSeasonings = new Set(
   [
+    'baking powder',
     'black pepper',
     'chilli flakes',
     'chilli powder',
@@ -339,6 +349,7 @@ const negligibleSeasonings = new Set(
     'salt and pepper',
     'smoked paprika',
     'turmeric',
+    'white pepper',
   ].map(normaliseIngredientName),
 );
 
@@ -516,6 +527,22 @@ export function estimateRecipeNutrition(
   };
 }
 
+export function describeNutritionEstimationIssue({
+  ingredientName,
+  reason,
+}: NutritionEstimationIssue): string {
+  if (reason === 'no_match') {
+    return `No safe CoFID match was found for ${ingredientName}.`;
+  }
+  if (reason === 'unsupported_unit') {
+    return `${ingredientName} needs a supported unit or an explicit weight.`;
+  }
+  if (reason === 'no_energy') {
+    return `${ingredientName} did not provide usable energy data.`;
+  }
+  return `${ingredientName} needs a usable quantity.`;
+}
+
 function readFood(row: string): CofidFood {
   const cells = row.split('\t');
   if (cells.length !== 6) throw new Error('Invalid bundled CoFID row.');
@@ -531,10 +558,16 @@ function readFood(row: string): CofidFood {
 
 function matchFood(ingredientName: string): FoodMatch | null {
   const name = normaliseName(ingredientName);
-  const exact = foodsByName.get(name);
-  if (exact?.length === 1) return { confidence: 'high', food: exact[0]! };
-
   const rule = findIngredientRule(normaliseIngredientName(ingredientName));
+  const exact = foodsByName.get(name);
+  if (exact?.length === 1) {
+    return {
+      confidence: 'high',
+      food: exact[0]!,
+      ...(rule === undefined ? {} : { rule }),
+    };
+  }
+
   if (rule === undefined) return null;
   const food = foodsByCode.get(rule.cofidCode);
   return food === undefined ? null : { confidence: 'medium', food, rule };
@@ -544,11 +577,13 @@ function findIngredientRule(name: string): IngredientRule | undefined {
   const direct = aliases.get(name);
   if (direct !== undefined) return direct;
 
-  const suffixMatches = new Set<IngredientRule>();
+  const phraseMatches = new Set<IngredientRule>();
   for (const [alias, rule] of aliases) {
-    if (name.endsWith(` ${alias}`)) suffixMatches.add(rule);
+    if (name.startsWith(`${alias} `) || name.endsWith(` ${alias}`)) {
+      phraseMatches.add(rule);
+    }
   }
-  return suffixMatches.size === 1 ? [...suffixMatches][0] : undefined;
+  return phraseMatches.size === 1 ? [...phraseMatches][0] : undefined;
 }
 
 function normaliseQuantity(
@@ -599,7 +634,12 @@ function measuredQuantity(
 }
 
 function isNegligibleSeasoning(ingredient: RecipeIngredient): boolean {
-  if (!negligibleSeasonings.has(normaliseIngredientName(ingredient.name))) {
+  const name = normaliseIngredientName(ingredient.name);
+  if (
+    ![...negligibleSeasonings].some(
+      (seasoning) => name === seasoning || name.endsWith(` ${seasoning}`),
+    )
+  ) {
     return false;
   }
 

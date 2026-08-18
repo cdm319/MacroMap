@@ -137,6 +137,64 @@ describe('CoFID nutrition estimation', () => {
     });
   });
 
+  it('keeps measure conversions for exact CoFID food names', () => {
+    const result = estimateRecipeNutrition(
+      [ingredient(2, 'tbsp', 'honey'), ingredient(2, 'tsp', 'sesame seeds')],
+      1,
+    );
+
+    expect(result).toMatchObject({
+      kind: 'estimated',
+      provenance: {
+        matches: [
+          { grams: 42, quantitySource: 'household_measure' },
+          { grams: 6, quantitySource: 'household_measure' },
+        ],
+      },
+    });
+  });
+
+  it('estimates the reviewed BBC lemon chicken ingredients', () => {
+    const result = estimateRecipeNutrition(
+      [
+        ingredient(600, 'g', 'chicken breast fillets cut into 2cm pieces'),
+        ingredient(2, 'tbsp', 'cornflour'),
+        ingredient(5, 'tbsp', 'plain flour'),
+        ingredient(1, 'tsp', 'baking powder'),
+        ingredient(1, 'item', 'egg beaten'),
+        ingredient(2, 'tbsp', 'sunflower or vegetable oil for frying'),
+        ingredient(2, 'item', 'spring onions finely sliced'),
+        ingredient(2, 'tsp', 'cornflour'),
+        ingredient(2, 'item', 'unwaxed lemons zested and juiced'),
+        ingredient(2, 'tbsp', 'honey'),
+        ingredient(2, 'tbsp', 'soy sauce'),
+        ingredient(2, 'tsp', 'sesame seeds'),
+        ingredient(2, 'tsp', 'sesame oil'),
+      ],
+      6,
+    );
+
+    expect(result.kind).toBe('estimated');
+    if (result.kind !== 'estimated') return;
+    expect(result.provenance.matches).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ cofidCode: '18-290', ingredientIndex: 0 }),
+        expect.objectContaining({ cofidCode: '12-937', ingredientIndex: 4 }),
+        expect.objectContaining({ cofidCode: '17-686', ingredientIndex: 5 }),
+        expect.objectContaining({ cofidCode: '13-352', ingredientIndex: 6 }),
+        expect.objectContaining({ cofidCode: '14-130', ingredientIndex: 8 }),
+        expect.objectContaining({ grams: 42, ingredientIndex: 9 }),
+        expect.objectContaining({ grams: 6, ingredientIndex: 11 }),
+      ]),
+    );
+    expect(result.provenance.omissions).toEqual([
+      expect.objectContaining({
+        ingredientIndex: 3,
+        reason: 'negligible_seasoning',
+      }),
+    ]);
+  });
+
   it('does not guess unknown foods or unsupported measures', () => {
     expect(
       estimateRecipeNutrition(

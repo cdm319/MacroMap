@@ -140,6 +140,7 @@ describe('Schema.org recipe imports', () => {
     const result = parseSchemaOrgRecipe(
       JSON.stringify({
         ...recipe,
+        nutrition: undefined,
         recipeIngredient: ['1-2 chillies'],
       }),
     );
@@ -153,6 +154,12 @@ describe('Schema.org recipe imports', () => {
     });
     expect(result.warnings).toContainEqual(
       expect.objectContaining({ code: 'INGREDIENT_REVIEW_NEEDED' }),
+    );
+    expect(result.warnings).toContainEqual(
+      expect.objectContaining({
+        code: 'NUTRITION_ESTIMATION_INCOMPLETE',
+        message: expect.stringContaining('1-2 chillies'),
+      }),
     );
   });
 

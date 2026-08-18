@@ -172,7 +172,9 @@ converted or assumed weight; bounded negligible seasonings may be omitted and
 are recorded too. A complete estimate is stored with the recipe. Otherwise
 nutrition stays absent and the recipe remains unavailable to the future
 planner. Confirmed manual or valid imported nutrition is retained. Missing
-instructions remain valid for storage, planning, and cooking.
+instructions remain valid for storage, planning, and cooking. The editor and
+recipe detail show every unmatched ingredient or unsupported measure when an
+estimate cannot be completed.
 
 Recipe edits are whole-document, last-write-wins operations for the single-login
 MVP. The Cognito `sub` determines ownership; recipe requests never accept a

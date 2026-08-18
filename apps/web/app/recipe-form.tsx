@@ -1,12 +1,18 @@
 'use client';
 
 import {
+  recipeIngredientSchema,
   recipeInputSchema,
   type MealType,
   type Recipe,
   type RecipeImportDraft,
   type RecipeInput,
 } from '@macromap/contracts';
+import {
+  describeNutritionEstimationIssue,
+  estimateRecipeNutrition,
+  type NutritionEstimationResult,
+} from '@macromap/domain/nutrition';
 import { useState, type FormEvent } from 'react';
 import { RecipePhoto } from './recipe-photo';
 
@@ -48,6 +54,7 @@ const nutritionFields = [
   { key: 'carbsGrams', label: 'Carbs', unit: 'g' },
   { key: 'fatGrams', label: 'Fat', unit: 'g' },
 ] as const;
+const recipeIngredientsSchema = recipeIngredientSchema.array();
 
 const mealTypes: ReadonlyArray<{ label: string; value: MealType }> = [
   { label: 'Breakfast', value: 'breakfast' },
@@ -93,17 +100,12 @@ export function RecipeForm({
   const [instructions, setInstructions] = useState<string[]>(
     initial?.instructions ?? [],
   );
-  const currentEstimate =
-    initial?.nutritionProvenance?.source === 'cofid'
-      ? {
-          nutrition: initial.nutrition,
-          provenance: initial.nutritionProvenance,
-        }
-      : undefined;
+  const hasEstimatedNutrition =
+    initial?.nutritionProvenance?.source === 'cofid';
   const [hasNutrition, setHasNutrition] = useState(
     initial !== undefined &&
       initial.nutrition !== null &&
-      currentEstimate === undefined,
+      !hasEstimatedNutrition,
   );
   const [nutrition, setNutrition] = useState<NutritionDraft>({
     carbsGrams: String(initial?.nutrition?.carbsGrams ?? ''),
@@ -115,6 +117,9 @@ export function RecipeForm({
   const [sourceUrl, setSourceUrl] = useState(initial?.source?.url ?? '');
   const [message, setMessage] = useState<string>();
   const [saving, setSaving] = useState(false);
+  const nutritionEstimate = hasNutrition
+    ? null
+    : estimateDraftNutrition(ingredients, servingCount);
 
   function updateIngredient(
     index: number,
@@ -458,20 +463,7 @@ export function RecipeForm({
       </section>
 
       <section className="form-section">
-        {currentEstimate === undefined ||
-        currentEstimate.nutrition === null ||
-        hasNutrition ? null : (
-          <div className="nutrition-estimate">
-            <strong>
-              Current CoFID {currentEstimate.provenance.confidence} confidence
-              estimate
-            </strong>
-            <p>
-              {formatNutrition(currentEstimate.nutrition)} per serving. MacroMap
-              will recalculate it from the ingredients when you save.
-            </p>
-          </div>
-        )}
+        {hasNutrition ? null : <NutritionEstimate result={nutritionEstimate} />}
         <label className="nutrition-toggle">
           <input
             checked={hasNutrition}
@@ -480,9 +472,9 @@ export function RecipeForm({
           />
           <span>
             <strong>
-              {currentEstimate === undefined
-                ? 'Add known nutrition'
-                : 'Replace the estimate with known nutrition'}
+              {hasEstimatedNutrition
+                ? 'Replace the estimate with known nutrition'
+                : 'Add known nutrition'}
             </strong>
             <small>
               Enter values per serving. These will be treated as authoritative.
@@ -513,13 +505,7 @@ export function RecipeForm({
               </label>
             ))}
           </div>
-        ) : (
-          <p className="notice">
-            MacroMap will try to estimate nutrition from your ingredients using
-            CoFID 2021. Any assumed weights or household-measure conversions
-            will be shown with the result.
-          </p>
-        )}
+        ) : null}
       </section>
 
       <div className="form-actions">
@@ -533,6 +519,63 @@ export function RecipeForm({
       </div>
     </form>
   );
+}
+
+function NutritionEstimate({
+  result,
+}: {
+  readonly result: NutritionEstimationResult | null;
+}) {
+  if (result === null) {
+    return (
+      <p className="notice">
+        Complete the ingredient quantities, units, and serving count to preview
+        a CoFID estimate.
+      </p>
+    );
+  }
+  if (result.kind === 'incomplete') {
+    return (
+      <div className="nutrition-estimate">
+        <strong>Nutrition estimate needs attention</strong>
+        <p>Fix these ingredients or add known nutrition before saving:</p>
+        <ul>
+          {result.issues.map((issue) => (
+            <li key={`${issue.ingredientIndex}-${issue.ingredientName}`}>
+              {describeNutritionEstimationIssue(issue)}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+  return (
+    <div className="nutrition-estimate">
+      <strong>
+        Current CoFID {result.provenance.confidence} confidence estimate
+      </strong>
+      <p>
+        {formatNutrition(result.nutrition)} per serving. MacroMap will calculate
+        this from the ingredients when you save.
+      </p>
+    </div>
+  );
+}
+
+function estimateDraftNutrition(
+  ingredients: ReadonlyArray<IngredientDraft>,
+  servingCount: string,
+): NutritionEstimationResult | null {
+  const parsed = recipeIngredientsSchema.safeParse(
+    ingredients.map((ingredient) => ({
+      ...ingredient,
+      quantity: Number(ingredient.quantity),
+    })),
+  );
+  const servings = Number(servingCount);
+  return parsed.success && Number.isFinite(servings) && servings > 0
+    ? estimateRecipeNutrition(parsed.data, servings)
+    : null;
 }
 
 function TagField({

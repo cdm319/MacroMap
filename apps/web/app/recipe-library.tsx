@@ -6,7 +6,10 @@ import type {
   RecipeNutritionProvenance,
   RecipeSummary,
 } from '@macromap/contracts';
-import { estimateRecipeNutrition } from '@macromap/domain/nutrition';
+import {
+  describeNutritionEstimationIssue,
+  estimateRecipeNutrition,
+} from '@macromap/domain/nutrition';
 import { useEffect, useState } from 'react';
 import { CookingMode } from './cooking-mode';
 import {
@@ -326,6 +329,10 @@ function RecipeDetail({
 }) {
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoMessage, setPhotoMessage] = useState<string>();
+  const missingNutrition =
+    recipe.nutrition === null
+      ? estimateRecipeNutrition(recipe.ingredients, recipe.servingCount)
+      : null;
   const tags = [
     ...recipe.mealTypes.map(capitalize),
     ...recipe.tags.cuisines,
@@ -444,9 +451,21 @@ function RecipeDetail({
             <div className="nutrition-missing">
               <h2>Nutrition needed</h2>
               <p>
-                This recipe will stay out of meal plans until nutrition is
-                added.
+                {missingNutrition?.kind === 'estimated'
+                  ? 'An estimate is now available. Edit and save this recipe to apply it.'
+                  : 'This recipe will stay out of meal plans until nutrition is added.'}
               </p>
+              {missingNutrition?.kind !== 'incomplete' ? null : (
+                <ul>
+                  {missingNutrition.issues.map((issue) => (
+                    <li
+                      key={`${issue.ingredientIndex}-${issue.ingredientName}`}
+                    >
+                      {describeNutritionEstimationIssue(issue)}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           ) : (
             <dl className="nutrition-summary">

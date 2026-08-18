@@ -213,6 +213,25 @@ test('saves a recipe without instructions and adds them later', async ({
   await expect(page.getByText('Fry until golden on both sides.')).toBeVisible();
 });
 
+test('explains why nutrition cannot be estimated', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Add recipe' }).click();
+
+  await page.getByLabel('Title').fill('Unknown ingredient test');
+  await page.getByLabel('Ingredient 1 amount').fill('100');
+  await page.getByLabel('Ingredient 1 unit').fill('g');
+  await page.getByLabel('Ingredient 1 name').fill('Mystery powder');
+  await expect(
+    page.getByText('No safe CoFID match was found for Mystery powder.'),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: 'Save recipe' }).click();
+  await expect(page.getByText('Nutrition needed')).toBeVisible();
+  await expect(
+    page.getByText('No safe CoFID match was found for Mystery powder.'),
+  ).toBeVisible();
+});
+
 test('reviews Schema.org JSON before saving an imported recipe', async ({
   page,
 }) => {

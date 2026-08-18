@@ -1,6 +1,6 @@
 # MacroMap production deployment runbook
 
-Status: Phase 1 live; Phase 2 photo release ready to merge
+Status: Phase 2 live
 Last reviewed: 2026-08-18
 
 ## Boundaries
@@ -82,6 +82,13 @@ check.
 - Aurora auto-pause and resume were observed during initialization.
 - The `Application` cost-allocation tag is active; USD 8 and USD 15 budgets each
   have actual and forecast notifications.
+
+## Phase 2 release record
+
+- Pull request #6 merged as commit `8b6d1c1` on 18 August 2026.
+- The automatic production deployment completed successfully.
+- The owner confirmed recipe photos can be added, displayed in the recipe
+  library and cooking mode, replaced, and removed.
 
 ## Smoke and cost checks
 

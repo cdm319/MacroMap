@@ -2,6 +2,7 @@ import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
 import {
   HouseholdPeopleMismatchError,
   type HouseholdRepository,
+  type RecipeImportRepository,
   type RecipeRepository,
 } from '@macromap/database';
 import { describe, expect, it, vi } from 'vitest';
@@ -42,12 +43,19 @@ function createRepository(
   overrides: Partial<HouseholdRepository> = {},
   recipeOverrides: Partial<RecipeRepository> = {},
   photoOverrides: Partial<RecipePhotoStore> = {},
+  importOverrides: Partial<RecipeImportRepository> = {},
 ): ApplicationDependencies {
   return {
     households: {
       findBySubject: vi.fn().mockResolvedValue(session),
       updateSettings: vi.fn().mockResolvedValue(session),
       ...overrides,
+    },
+    imports: {
+      create: vi.fn().mockResolvedValue(true),
+      find: vi.fn().mockResolvedValue(undefined),
+      markSaved: vi.fn().mockResolvedValue(true),
+      ...importOverrides,
     },
     photos: {
       completeUpload: vi.fn(),
@@ -263,6 +271,7 @@ describe('authenticated household API', () => {
       mealTypes: ['dinner'],
       nutrition: null,
       servingCount: 2,
+      source: null,
       tags: { cuisines: ['Italian'], flavours: [], proteins: [] },
       title: 'Tomato pasta',
     };
@@ -293,6 +302,95 @@ describe('authenticated household API', () => {
       input,
     );
     expect(response.statusCode).toBe(200);
+  });
+
+  it('creates a review preview before importing Schema.org JSON', async () => {
+    const repository = createRepository();
+    const content = JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'Recipe',
+      name: 'Tomato pasta',
+      recipeCategory: 'Dinner',
+      recipeIngredient: ['200g pasta'],
+      recipeYield: '2 servings',
+    });
+    const response = await handleRequest(
+      repository,
+      event('POST /v1/recipe-imports/preview', {
+        body: { content },
+        subject: 'subject-1',
+      }),
+    );
+    const body = JSON.parse(response.body ?? '{}') as {
+      importId: string;
+      kind: string;
+    };
+
+    expect(response.statusCode).toBe(201);
+    expect(body.kind).toBe('preview');
+    expect(repository.imports.create).toHaveBeenCalledWith(
+      'subject-1',
+      body.importId,
+      content,
+      expect.objectContaining({ title: 'Tomato pasta' }),
+      expect.any(Array),
+    );
+    expect(repository.recipes.save).not.toHaveBeenCalled();
+  });
+
+  it('saves only a reviewed recipe import', async () => {
+    const importId = '00000000-0000-4000-8000-000000000301';
+    const recipeId = importId;
+    const input = {
+      description: '',
+      ingredients: [
+        {
+          name: 'Pasta',
+          preparationNote: '',
+          quantity: 200,
+          unit: 'g',
+        },
+      ],
+      instructions: [],
+      mealTypes: ['dinner'] as const,
+      nutrition: null,
+      servingCount: 2,
+      source: null,
+      tags: { cuisines: [], flavours: [], proteins: [] },
+      title: 'Tomato pasta',
+    };
+    const repository = createRepository(
+      {},
+      { save: vi.fn().mockResolvedValue(storedRecipe(recipeId)) },
+      {},
+      {
+        find: vi.fn().mockResolvedValue({
+          draft: { ...input, photoUrl: null },
+          recipeId: null,
+          warnings: [],
+        }),
+      },
+    );
+    const response = await handleRequest(
+      repository,
+      event('POST /v1/recipe-imports/{importId}/save', {
+        body: { recipe: input },
+        pathParameters: { importId },
+        subject: 'subject-1',
+      }),
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(repository.recipes.save).toHaveBeenCalledWith(
+      'subject-1',
+      recipeId,
+      input,
+    );
+    expect(repository.imports.markSaved).toHaveBeenCalledWith(
+      'subject-1',
+      importId,
+      recipeId,
+    );
   });
 
   it('archives only a recipe owned by the authenticated household', async () => {
@@ -439,6 +537,7 @@ function storedRecipe(recipeId: string) {
     photoUpdatedAt: null,
     planningStatus: 'needs-nutrition' as const,
     servingCount: 2,
+    source: null,
     tags: { cuisines: ['Italian'], flavours: [], proteins: [] },
     title: 'Tomato pasta',
     updatedAt: '2026-08-17T12:00:00.000Z',

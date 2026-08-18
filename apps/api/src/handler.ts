@@ -8,9 +8,11 @@ import {
 } from '@macromap/contracts';
 import {
   createDataApiHouseholdRepository,
+  createDataApiRecipeImportRepository,
   HouseholdPeopleMismatchError,
   type HouseholdRepository,
   type HouseholdSession,
+  type RecipeImportRepository,
 } from '@macromap/database';
 import {
   createDataApiRecipeRepository,
@@ -22,6 +24,7 @@ import {
   type RecipePhotoStore,
 } from './recipe-photo-store.js';
 import { handleRecipeRequest } from './recipes.js';
+import { handleRecipeImportRequest } from './recipe-imports.js';
 
 function sessionResponse(
   session: HouseholdSession,
@@ -143,6 +146,7 @@ function requireEnvironment(name: string): string {
 
 export interface ApplicationDependencies {
   readonly households: HouseholdRepository;
+  readonly imports: RecipeImportRepository;
   readonly photos: RecipePhotoStore;
   readonly recipes: RecipeRepository;
 }
@@ -157,6 +161,7 @@ function getDependencies(): ApplicationDependencies {
   };
   dependencies ??= {
     households: createDataApiHouseholdRepository(config),
+    imports: createDataApiRecipeImportRepository(config),
     photos: createS3RecipePhotoStore(
       requireEnvironment('RECIPE_PHOTO_BUCKET_NAME'),
     ),
@@ -185,6 +190,16 @@ export async function handleRequest(
   }
   if (event.routeKey === 'PUT /v1/household-settings') {
     return updateSettings(dependencies.households, event, subject, requestId);
+  }
+  if (event.routeKey.includes('/v1/recipe-imports')) {
+    return handleRecipeImportRequest(
+      dependencies.imports,
+      dependencies.recipes,
+      dependencies.photos,
+      event,
+      subject,
+      requestId,
+    );
   }
   if (event.routeKey.includes('/v1/recipes')) {
     return handleRecipeRequest(

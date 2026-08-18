@@ -221,12 +221,53 @@
   margin: 2rem auto 0;
 }
 
+.library-actions,
+.import-candidates {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.library-actions .primary-button,
+.library-actions .secondary-button,
+.import-candidates .secondary-button {
+  margin-top: 0;
+}
+
 .notice {
   padding: 0.9rem 1rem;
   border-radius: 0.8rem;
   background: #f4e7cf;
   color: #664718;
   line-height: 1.45;
+}
+
+.import-warnings {
+  padding: 1rem 1.25rem;
+  border-radius: 0.8rem;
+  background: #f4e7cf;
+  color: #664718;
+}
+
+.import-warnings h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.import-warnings ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.import-candidates {
+  align-items: stretch;
+  flex-direction: column;
+  margin-top: 1.25rem;
+}
+
+.import-candidates button {
+  width: 100%;
+  text-align: left;
 }
 
 .back-button {
@@ -372,6 +413,11 @@
 .danger-button {
   margin-top: 2rem;
   padding: 0.5rem 0;
+}
+
+.recipe-source {
+  color: var(--color-muted);
+  font-size: 0.9rem;
 }
 
 .recipe-form {
@@ -685,7 +731,13 @@
     flex-direction: column;
   }
 
+  .library-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .view-heading .primary-button,
+  .view-heading .secondary-button,
   .detail-actions button {
     width: 100%;
   }

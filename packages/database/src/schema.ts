@@ -2,6 +2,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   numeric,
   pgTable,
   text,
@@ -108,6 +109,8 @@ export const recipes = pgTable(
       scale: 2,
     }),
     photoUpdatedAt: timestamp('photo_updated_at', { withTimezone: true }),
+    sourceName: text('source_name'),
+    sourceUrl: text('source_url'),
     archivedAt: timestamp('archived_at', { withTimezone: true }),
     ...timestamps,
   },
@@ -117,6 +120,32 @@ export const recipes = pgTable(
       table.updatedAt,
       table.id,
     ),
+  ],
+);
+
+export const recipeImports = pgTable(
+  'recipe_import',
+  {
+    id: uuid('id').primaryKey(),
+    householdId: uuid('household_id')
+      .notNull()
+      .references(() => households.id, { onDelete: 'cascade' }),
+    sourceKind: text('source_kind').notNull(),
+    originalContent: text('original_content').notNull(),
+    draft: jsonb('draft').notNull(),
+    warnings: jsonb('warnings').notNull(),
+    recipeId: uuid('recipe_id').references(() => recipes.id, {
+      onDelete: 'set null',
+    }),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    index('recipe_import_household_created_index').on(
+      table.householdId,
+      table.createdAt,
+    ),
+    uniqueIndex('recipe_import_recipe_unique').on(table.recipeId),
   ],
 );
 

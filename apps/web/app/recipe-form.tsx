@@ -4,14 +4,19 @@ import {
   recipeInputSchema,
   type MealType,
   type Recipe,
+  type RecipeImportDraft,
   type RecipeInput,
 } from '@macromap/contracts';
 import { useState, type FormEvent } from 'react';
 
 interface RecipeFormProps {
+  readonly eyebrow?: string;
+  readonly heading?: string;
+  readonly initial?: Recipe | RecipeImportDraft;
+  readonly notices?: ReadonlyArray<string>;
   readonly onCancel: () => void;
   readonly onSave: (recipe: RecipeInput) => Promise<void>;
-  readonly recipe?: Recipe;
+  readonly submitLabel?: string;
 }
 
 interface IngredientDraft {
@@ -48,42 +53,54 @@ const mealTypes: ReadonlyArray<{ label: string; value: MealType }> = [
   { label: 'Dinner', value: 'dinner' },
 ];
 
-export function RecipeForm({ onCancel, onSave, recipe }: RecipeFormProps) {
-  const [title, setTitle] = useState(recipe?.title ?? '');
-  const [description, setDescription] = useState(recipe?.description ?? '');
+export function RecipeForm({
+  eyebrow = 'Recipe editor',
+  heading,
+  initial,
+  notices = [],
+  onCancel,
+  onSave,
+  submitLabel = 'Save recipe',
+}: RecipeFormProps) {
+  const [title, setTitle] = useState(initial?.title ?? '');
+  const [description, setDescription] = useState(initial?.description ?? '');
   const [servingCount, setServingCount] = useState(
-    String(recipe?.servingCount ?? 2),
+    initial === undefined ? '2' : String(initial.servingCount ?? ''),
   );
   const [selectedMealTypes, setSelectedMealTypes] = useState<MealType[]>(
-    recipe?.mealTypes ?? ['dinner'],
+    initial?.mealTypes ?? ['dinner'],
   );
   const [cuisines, setCuisines] = useState(
-    recipe?.tags.cuisines.join(', ') ?? '',
+    initial?.tags.cuisines.join(', ') ?? '',
   );
   const [proteins, setProteins] = useState(
-    recipe?.tags.proteins.join(', ') ?? '',
+    initial?.tags.proteins.join(', ') ?? '',
   );
   const [flavours, setFlavours] = useState(
-    recipe?.tags.flavours.join(', ') ?? '',
+    initial?.tags.flavours.join(', ') ?? '',
   );
   const [ingredients, setIngredients] = useState<IngredientDraft[]>(
-    recipe?.ingredients.map((ingredient) => ({
-      ...ingredient,
-      quantity: String(ingredient.quantity),
-    })) ?? [{ ...emptyIngredient }],
+    initial === undefined || initial.ingredients.length === 0
+      ? [{ ...emptyIngredient }]
+      : initial.ingredients.map((ingredient) => ({
+          ...ingredient,
+          quantity: String(ingredient.quantity ?? ''),
+        })),
   );
   const [instructions, setInstructions] = useState<string[]>(
-    recipe?.instructions ?? [],
+    initial?.instructions ?? [],
   );
   const [hasNutrition, setHasNutrition] = useState(
-    recipe !== undefined && recipe.nutrition !== null,
+    initial !== undefined && initial.nutrition !== null,
   );
   const [nutrition, setNutrition] = useState<NutritionDraft>({
-    carbsGrams: String(recipe?.nutrition?.carbsGrams ?? ''),
-    fatGrams: String(recipe?.nutrition?.fatGrams ?? ''),
-    kcal: String(recipe?.nutrition?.kcal ?? ''),
-    proteinGrams: String(recipe?.nutrition?.proteinGrams ?? ''),
+    carbsGrams: String(initial?.nutrition?.carbsGrams ?? ''),
+    fatGrams: String(initial?.nutrition?.fatGrams ?? ''),
+    kcal: String(initial?.nutrition?.kcal ?? ''),
+    proteinGrams: String(initial?.nutrition?.proteinGrams ?? ''),
   });
+  const [sourceName, setSourceName] = useState(initial?.source?.name ?? '');
+  const [sourceUrl, setSourceUrl] = useState(initial?.source?.url ?? '');
   const [message, setMessage] = useState<string>();
   const [saving, setSaving] = useState(false);
 
@@ -137,6 +154,13 @@ export function RecipeForm({ onCancel, onSave, recipe }: RecipeFormProps) {
           }
         : null,
       servingCount: Number(servingCount),
+      source:
+        sourceName.trim() === '' && sourceUrl.trim() === ''
+          ? null
+          : {
+              name: sourceName,
+              url: sourceUrl.trim() === '' ? null : sourceUrl,
+            },
       tags: {
         cuisines: tagsFrom(cuisines),
         flavours: tagsFrom(flavours),
@@ -168,13 +192,27 @@ export function RecipeForm({ onCancel, onSave, recipe }: RecipeFormProps) {
     <form className="recipe-form" onSubmit={submit}>
       <div className="view-heading">
         <div>
-          <p className="eyebrow">Recipe editor</p>
-          <h1>{recipe === undefined ? 'Add a recipe' : 'Edit recipe'}</h1>
+          <p className="eyebrow">{eyebrow}</p>
+          <h1>
+            {heading ??
+              (initial === undefined ? 'Add a recipe' : 'Edit recipe')}
+          </h1>
         </div>
         <button className="text-button" onClick={onCancel} type="button">
           Cancel
         </button>
       </div>
+
+      {notices.length === 0 ? null : (
+        <section className="import-warnings" aria-label="Import review notes">
+          <h2>Check before saving</h2>
+          <ul>
+            {notices.map((notice) => (
+              <li key={notice}>{notice}</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="form-section">
         <h2>Basics</h2>
@@ -369,6 +407,30 @@ export function RecipeForm({ onCancel, onSave, recipe }: RecipeFormProps) {
       </section>
 
       <section className="form-section">
+        <h2>Source</h2>
+        <p className="section-help">
+          Keep the original author or website attached to imported recipes.
+        </p>
+        <div className="form-grid">
+          <label className="form-field">
+            <span>Source name (optional)</span>
+            <input
+              onChange={(event) => setSourceName(event.target.value)}
+              value={sourceName}
+            />
+          </label>
+          <label className="form-field">
+            <span>Source URL (optional)</span>
+            <input
+              onChange={(event) => setSourceUrl(event.target.value)}
+              type="url"
+              value={sourceUrl}
+            />
+          </label>
+        </div>
+      </section>
+
+      <section className="form-section">
         <label className="nutrition-toggle">
           <input
             checked={hasNutrition}
@@ -416,7 +478,7 @@ export function RecipeForm({ onCancel, onSave, recipe }: RecipeFormProps) {
 
       <div className="form-actions">
         <button className="primary-button" disabled={saving} type="submit">
-          {saving ? 'Saving…' : 'Save recipe'}
+          {saving ? 'Saving…' : submitLabel}
         </button>
         <button className="text-button" onClick={onCancel} type="button">
           Cancel

@@ -33,6 +33,14 @@ The owner applied and verified the recipe photo schema update in production on
 timestamp to `recipe` without transforming the two existing recipes. Do not
 reapply it to production.
 
+## Pending Phase 3 schema update
+
+`packages/database/sql/updates/004-recipe-imports.sql` must be applied once by
+the owner before the first Phase 3 import code is merged. It adds two nullable
+source-attribution columns to `recipe` and creates an empty `recipe_import`
+preview table. It does not transform any existing recipe data. Do not mark this
+update as applied or reapply it until the owner has run and verified it.
+
 The expected USD 2-6 monthly cost envelope is now live. The
 database-not-pausing failure case remains approximately USD 51 per month. Check
 current official prices and the PR's cost classification before merging. The

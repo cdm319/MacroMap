@@ -3,6 +3,7 @@ import {
   apiErrorSchema,
   householdSettingsSchema,
   recipeInputSchema,
+  recipeImportResponseSchema,
   recipePhotoUploadRequestSchema,
   recipeSchema,
   runtimeConfigSchema,
@@ -125,6 +126,7 @@ describe('shared API contracts', () => {
       mealTypes: ['dinner'],
       nutrition: null,
       servingCount: 2,
+      source: null,
       tags: {
         cuisines: ['Italian'],
         flavours: ['Fresh'],
@@ -178,8 +180,60 @@ describe('shared API contracts', () => {
         mealTypes: ['dinner'],
         nutrition: null,
         servingCount: 0,
+        source: null,
         tags: { cuisines: [], flavours: [], proteins: [] },
         title: 'Incomplete',
+      }),
+    ).toThrow();
+  });
+
+  it('accepts incomplete import drafts only as review previews', () => {
+    const preview = {
+      draft: {
+        description: '',
+        ingredients: [
+          {
+            name: 'Salt to taste',
+            preparationNote: '',
+            quantity: null,
+            unit: '',
+          },
+        ],
+        instructions: [],
+        mealTypes: [],
+        nutrition: null,
+        photoUrl: null,
+        servingCount: null,
+        source: null,
+        tags: { cuisines: [], flavours: [], proteins: [] },
+        title: 'Seasoning',
+      },
+      importId: '00000000-0000-4000-8000-000000000301',
+      kind: 'preview',
+      warnings: [
+        {
+          code: 'INGREDIENT_REVIEW_NEEDED',
+          message: 'Confirm this ingredient.',
+        },
+      ],
+    };
+
+    expect(recipeImportResponseSchema.parse(preview)).toEqual(preview);
+    expect(() => recipeInputSchema.parse(preview.draft)).toThrow();
+    expect(() =>
+      recipeInputSchema.parse({
+        ...preview.draft,
+        ingredients: [
+          {
+            name: 'Salt',
+            preparationNote: '',
+            quantity: 1,
+            unit: 'tsp',
+          },
+        ],
+        mealTypes: ['dinner'],
+        servingCount: 2,
+        source: { name: 'Unsafe', url: 'javascript:alert(1)' },
       }),
     ).toThrow();
   });

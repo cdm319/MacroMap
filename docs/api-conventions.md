@@ -173,3 +173,19 @@ Photo operations first verify that the recipe belongs to the authenticated
 household. Signed URLs expire after five minutes. The browser uploads directly
 to the private bucket, but the staged object is not displayed until the API has
 validated its actual bytes. Unfinished staging objects expire after one day.
+
+## Recipe import endpoints
+
+- `POST /v1/recipe-imports/preview` accepts bounded Schema.org Recipe JSON or
+  JSON-LD. When a document contains multiple recipes, it returns candidate
+  titles and requires the user to choose one before creating a preview.
+- A preview may contain incomplete fields and review warnings. It is not a
+  recipe and cannot appear in planning or the recipe library.
+- `POST /v1/recipe-imports/{importId}/save` accepts the complete, corrected
+  recipe. The import UUID becomes the recipe UUID, making retries idempotent.
+  Only a preview owned by the authenticated household can be saved.
+- The original JSON, extracted draft, warnings, and reviewed recipe link are
+  retained. Reusing an import for another recipe returns `409`.
+
+Direct JSON importing performs no network or AI call. Remote URL and primary
+photo fetching are introduced by their later Phase 3 slice.

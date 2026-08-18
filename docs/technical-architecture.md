@@ -230,10 +230,9 @@ is stored as household planning configuration and defaults to `0.15`.
 
 ### Recipes
 
-- `recipe`: editable title, description, yield, archive state, optional
-  authoritative per-serving nutrition, and a nullable marker for its private
-  photo. Source and nutrition provenance are added with the slices that need
-  them.
+- `recipe`: editable title, description, yield, archive state, optional source
+  attribution, optional authoritative per-serving nutrition, and a nullable
+  marker for its private photo. Nutrition provenance is added with estimation.
 - `recipe_ingredient`: ordered structured ingredient, amount, unit, and
   preparation note. Imported source text is added with recipe imports.
 - `recipe_step`: zero or more ordered cooking instructions.
@@ -243,7 +242,8 @@ is stored as household planning configuration and defaults to `0.15`.
 - `ingredient`: canonical identity used for nutrition matching and grocery
   consolidation.
 - `ingredient_nutrition_match`: the selected CoFID or USDA match and confidence.
-- `recipe_import`: an uncommitted import preview and its warnings.
+- `recipe_import`: the original import content, extracted draft, review
+  warnings, and nullable link to the recipe created after explicit review.
 
 Original ingredient text and source attribution are preserved even after
 normalisation. Imported or inferred data never bypasses the mandatory review

@@ -1,6 +1,6 @@
 # MacroMap MVP delivery plan
 
-Status: Approved implementation sequence; Phase 2 complete
+Status: Approved implementation sequence; Phase 3 in progress
 Last reviewed: 2026-08-18
 
 ## Delivery principles
@@ -20,9 +20,12 @@ Current progress:
   private-session smoke testing, and Aurora pause/resume verification completed
   on 17 August 2026.
 - Phase 2 is complete. Macro targets, snack reserve settings, the manual recipe
-  library, private photos, and cooking mode are implemented. Imports and
-  nutrition estimation remain Phase 3 work.
-- Phases 3-6 have not started.
+  library, private photos, and cooking mode are implemented.
+- Phase 3 is in progress. The first slice adds direct Schema.org JSON/JSON-LD
+  previews, explicit recipe selection, mandatory review, source attribution,
+  and reviewed saving. URL fetching, nutrition estimation, USDA, and AI remain
+  later Phase 3 slices.
+- Phases 4-6 have not started.
 
 ## Phase 0: Repository and contracts
 

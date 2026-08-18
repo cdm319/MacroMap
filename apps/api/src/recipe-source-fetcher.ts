@@ -3,7 +3,6 @@ import { request as requestHttp } from 'node:http';
 import { request as requestHttps } from 'node:https';
 import type { LookupFunction } from 'node:net';
 import {
-  maxRecipeImportCharacters,
   maxRecipePhotoBytes,
   type RecipePhotoContentType,
 } from '@macromap/contracts';
@@ -16,6 +15,7 @@ const supportedPhotos = new Set<RecipePhotoContentType>([
 ]);
 const timeoutMilliseconds = 8_000;
 const maximumRedirects = 5;
+export const maxRecipePageBytes = 1024 * 1024;
 
 interface RemoteResponse {
   readonly bytes: Uint8Array;
@@ -69,7 +69,7 @@ export function createRecipeSourceFetcher(
       const fetched = await fetchRemote(
         rawUrl,
         'text/html, application/ld+json, application/json',
-        maxRecipeImportCharacters,
+        maxRecipePageBytes,
         resolve,
         request,
       );
@@ -261,7 +261,7 @@ function responseTooLarge(): RemoteRecipeError {
   );
 }
 
-function download(
+export function download(
   url: URL,
   address: string,
   accept: string,
@@ -283,7 +283,11 @@ function download(
       reject(error);
     };
     const transport = url.protocol === 'https:' ? requestHttps : requestHttp;
-    const pinnedLookup: LookupFunction = (_hostname, _options, callback) => {
+    const pinnedLookup: LookupFunction = (_hostname, options, callback) => {
+      if (options.all) {
+        callback(null, [{ address, family: 4 }]);
+        return;
+      }
       callback(null, address, 4);
     };
     const request = transport(

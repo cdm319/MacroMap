@@ -135,6 +135,9 @@ describe('shared API contracts', () => {
 
     expect(recipeInputSchema.parse(input)).toEqual(input);
     expect(
+      recipeInputSchema.parse({ ...input, instructions: [] }).instructions,
+    ).toEqual([]);
+    expect(
       recipeSchema.parse({
         ...input,
         id: '00000000-0000-4000-8000-000000000201',

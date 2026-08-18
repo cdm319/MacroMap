@@ -423,11 +423,15 @@ function RecipeDetail({
 
       <section className="detail-card instructions-card">
         <p className="card-label">Method</p>
-        <ol>
-          {recipe.instructions.map((instruction, index) => (
-            <li key={index}>{instruction}</li>
-          ))}
-        </ol>
+        {recipe.instructions.length === 0 ? (
+          <p>No instructions added yet.</p>
+        ) : (
+          <ol>
+            {recipe.instructions.map((instruction, index) => (
+              <li key={index}>{instruction}</li>
+            ))}
+          </ol>
+        )}
       </section>
       <button className="danger-button" onClick={onArchive}>
         Archive recipe

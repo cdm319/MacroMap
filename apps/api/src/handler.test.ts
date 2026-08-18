@@ -247,7 +247,7 @@ describe('authenticated household API', () => {
     });
   });
 
-  it('validates and saves a complete recipe document', async () => {
+  it('validates and saves a recipe without instructions', async () => {
     const recipeId = '00000000-0000-4000-8000-000000000201';
     const input = {
       description: 'A quick dinner.',
@@ -259,7 +259,7 @@ describe('authenticated household API', () => {
           unit: 'g',
         },
       ],
-      instructions: ['Boil the pasta.'],
+      instructions: [],
       mealTypes: ['dinner'],
       nutrition: null,
       servingCount: 2,

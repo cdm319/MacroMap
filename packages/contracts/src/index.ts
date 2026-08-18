@@ -139,7 +139,7 @@ export const recipeInputSchema = z
   .object({
     description: z.string().trim(),
     ingredients: z.array(recipeIngredientSchema).min(1),
-    instructions: z.array(z.string().trim().min(1)).min(1),
+    instructions: z.array(z.string().trim().min(1)),
     mealTypes: z
       .array(mealTypeSchema)
       .min(1)

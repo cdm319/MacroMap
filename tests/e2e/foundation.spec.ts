@@ -98,6 +98,7 @@ test('creates, cooks, edits, and archives a manual recipe', async ({
   await page.getByLabel('Ingredient 1 amount').fill('200');
   await page.getByLabel('Ingredient 1 unit').fill('g');
   await page.getByLabel('Ingredient 1 name').fill('Pasta');
+  await page.getByRole('button', { name: 'Add step' }).click();
   await page.getByLabel('Step 1').fill('Boil the pasta until tender.');
   await page.getByRole('button', { name: 'Save recipe' }).click();
 
@@ -133,6 +134,30 @@ test('creates, cooks, edits, and archives a manual recipe', async ({
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByRole('button', { name: 'Archive recipe' }).click();
   await expect(page.getByText('Your recipe book is empty')).toBeVisible();
+});
+
+test('saves a recipe without instructions and adds them later', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Add recipe' }).click();
+
+  await page.getByLabel('Title').fill('Pan-fried halloumi');
+  await page.getByLabel('Ingredient 1 amount').fill('200');
+  await page.getByLabel('Ingredient 1 unit').fill('g');
+  await page.getByLabel('Ingredient 1 name').fill('Halloumi');
+  await page.getByRole('button', { name: 'Save recipe' }).click();
+
+  await expect(page.getByText('No instructions added yet.')).toBeVisible();
+  await page.getByRole('button', { name: 'Start cooking' }).click();
+  await expect(page.getByText('No instructions added yet.')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Exit cooking mode' }).click();
+  await page.getByRole('button', { name: 'Edit' }).click();
+  await page.getByRole('button', { name: 'Add step' }).click();
+  await page.getByLabel('Step 1').fill('Fry until golden on both sides.');
+  await page.getByRole('button', { name: 'Save recipe' }).click();
+  await expect(page.getByText('Fry until golden on both sides.')).toBeVisible();
 });
 
 test('keeps an unauthenticated household behind sign-in', async ({ page }) => {

@@ -96,13 +96,17 @@ correct:
 - Photo
 - Inferred descriptive attributes
 
+Instructions are optional. A recipe without them can be saved, planned, and
+shown in cooking mode with a clear placeholder until instructions are added.
+
 Breakfast, lunch, and dinner eligibility must be explicitly tagged. Cuisine,
 primary protein, and flavour attributes may be inferred automatically but
 remain editable. These inferred attributes are used only as soft planning
 signals.
 
 Recipe photos are optional. Imported photos are copied into application
-storage; recipes without a photo use a neutral placeholder.
+storage; recipes without a photo use a neutral placeholder. When an import
+contains multiple photos, MacroMap keeps only its primary photo.
 
 ## Nutrition estimation
 
@@ -186,7 +190,7 @@ The mobile-friendly cooking view provides:
 - The scaled combined recipe
 - Each person's suggested serving
 - A checkable ingredient list
-- One instruction step at a time
+- One instruction step at a time, or a clear placeholder when none exist
 - An option to keep the screen awake
 - The recipe photo or a neutral placeholder
 

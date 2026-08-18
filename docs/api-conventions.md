@@ -185,18 +185,25 @@ validated its actual bytes. Unfinished staging objects expire after one day.
 
 ## Recipe import endpoints
 
-- `POST /v1/recipe-imports/preview` accepts bounded Schema.org Recipe JSON or
-  JSON-LD. When a document contains multiple recipes, it returns candidate
-  titles and requires the user to choose one before creating a preview.
+- `POST /v1/recipe-imports/preview` accepts either bounded Schema.org Recipe
+  JSON/JSON-LD or an HTTP(S) recipe URL. URL imports fetch the page on the
+  server, extract its JSON-LD, and copy only the first usable photo into
+  temporary private storage. When a document contains multiple recipes, the
+  endpoint returns candidate titles and requires the user to choose one before
+  creating a preview.
 - A preview may contain incomplete fields and review warnings. It is not a
   recipe and cannot appear in planning or the recipe library.
 - `POST /v1/recipe-imports/{importId}/save` accepts the complete, corrected
   recipe. The import UUID becomes the recipe UUID, making retries idempotent.
   Only a preview owned by the authenticated household can be saved.
-- The original JSON, extracted draft, warnings, and reviewed recipe link are
-  retained. Reusing an import for another recipe returns `409`.
+- The supplied or extracted JSON, extracted draft, warnings, and reviewed
+  recipe link are retained. Reusing an import for another recipe returns `409`.
 
 Direct JSON importing performs no network or AI call. Valid supplied nutrition
 is retained; otherwise a structurally complete recipe receives the same CoFID
-attempt and review warnings before saving. Remote URL and primary photo fetching
-are introduced by their later Phase 3 slice.
+attempt and review warnings before saving. Direct JSON previews identify a
+primary photo but do not copy it. URL imports are limited to public IPv4 HTTP(S)
+targets on standard ports, five redirects, eight seconds, and 512 KiB. Every
+redirect is resolved and checked again. Photos are limited to 5 MiB and JPEG,
+PNG, or WebP content whose bytes match its declared type. Imported photos are
+published only when the reviewed recipe is saved.

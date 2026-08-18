@@ -92,6 +92,30 @@ describe('Schema.org recipe imports', () => {
     });
   });
 
+  it('resolves relative source and primary-photo URLs from a recipe page', () => {
+    const result = parseSchemaOrgRecipe(
+      JSON.stringify({
+        '@type': 'Recipe',
+        image: ['/images/dinner.jpg', '/images/extra.jpg'],
+        name: 'Dinner',
+        recipeCategory: 'Dinner',
+        recipeIngredient: ['200g pasta'],
+        recipeYield: '2 servings',
+      }),
+      undefined,
+      'https://recipes.example.test/dinner',
+    );
+
+    expect(result).toMatchObject({
+      draft: {
+        photoStaged: false,
+        photoUrl: 'https://recipes.example.test/images/dinner.jpg',
+        source: { url: 'https://recipes.example.test/dinner' },
+      },
+      kind: 'preview',
+    });
+  });
+
   it('flags missing yields, meal types, ingredients, and partial nutrition', () => {
     const result = parseSchemaOrgRecipe(
       JSON.stringify({

@@ -240,7 +240,7 @@ export function RecipeLibrary({ api }: RecipeLibraryProps) {
             className="secondary-button"
             onClick={() => setView({ kind: 'import' })}
           >
-            Import JSON
+            Import recipe
           </button>
           <button
             className="primary-button"

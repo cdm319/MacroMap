@@ -73,6 +73,23 @@ export async function previewRecipeImport(
   return recipeImportResponseSchema.parse(await response.json());
 }
 
+export async function previewRecipeUrl(
+  config: RecipeApiConfig,
+  url: string,
+  recipeIndex?: number,
+): Promise<RecipeImportResponse> {
+  const response = await request(
+    config,
+    `${config.baseUrl}/v1/recipe-imports/preview`,
+    {
+      body: JSON.stringify({ recipeIndex, url }),
+      headers: { 'content-type': 'application/json' },
+      method: 'POST',
+    },
+  );
+  return recipeImportResponseSchema.parse(await response.json());
+}
+
 export async function saveRecipeImport(
   config: RecipeApiConfig,
   importId: string,

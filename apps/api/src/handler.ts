@@ -23,6 +23,10 @@ import {
   createS3RecipePhotoStore,
   type RecipePhotoStore,
 } from './recipe-photo-store.js';
+import {
+  createRecipeSourceFetcher,
+  type RecipeSourceFetcher,
+} from './recipe-source-fetcher.js';
 import { handleRecipeRequest } from './recipes.js';
 import { handleRecipeImportRequest } from './recipe-imports.js';
 
@@ -149,6 +153,7 @@ export interface ApplicationDependencies {
   readonly imports: RecipeImportRepository;
   readonly photos: RecipePhotoStore;
   readonly recipes: RecipeRepository;
+  readonly sources: RecipeSourceFetcher;
 }
 
 let dependencies: ApplicationDependencies | undefined;
@@ -166,6 +171,7 @@ function getDependencies(): ApplicationDependencies {
       requireEnvironment('RECIPE_PHOTO_BUCKET_NAME'),
     ),
     recipes: createDataApiRecipeRepository(config),
+    sources: createRecipeSourceFetcher(),
   };
   return dependencies;
 }
@@ -196,6 +202,7 @@ export async function handleRequest(
       dependencies.imports,
       dependencies.recipes,
       dependencies.photos,
+      dependencies.sources,
       event,
       subject,
       requestId,

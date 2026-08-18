@@ -217,7 +217,8 @@ test('reviews Schema.org JSON before saving an imported recipe', async ({
   page,
 }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Import JSON' }).click();
+  await page.getByRole('button', { name: 'Import recipe' }).click();
+  await page.getByRole('button', { name: 'Paste JSON' }).click();
   await page.getByLabel('Schema.org Recipe JSON').fill(
     JSON.stringify({
       '@context': 'https://schema.org',
@@ -324,6 +325,109 @@ test('saves targets through the authenticated API', async ({ page }) => {
       snackReserve: 0.15,
     }),
   );
+});
+
+test('reviews a recipe webpage and its primary photo before saving', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem(
+      'macromap.tokens',
+      JSON.stringify({
+        accessToken: 'test-access-token',
+        expiresAt: Date.now() + 60_000,
+      }),
+    );
+  });
+  await useCognitoConfig(page);
+  await page.route('https://api.example.test/v1/session', (route) =>
+    route.fulfill({ contentType: 'application/json', json: householdSession }),
+  );
+  await page.route('https://api.example.test/v1/recipes', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      json: { items: [], nextCursor: null },
+    }),
+  );
+  await page.route('https://images.example.test/primary.jpg', (route) =>
+    route.fulfill({
+      body: Buffer.from(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+        'base64',
+      ),
+      contentType: 'image/png',
+    }),
+  );
+
+  let previewBody: unknown;
+  await page.route(
+    'https://api.example.test/v1/recipe-imports/preview',
+    (route) => {
+      previewBody = route.request().postDataJSON();
+      return route.fulfill({
+        contentType: 'application/json',
+        json: {
+          draft: {
+            description: 'A quick imported dinner.',
+            ingredients: [
+              {
+                name: 'pasta',
+                preparationNote: '',
+                quantity: 200,
+                unit: 'g',
+              },
+            ],
+            instructions: ['Boil the pasta.'],
+            mealTypes: ['dinner'],
+            nutrition: {
+              carbsGrams: 70,
+              fatGrams: 10,
+              kcal: 450,
+              proteinGrams: 20,
+            },
+            nutritionProvenance: {
+              confidence: 'confirmed',
+              source: 'schema_org',
+            },
+            photoStaged: true,
+            photoUrl: 'https://images.example.test/primary.jpg',
+            servingCount: 2,
+            source: {
+              name: 'Example Cook',
+              url: 'https://recipes.example.test/tomato-pasta',
+            },
+            tags: { cuisines: ['Italian'], flavours: [], proteins: [] },
+            title: 'Web tomato pasta',
+          },
+          importId: '00000000-0000-4000-8000-000000000301',
+          kind: 'preview',
+          warnings: [],
+        },
+        status: 201,
+      });
+    },
+  );
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Import recipe' }).click();
+  await page
+    .getByLabel('Recipe URL')
+    .fill('https://recipes.example.test/tomato-pasta');
+  await page.getByRole('button', { name: 'Review recipe' }).click();
+
+  await expect(
+    page.getByRole('heading', { name: 'Review imported recipe' }),
+  ).toBeVisible();
+  await expect(page.getByLabel('Title')).toHaveValue('Web tomato pasta');
+  await expect(
+    page.getByRole('img', { name: 'Primary photo for Web tomato pasta' }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/This photo will be copied into MacroMap when you save/u),
+  ).toBeVisible();
+  expect(previewBody).toEqual({
+    url: 'https://recipes.example.test/tomato-pasta',
+  });
 });
 
 test('explains an auto-paused database and offers a retry', async ({

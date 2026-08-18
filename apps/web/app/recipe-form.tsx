@@ -8,6 +8,7 @@ import {
   type RecipeInput,
 } from '@macromap/contracts';
 import { useState, type FormEvent } from 'react';
+import { RecipePhoto } from './recipe-photo';
 
 interface RecipeFormProps {
   readonly eyebrow?: string;
@@ -16,6 +17,7 @@ interface RecipeFormProps {
   readonly notices?: ReadonlyArray<string>;
   readonly onCancel: () => void;
   readonly onSave: (recipe: RecipeInput) => Promise<void>;
+  readonly photoUrl?: string;
   readonly submitLabel?: string;
 }
 
@@ -60,6 +62,7 @@ export function RecipeForm({
   notices = [],
   onCancel,
   onSave,
+  photoUrl,
   submitLabel = 'Save recipe',
 }: RecipeFormProps) {
   const [title, setTitle] = useState(initial?.title ?? '');
@@ -220,6 +223,21 @@ export function RecipeForm({
               <li key={notice}>{notice}</li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {photoUrl === undefined ? null : (
+        <section className="form-section">
+          <h2>Primary photo</h2>
+          <RecipePhoto
+            alt={`Primary photo for ${title || 'imported recipe'}`}
+            className="recipe-import-photo"
+            photoUrl={photoUrl}
+          />
+          <p className="section-help">
+            This photo will be copied into MacroMap when you save. You can
+            replace or remove it afterwards.
+          </p>
         </section>
       )}
 

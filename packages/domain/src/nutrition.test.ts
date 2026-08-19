@@ -77,6 +77,73 @@ describe('nutrition database estimation', () => {
     });
   });
 
+  it('uses the supplied everyday label profiles', () => {
+    expect(
+      estimateRecipeNutrition([ingredient(100, 'ml', 'almond milk')], 1),
+    ).toMatchObject({
+      kind: 'estimated',
+      nutrition: {
+        carbsGrams: 0,
+        fatGrams: 1.1,
+        kcal: 15,
+        proteinGrams: 0.5,
+      },
+      provenance: {
+        confidence: 'high',
+        matches: [{ foodCode: 'generic-almond-milk', foodSource: 'label' }],
+      },
+    });
+    expect(
+      estimateRecipeNutrition([ingredient(200, 'ml', 'beef stock')], 1),
+    ).toMatchObject({
+      kind: 'estimated',
+      nutrition: {
+        carbsGrams: 2,
+        fatGrams: 0.3,
+        kcal: 16,
+        proteinGrams: 1,
+      },
+      provenance: {
+        matches: [{ foodCode: 'beef-stock-cube', grams: 200 }],
+      },
+    });
+    expect(
+      estimateRecipeNutrition([ingredient(1, 'item', 'chicken stock cube')], 1),
+    ).toMatchObject({
+      kind: 'estimated',
+      nutrition: {
+        carbsGrams: 2.8,
+        fatGrams: 0.57,
+        kcal: 17,
+        proteinGrams: 0.7,
+      },
+      provenance: {
+        matches: [
+          {
+            foodCode: 'chicken-stock-cube',
+            grams: 200,
+            quantitySource: 'label_measure',
+          },
+        ],
+      },
+    });
+    expect(
+      estimateRecipeNutrition([ingredient(100, 'g', 'turkey mince')], 1),
+    ).toMatchObject({
+      kind: 'estimated',
+      nutrition: {
+        carbsGrams: 0.5,
+        fatGrams: 1.2,
+        kcal: 119,
+        proteinGrams: 27,
+      },
+      provenance: {
+        confidence: 'high',
+        matches: [{ foodCode: 'generic-turkey-mince', foodSource: 'label' }],
+      },
+    });
+  });
+
   it('recognises the protein powder wording used by the Paprika archive', () => {
     for (const name of [
       'protein powder',
@@ -220,7 +287,7 @@ describe('nutrition database estimation', () => {
         matches: [
           { grams: 13.8, quantitySource: 'household_measure' },
           { grams: 6, quantitySource: 'household_measure' },
-          { grams: 200, quantitySource: 'household_measure' },
+          { grams: 200, quantitySource: 'label_measure' },
         ],
         omissions: [
           {
@@ -253,15 +320,23 @@ describe('nutrition database estimation', () => {
     });
   });
 
-  it('distinguishes fresh and dried egg noodles from eggs', () => {
+  it('defaults egg noodles to fresh and keeps dried noodles distinct', () => {
     const fresh = estimateRecipeNutrition(
       [ingredient(300, 'g', 'fresh egg noodles')],
+      1,
+    );
+    const unspecified = estimateRecipeNutrition(
+      [ingredient(300, 'g', 'egg noodles')],
       1,
     );
     const dried = estimateRecipeNutrition(
       [ingredient(300, 'g', 'dried egg noodles')],
       1,
     );
+
+    if (fresh.kind !== 'estimated' || unspecified.kind !== 'estimated') {
+      throw new Error('Expected fresh noodle estimates.');
+    }
 
     expect(fresh).toMatchObject({
       kind: 'estimated',
@@ -273,6 +348,11 @@ describe('nutrition database estimation', () => {
       },
       provenance: { matches: [{ foodCode: '11-941' }] },
     });
+    expect(unspecified).toMatchObject({
+      kind: 'estimated',
+      provenance: { matches: [{ foodCode: '11-941' }] },
+    });
+    expect(unspecified.nutrition).toEqual(fresh.nutrition);
     expect(dried).toMatchObject({
       kind: 'estimated',
       nutrition: {
@@ -286,7 +366,7 @@ describe('nutrition database estimation', () => {
   });
 
   it('does not collapse compound foods into a shorter alias', () => {
-    for (const name of ['egg noodles', 'avocado oil', 'banana bread']) {
+    for (const name of ['avocado oil', 'banana bread']) {
       expect(estimateRecipeNutrition([ingredient(300, 'g', name)], 1)).toEqual({
         issues: [
           {

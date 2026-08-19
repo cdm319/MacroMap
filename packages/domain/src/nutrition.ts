@@ -6,14 +6,14 @@ import type {
 import { cofid2021Rows } from '@macromap/domain/cofid-2021-data';
 
 interface NutritionFood {
-  readonly carbsHundredths: number;
+  readonly carbsThousandths: number;
   readonly code: string;
-  readonly fatHundredths: number;
+  readonly fatThousandths: number;
   readonly foodSource: 'cofid' | 'label';
   readonly foodVersion: string;
-  readonly kcalHundredths: number;
+  readonly kcalThousandths: number;
   readonly name: string;
-  readonly proteinHundredths: number;
+  readonly proteinThousandths: number;
 }
 
 type NutritionDatabaseProvenance = Extract<
@@ -32,9 +32,11 @@ interface IngredientRule {
   readonly aliases: ReadonlyArray<string>;
   readonly foodCode: string;
   readonly countGrams?: number;
+  readonly countSource?: 'estimated_count' | 'label_measure';
   readonly gramsPerMillilitre?: number;
   readonly matchConfidence?: 'high';
   readonly measures?: Readonly<Record<string, number | IngredientMeasure>>;
+  readonly volumeSource?: 'household_measure' | 'label_measure';
 }
 
 interface FoodMatch {
@@ -61,19 +63,62 @@ export type NutritionEstimationResult =
       readonly provenance: NutritionDatabaseProvenance;
     };
 
-const foods: NutritionFood[] = [
-  ...cofid2021Rows.trim().split('\n').map(readFood),
-  // Label source: data/generic-protein-powder.md
+// Label source: data/household-label-profiles.md
+const labelFoods: NutritionFood[] = [
   {
-    carbsHundredths: 680,
-    code: 'generic-protein-powder',
-    fatHundredths: 450,
+    carbsThousandths: 0,
+    code: 'generic-almond-milk',
+    fatThousandths: 1_100,
     foodSource: 'label',
     foodVersion: '2026-08-19',
-    kcalHundredths: 37_100,
-    name: 'Generic protein powder',
-    proteinHundredths: 7_400,
+    kcalThousandths: 15_000,
+    name: 'Generic almond milk',
+    proteinThousandths: 500,
   },
+  {
+    carbsThousandths: 1_000,
+    code: 'beef-stock-cube',
+    fatThousandths: 150,
+    foodSource: 'label',
+    foodVersion: '2026-08-19',
+    kcalThousandths: 8_000,
+    name: 'Beef stock, prepared from a cube',
+    proteinThousandths: 500,
+  },
+  {
+    carbsThousandths: 1_400,
+    code: 'chicken-stock-cube',
+    fatThousandths: 285,
+    foodSource: 'label',
+    foodVersion: '2026-08-19',
+    kcalThousandths: 8_500,
+    name: 'Chicken stock, prepared from a cube',
+    proteinThousandths: 350,
+  },
+  {
+    carbsThousandths: 500,
+    code: 'generic-turkey-mince',
+    fatThousandths: 1_200,
+    foodSource: 'label',
+    foodVersion: '2026-08-19',
+    kcalThousandths: 119_000,
+    name: 'Generic turkey mince',
+    proteinThousandths: 27_000,
+  },
+  {
+    carbsThousandths: 6_800,
+    code: 'generic-protein-powder',
+    fatThousandths: 4_500,
+    foodSource: 'label',
+    foodVersion: '2026-08-19',
+    kcalThousandths: 371_000,
+    name: 'Generic protein powder',
+    proteinThousandths: 74_000,
+  },
+];
+const foods: NutritionFood[] = [
+  ...cofid2021Rows.trim().split('\n').map(readFood),
+  ...labelFoods,
 ];
 const foodsByCode = new Map(foods.map((food) => [food.code, food]));
 const foodsByName = new Map<string, NutritionFood[]>();
@@ -84,6 +129,13 @@ for (const food of foods) {
 }
 
 const ingredientRules: ReadonlyArray<IngredientRule> = [
+  {
+    aliases: ['almond milk'],
+    foodCode: 'generic-almond-milk',
+    gramsPerMillilitre: 1,
+    matchConfidence: 'high',
+    volumeSource: 'label_measure',
+  },
   { aliases: ['apple'], foodCode: '14-319', countGrams: 150 },
   { aliases: ['avocado'], foodCode: '14-386', countGrams: 150 },
   { aliases: ['baked beans', 'heinz baked beans'], foodCode: '13-532' },
@@ -95,6 +147,15 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     foodCode: '13-618',
   },
   { aliases: ['beef mince', 'minced beef'], foodCode: '18-469' },
+  {
+    aliases: ['beef stock', 'beef stock cube'],
+    countGrams: 200,
+    countSource: 'label_measure',
+    foodCode: 'beef-stock-cube',
+    gramsPerMillilitre: 1,
+    matchConfidence: 'high',
+    volumeSource: 'label_measure',
+  },
   {
     aliases: ['blueberry', 'blueberries'],
     foodCode: '14-325',
@@ -132,9 +193,13 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     countGrams: 150,
   },
   {
-    aliases: ['chicken stock'],
-    foodCode: '17-681',
+    aliases: ['chicken stock', 'chicken stock cube'],
+    countGrams: 200,
+    countSource: 'label_measure',
+    foodCode: 'chicken-stock-cube',
     gramsPerMillilitre: 1,
+    matchConfidence: 'high',
+    volumeSource: 'label_measure',
   },
   { aliases: ['chorizo'], foodCode: '19-516' },
   {
@@ -199,7 +264,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
   },
   // A hydrated noodle is the closest CoFID profile to chilled fresh noodles.
   {
-    aliases: ['fresh egg noodle'],
+    aliases: ['egg noodle', 'fresh egg noodle'],
     foodCode: '11-941',
   },
   {
@@ -357,6 +422,11 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     gramsPerMillilitre: 1.05,
   },
   { aliases: ['tuna steak'], foodCode: '16-399' },
+  {
+    aliases: ['turkey mince', 'lean turkey mince', 'minced turkey'],
+    foodCode: 'generic-turkey-mince',
+    matchConfidence: 'high',
+  },
   {
     aliases: ['vegetable oil', 'sunflower or vegetable oil for frying'],
     foodCode: '17-686',
@@ -533,11 +603,11 @@ export function estimateRecipeNutrition(
       return;
     }
 
-    totals.kcal += quantity.milligrams * BigInt(match.food.kcalHundredths);
+    totals.kcal += quantity.milligrams * BigInt(match.food.kcalThousandths);
     totals.protein +=
-      quantity.milligrams * BigInt(match.food.proteinHundredths);
-    totals.carbs += quantity.milligrams * BigInt(match.food.carbsHundredths);
-    totals.fat += quantity.milligrams * BigInt(match.food.fatHundredths);
+      quantity.milligrams * BigInt(match.food.proteinThousandths);
+    totals.carbs += quantity.milligrams * BigInt(match.food.carbsThousandths);
+    totals.fat += quantity.milligrams * BigInt(match.food.fatThousandths);
     matches.push({
       canonicalName: normaliseIngredientName(ingredient.name),
       foodCode: match.food.code,
@@ -574,7 +644,7 @@ export function estimateRecipeNutrition(
 
   const denominator = 100_000n * BigInt(servingThousandths);
   const perServing = (value: bigint) =>
-    Number(roundDivide(value * 1_000n, denominator)) / 100;
+    Number(roundDivide(value * 100n, denominator)) / 100;
   const nutrition = {
     carbsGrams: perServing(totals.carbs),
     fatGrams: perServing(totals.fat),
@@ -626,14 +696,14 @@ function readFood(row: string): NutritionFood {
   const cells = row.split('\t');
   if (cells.length !== 6) throw new Error('Invalid bundled CoFID row.');
   return {
-    carbsHundredths: Number(cells[4]),
+    carbsThousandths: Number(cells[4]) * 10,
     code: cells[0]!,
-    fatHundredths: Number(cells[5]),
+    fatThousandths: Number(cells[5]) * 10,
     foodSource: 'cofid',
     foodVersion: '2021',
-    kcalHundredths: Number(cells[2]),
+    kcalThousandths: Number(cells[2]) * 10,
     name: cells[1]!,
-    proteinHundredths: Number(cells[3]),
+    proteinThousandths: Number(cells[3]) * 10,
   };
 }
 
@@ -691,12 +761,15 @@ function normaliseQuantity(
   if (millilitres !== undefined && rule?.gramsPerMillilitre !== undefined) {
     return measuredQuantity(
       quantity * millilitres * rule.gramsPerMillilitre,
-      'household_measure',
+      rule.volumeSource ?? 'household_measure',
     );
   }
 
   if (countUnits.has(unit) && rule?.countGrams !== undefined) {
-    return measuredQuantity(quantity * rule.countGrams, 'estimated_count');
+    return measuredQuantity(
+      quantity * rule.countGrams,
+      rule.countSource ?? 'estimated_count',
+    );
   }
 
   return null;

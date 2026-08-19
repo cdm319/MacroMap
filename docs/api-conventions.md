@@ -168,10 +168,11 @@ converted mass, and selected ingredient matches.
 
 When nutrition is omitted, saving tries the bundled nutrition database using
 exact or explicit alias matches. It contains CoFID 2021 and versioned label
-profiles such as generic protein powder. Nutrition-relevant qualifiers such as
-fresh, dried, and cooked are not discarded. Direct weights, common household
-measures, label measures, and a small set of explicit item weights are
-supported. Recipe imports also recognise leading list bullets, simple
+profiles for household products such as protein powder, almond milk, prepared
+stock, and turkey mince. Unqualified egg noodles default to fresh; explicit
+fresh, dried, and cooked qualifiers are otherwise preserved. Direct weights,
+common household measures, label measures, and a small set of explicit item
+weights are supported. Recipe imports also recognise leading list bullets, simple
 multiplicative masses such as `2 x 200g`, common written measures, and a
 standalone salt or pepper line as one pinch. These inferred structures remain
 editable during review. The response records every converted or assumed

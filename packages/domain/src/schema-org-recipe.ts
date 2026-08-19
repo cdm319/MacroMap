@@ -191,8 +191,10 @@ function mapRecipe(
     );
   }
 
-  const ingredientLines = strings(recipe.recipeIngredient);
-  const ingredients = ingredientLines.map(parseIngredient);
+  const ingredientLines = strings(recipe.recipeIngredient).filter(
+    (line) => !/^(?:ingredients|pizza toppings):?$/iu.test(line.trim()),
+  );
+  const ingredients = ingredientLines.flatMap(parseIngredientLine);
   if (ingredients.length === 0) {
     warn(
       warnings,
@@ -344,6 +346,28 @@ function estimateNutrition(
   return estimation;
 }
 
+function parseIngredientLine(line: string): RecipeImportDraft['ingredients'] {
+  const combinedCitrusAndCheese =
+    /^(?:zest and juice|juice and zest)(?: of)? (\d+) (lemons?|limes?)\s+(\d+(?:\.\d+)?)\s*g\s+(.+)$/iu.exec(
+      line.trim(),
+    );
+  if (combinedCitrusAndCheese !== null) {
+    return [
+      ingredient(
+        combinedCitrusAndCheese[2]!,
+        Number(combinedCitrusAndCheese[1]),
+        'item',
+      ),
+      ingredient(
+        combinedCitrusAndCheese[4]!,
+        Number(combinedCitrusAndCheese[3]),
+        'g',
+      ),
+    ];
+  }
+  return [parseIngredient(line)];
+}
+
 function parseIngredient(
   line: string,
 ): RecipeImportDraft['ingredients'][number] {
@@ -351,6 +375,52 @@ function parseIngredient(
   const [ingredientText, ...noteParts] = cleanedLine.split(',');
   const main = ingredientText?.trim() ?? '';
   const preparationNote = noteParts.join(',').trim();
+  const citrus =
+    /^(?:juice(?: and zest)?|zest and juice)(?: of| from)?\s*(\d+)\s*(lemons?|limes?|oranges?)$/iu.exec(
+      main,
+    );
+  if (citrus !== null) {
+    return ingredient(citrus[2]!, Number(citrus[1]), 'item', preparationNote);
+  }
+
+  const impliedMeasure =
+    /^(?:a\s+)?(?:(small|large)\s+)?(pinch|handful|bunch|pack|drizzle|splash)(?:\s+of)?\s+(.+)$/iu.exec(
+      main,
+    );
+  if (impliedMeasure !== null) {
+    const measure = impliedMeasure[2]!.toLowerCase();
+    return ingredient(
+      impliedMeasure[3]!,
+      measure === 'handful' && impliedMeasure[1]?.toLowerCase() === 'small'
+        ? 0.5
+        : 1,
+      measure === 'pack'
+        ? 'packet'
+        : measure === 'drizzle' || measure === 'splash'
+          ? 'tsp'
+          : measure,
+      preparationNote,
+    );
+  }
+
+  const fewLeaves = /^(?:a\s+)?few leaves(?: of)?\s+(.+)$/iu.exec(main);
+  if (fewLeaves !== null) {
+    return ingredient(fewLeaves[1]!, 0.5, 'handful', preparationNote);
+  }
+
+  const range =
+    /^(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s+(spring onions?)$/iu.exec(
+      main,
+    );
+  if (range !== null) {
+    return ingredient(
+      range[3]!,
+      (Number(range[1]) + Number(range[2])) / 2,
+      'item',
+      preparationNote,
+    );
+  }
+
   const multipliedMass =
     /^(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*(g|kg)\b\s*(.+)$/iu.exec(main);
   if (multipliedMass !== null) {
@@ -364,33 +434,78 @@ function parseIngredient(
 
   const quantity = leadingQuantity(main);
   if (quantity === null) {
-    const impliedMeasure = /^(pinch|handful)\s+(?:of\s+)?(.+)$/iu.exec(main);
-    if (impliedMeasure !== null) {
-      return {
-        name: impliedMeasure[2]!.trim(),
-        preparationNote,
-        quantity: 1,
-        unit: impliedMeasure[1]!.toLowerCase(),
-      };
-    }
     if (quantitylessSeasonings.has(main.toLowerCase())) {
       return { name: main, preparationNote, quantity: 1, unit: 'pinch' };
     }
+    const inferred = inferQuantitylessIngredient(main, preparationNote);
+    if (inferred !== null) return inferred;
     return { name: main, preparationNote, quantity: null, unit: '' };
   }
 
   const remainder = main.slice(quantity.characters).trim();
   const unitMatch = /^([a-zA-Z]+)\b/u.exec(remainder);
   const unit = unitNames.get(unitMatch?.[1]?.toLowerCase() ?? '');
+  const name =
+    unit === undefined
+      ? remainder
+      : remainder.slice(unitMatch![0].length).trim();
   return {
-    name:
-      unit === undefined
-        ? remainder
-        : remainder.slice(unitMatch![0].length).trim(),
+    name: name === '' && unit === 'clove' ? 'garlic' : name,
     preparationNote,
     quantity: quantity.value,
     unit: unit ?? 'item',
   };
+}
+
+function inferQuantitylessIngredient(
+  value: string,
+  preparationNote: string,
+): RecipeImportDraft['ingredients'][number] | null {
+  if (/^garlic\s*\(lots\)$/iu.test(value.trim())) {
+    return ingredient('garlic', 3, 'clove', preparationNote);
+  }
+  const name = value.replace(/[)]+$/u, '').trim();
+  if (/^(?:ice|a tray of ice)$/iu.test(name)) {
+    return ingredient('ice', 1, 'handful', preparationNote);
+  }
+  if (/^tagliatelle$/iu.test(name)) {
+    return ingredient(name, 100, 'g', preparationNote);
+  }
+  if (/^onion$/iu.test(name)) {
+    return ingredient(name, 1, 'item', preparationNote);
+  }
+  if (/^spinach$/iu.test(name)) {
+    return ingredient(name, 1, 'handful', preparationNote);
+  }
+  if (/^sesame seeds$/iu.test(name)) {
+    return ingredient(name, 1, 'tsp', preparationNote);
+  }
+  if (/^soy sauce$/iu.test(name)) {
+    return ingredient(name, 1, 'tbsp', preparationNote);
+  }
+  if (/^(?:toasted )?pecans$/iu.test(name)) {
+    return ingredient(name, 1, 'tbsp', preparationNote);
+  }
+  if (
+    /^(?:chopped |flat leaf |fresh )?(?:coriander|chives|parsely|parsley)(?: to serve)?$/iu.test(
+      name,
+    )
+  ) {
+    return ingredient(name, 1, 'handful', preparationNote);
+  }
+  if (/^thumb-sized piece(?: of)? ginger$/iu.test(name)) {
+    return ingredient('ginger', 15, 'g', preparationNote);
+  }
+  return null;
+}
+
+function ingredient(
+  name: string,
+  quantity: number,
+  unit: string,
+  preparationNote = '',
+): RecipeImportDraft['ingredients'][number] {
+  return { name: name.trim(), preparationNote, quantity, unit };
 }
 
 function leadingQuantity(

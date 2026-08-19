@@ -167,13 +167,16 @@ nutrition-database estimates with per-match source versions, confidence,
 converted mass, and selected ingredient matches.
 
 When nutrition is omitted, saving tries the bundled nutrition database using
-exact or explicit alias matches. It contains CoFID 2021 and versioned label
-profiles for household products such as protein powder, almond milk, prepared
-stock, and turkey mince. Unqualified egg noodles default to fresh; explicit
-fresh, dried, and cooked qualifiers are otherwise preserved. Direct weights,
-common household measures, label measures, and a small set of explicit item
-weights are supported. Recipe imports also recognise leading list bullets, simple
-multiplicative masses such as `2 x 200g`, common written measures, and a
+exact matches, explicit aliases, and bounded low-confidence rules for familiar
+UK ingredient wording. It contains CoFID 2021 and versioned label profiles for
+household products such as protein powder, almond milk, prepared stock, and
+turkey mince. Unqualified egg noodles default to fresh; explicit fresh, dried,
+and cooked qualifiers are otherwise preserved. Direct weights,
+ingredient-specific measures, label measures, and conservative default
+household quantities are supported. Default quantities are used only after the
+food has matched and make the estimate low confidence. Recipe imports also
+recognise leading list bullets, simple multiplicative masses such as `2 x
+200g`, common written and qualitative measures, citrus shorthand, and a
 standalone salt or pepper line as one pinch. These inferred structures remain
 editable during review. The response records every converted or assumed
 weight; bounded negligible seasonings may be omitted and are recorded too. A

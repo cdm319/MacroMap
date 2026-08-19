@@ -192,6 +192,63 @@ describe('nutrition database estimation', () => {
     }
   });
 
+  it('uses reviewable close matches for ordinary UK ingredient wording', () => {
+    const foods = [
+      ['chicken sausages', 1, 'item', '19-658', 60],
+      ['wholemeal penne', 100, 'g', '11-718', 100],
+      ['cornflour mixed with water', 1, 'tbsp', '11-1045', 8.25],
+      ['Worcester sauce', 1, 'tbsp', '17-723', 16.5],
+      ['sriracha', 1, 'tbsp', '17-719', 16.5],
+      ['coconut flour', 100, 'g', '14-873', 100],
+      ['white fish', 100, 'g', '16-372', 100],
+      ['couscous', 100, 'g', '11-901', 100],
+    ] as const;
+
+    for (const [name, quantity, unit, foodCode, grams] of foods) {
+      const result = estimateRecipeNutrition(
+        [ingredient(quantity, unit, name)],
+        1,
+      );
+      expect(result).toMatchObject({
+        kind: 'estimated',
+        provenance: {
+          confidence: 'low',
+          matches: [{ foodCode, grams, matchConfidence: 'low' }],
+        },
+      });
+    }
+  });
+
+  it('records conservative default measures only after matching the food', () => {
+    expect(
+      estimateRecipeNutrition([ingredient(1, 'packet', 'mozzarella')], 1),
+    ).toMatchObject({
+      kind: 'estimated',
+      provenance: {
+        confidence: 'low',
+        matches: [
+          {
+            grams: 250,
+            matchConfidence: 'low',
+            quantitySource: 'household_measure',
+          },
+        ],
+      },
+    });
+    expect(
+      estimateRecipeNutrition([ingredient(1, 'item', 'mystery food')], 1),
+    ).toEqual({
+      issues: [
+        {
+          ingredientIndex: 0,
+          ingredientName: 'mystery food',
+          reason: 'no_match',
+        },
+      ],
+      kind: 'incomplete',
+    });
+  });
+
   it('uses exact CoFID names with high confidence and converts imperial mass', () => {
     const result = estimateRecipeNutrition(
       [

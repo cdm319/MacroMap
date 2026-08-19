@@ -4,6 +4,10 @@ import type {
   RecipeNutritionProvenance,
 } from '@macromap/contracts';
 import { cofid2021Rows } from '@macromap/domain/cofid-2021-data';
+import {
+  everydayIngredientRules,
+  type IngredientRule,
+} from '@macromap/domain/nutrition-rules';
 
 interface NutritionFood {
   readonly carbsThousandths: number;
@@ -23,24 +27,8 @@ type NutritionDatabaseProvenance = Extract<
 type NutritionDatabaseMatch = NutritionDatabaseProvenance['matches'][number];
 type QuantitySource = NutritionDatabaseMatch['quantitySource'];
 
-interface IngredientMeasure {
-  readonly grams: number;
-  readonly source: 'household_measure' | 'label_measure';
-}
-
-interface IngredientRule {
-  readonly aliases: ReadonlyArray<string>;
-  readonly foodCode: string;
-  readonly countGrams?: number;
-  readonly countSource?: 'estimated_count' | 'label_measure';
-  readonly gramsPerMillilitre?: number;
-  readonly matchConfidence?: 'high';
-  readonly measures?: Readonly<Record<string, number | IngredientMeasure>>;
-  readonly volumeSource?: 'household_measure' | 'label_measure';
-}
-
 interface FoodMatch {
-  readonly confidence: 'high' | 'medium';
+  readonly confidence: 'high' | 'low' | 'medium';
   readonly food: NutritionFood;
   readonly rule?: IngredientRule;
 }
@@ -163,7 +151,9 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
   },
   {
     aliases: ['broccoli', 'tenderstem broccoli'],
+    countGrams: 100,
     foodCode: '13-502',
+    measures: { handful: 80 },
   },
   {
     aliases: ['butter', 'salted butter'],
@@ -218,6 +208,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
   },
   {
     aliases: ['coconut oil'],
+    countGrams: 14,
     foodCode: '17-031',
     gramsPerMillilitre: 0.92,
   },
@@ -253,6 +244,8 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
       'strawberry or vanilla protein powder',
       'chocolate or vanilla protein powder',
       'protein powder chocolate',
+      'chocolate protein',
+      'vanilla protein',
       'whey protein powder',
     ],
     foodCode: 'generic-protein-powder',
@@ -338,6 +331,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
   },
   {
     aliases: ['passata', 'canned tomato'],
+    countGrams: 500,
     foodCode: '13-530',
     gramsPerMillilitre: 1,
   },
@@ -347,9 +341,10 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     gramsPerMillilitre: 0.53,
   },
   { aliases: ['potato'], foodCode: '13-489', countGrams: 175 },
-  { aliases: ['pork fillet'], foodCode: '18-510' },
+  { aliases: ['pork fillet'], countGrams: 150, foodCode: '18-510' },
   {
     aliases: ['rapeseed oil'],
+    countGrams: 14,
     foodCode: '17-041',
     gramsPerMillilitre: 0.91,
   },
@@ -438,9 +433,10 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     gramsPerMillilitre: 1,
   },
   {
-    aliases: ['water'],
+    aliases: ['ice', 'water'],
     foodCode: '17-377',
     gramsPerMillilitre: 1,
+    measures: { handful: 30 },
   },
   { aliases: ['walnut'], foodCode: '14-879' },
   { aliases: ['white rice'], foodCode: '11-861' },
@@ -449,6 +445,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     foodCode: '12-596',
     gramsPerMillilitre: 1.03,
   },
+  ...everydayIngredientRules,
 ];
 
 const ignoredNameWords = new Set([
@@ -463,11 +460,17 @@ const ignoredNameWords = new Set([
   'grated',
   'into',
   'juiced',
+  'large',
+  'medium',
+  'melted',
   'organic',
+  'of',
   'peeled',
   'piece',
   'roughly',
+  'serve',
   'skinless',
+  'small',
   'sliced',
   'trimmed',
   'unwaxed',
@@ -477,7 +480,7 @@ const ignoredNameWords = new Set([
 
 const aliases = new Map<string, IngredientRule>();
 for (const rule of ingredientRules) {
-  for (const alias of rule.aliases) {
+  for (const alias of rule.aliases ?? []) {
     aliases.set(normaliseName(alias), rule);
   }
 }
@@ -502,6 +505,7 @@ const negligibleSeasonings = new Set(
     'sea salt',
     'smoked paprika',
     'turmeric',
+    'vanilla extract',
     'white pepper',
   ].map(normaliseIngredientName),
 );
@@ -554,6 +558,21 @@ const countUnits = new Set([
   'unit',
   'units',
   'whole',
+]);
+
+const defaultMeasureGrams = new Map([
+  ['bottle', 500],
+  ['bunch', 30],
+  ['can', 400],
+  ['clove', 3],
+  ['cm', 5],
+  ['handful', 30],
+  ['item', 100],
+  ['packet', 250],
+  ['pinch', 0.5],
+  ['slice', 30],
+  ['tin', 400],
+  ['unit', 100],
 ]);
 
 export function estimateRecipeNutrition(
@@ -616,7 +635,7 @@ export function estimateRecipeNutrition(
       foodVersion: match.food.foodVersion,
       grams: Number(quantity.milligrams) / 1_000,
       ingredientIndex,
-      matchConfidence: match.confidence,
+      matchConfidence: quantity.assumed ? 'low' : match.confidence,
       quantitySource: quantity.source,
     });
   });
@@ -731,13 +750,18 @@ function findIngredientRule(
 ): IngredientRule | undefined {
   const direct = aliases.get(normaliseName(ingredientName));
   if (direct !== undefined) return direct;
-  return aliases.get(normaliseIngredientName(ingredientName));
+  const normalised = normaliseIngredientName(ingredientName);
+  return (
+    aliases.get(normalised) ??
+    ingredientRules.find(({ pattern }) => pattern?.test(normalised))
+  );
 }
 
 function normaliseQuantity(
   ingredient: RecipeIngredient,
   rule: IngredientRule | undefined,
 ): {
+  readonly assumed: boolean;
   readonly milligrams: bigint;
   readonly source: QuantitySource;
 } | null {
@@ -747,14 +771,14 @@ function normaliseQuantity(
   const unit = ingredient.unit.trim().toLowerCase();
   const mass = massUnits.get(unit);
   if (mass !== undefined) {
-    return measuredQuantity(quantity * mass.grams, mass.source);
+    return measuredQuantity(quantity * mass.grams, mass.source, false);
   }
 
   const measure = rule?.measures?.[unit];
   if (measure !== undefined) {
     return typeof measure === 'number'
       ? measuredQuantity(quantity * measure, 'household_measure')
-      : measuredQuantity(quantity * measure.grams, measure.source);
+      : measuredQuantity(quantity * measure.grams, measure.source, false);
   }
 
   const millilitres = volumeUnits.get(unit);
@@ -762,6 +786,7 @@ function normaliseQuantity(
     return measuredQuantity(
       quantity * millilitres * rule.gramsPerMillilitre,
       rule.volumeSource ?? 'household_measure',
+      false,
     );
   }
 
@@ -769,6 +794,20 @@ function normaliseQuantity(
     return measuredQuantity(
       quantity * rule.countGrams,
       rule.countSource ?? 'estimated_count',
+      false,
+    );
+  }
+
+  if (millilitres !== undefined) {
+    return measuredQuantity(quantity * millilitres, 'household_measure', true);
+  }
+
+  const assumedGrams = defaultMeasureGrams.get(unit);
+  if (assumedGrams !== undefined) {
+    return measuredQuantity(
+      quantity * assumedGrams,
+      countUnits.has(unit) ? 'estimated_count' : 'household_measure',
+      true,
     );
   }
 
@@ -778,10 +817,15 @@ function normaliseQuantity(
 function measuredQuantity(
   grams: number,
   source: QuantitySource,
-): { readonly milligrams: bigint; readonly source: typeof source } | null {
+  assumed = false,
+): {
+  readonly assumed: boolean;
+  readonly milligrams: bigint;
+  readonly source: typeof source;
+} | null {
   const milligrams = Math.round(grams * 1_000);
   return Number.isSafeInteger(milligrams) && milligrams > 0
-    ? { milligrams: BigInt(milligrams), source }
+    ? { assumed, milligrams: BigInt(milligrams), source }
     : null;
 }
 
@@ -813,7 +857,10 @@ function nutritionConfidence(
 ): 'high' | 'low' | 'medium' {
   if (
     omissions.length > 0 ||
-    matches.some(({ quantitySource }) => quantitySource === 'estimated_count')
+    matches.some(
+      ({ matchConfidence, quantitySource }) =>
+        matchConfidence === 'low' || quantitySource === 'estimated_count',
+    )
   ) {
     return 'low';
   }
@@ -854,6 +901,7 @@ function normaliseIngredientName(value: string): string {
 }
 
 function singular(value: string): string {
+  if (value === 'couscous') return value;
   if (value === 'leaves') return 'leaf';
   if (value.endsWith('ies') && value.length > 4)
     return `${value.slice(0, -3)}y`;

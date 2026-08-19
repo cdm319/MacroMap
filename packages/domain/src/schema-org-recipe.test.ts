@@ -210,6 +210,35 @@ describe('Schema.org recipe imports', () => {
     expect(result.draft.nutrition).not.toBeNull();
   });
 
+  it('structures familiar shorthand while discarding section headings', () => {
+    const result = parseSchemaOrgRecipe(
+      JSON.stringify({
+        ...recipe,
+        nutrition: undefined,
+        recipeIngredient: [
+          'Ingredients',
+          'Drizzle of olive oil',
+          '3-4 spring onions, chopped',
+          'juice and zest of 2 lemons 25g grated Parmesan cheese',
+          '- Garlic (lots)',
+          'tagliatelle',
+        ],
+        recipeYield: '2 servings',
+      }),
+    );
+
+    if (result.kind !== 'preview') throw new Error('Expected a preview.');
+    expect(result.draft.ingredients).toEqual([
+      ingredient('olive oil', 1, 'tsp'),
+      ingredient('spring onions', 3.5, 'item', 'chopped'),
+      ingredient('lemons', 2, 'item'),
+      ingredient('grated Parmesan cheese', 25, 'g'),
+      ingredient('garlic', 3, 'clove'),
+      ingredient('tagliatelle', 100, 'g'),
+    ]);
+    expect(result.draft.nutrition).not.toBeNull();
+  });
+
   it('estimates missing nutrition from complete mass ingredients', () => {
     const result = parseSchemaOrgRecipe(
       JSON.stringify({
@@ -309,3 +338,12 @@ describe('Schema.org recipe imports', () => {
     });
   });
 });
+
+function ingredient(
+  name: string,
+  quantity: number,
+  unit: string,
+  preparationNote = '',
+) {
+  return { name, preparationNote, quantity, unit };
+}

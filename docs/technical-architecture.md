@@ -287,12 +287,13 @@ The current nutrition slice stores:
 - the conversion source and match confidence.
 
 Metric and avoirdupois weights are converted directly. Common household
-measures use explicit ingredient densities, and a small set of common item
-units use explicit assumed weights. Assumed item weights make the overall
-estimate low confidence and are shown to the user. Small, explicitly allowlisted
-seasonings may be omitted as negligible; those omissions are also shown and
-make the estimate low confidence. Unknown or ambiguous ingredients remain
-without estimated nutrition and are shown for review.
+measures prefer explicit ingredient densities and item weights. Once a food has
+matched, a conservative default can cover an otherwise unsupported household
+unit; that assumption is stored and makes the match low confidence. Bounded
+rules also map familiar UK wording to a close CoFID food at low confidence.
+Small, explicitly allowlisted seasonings may be omitted as negligible; those
+omissions are also shown and make the estimate low confidence. Unknown or
+ambiguous foods remain without estimated nutrition and are shown for review.
 
 Only compatible dimensions and confidently equivalent ingredients are merged
 in the grocery list. Ambiguous count-to-weight conversions remain separate and

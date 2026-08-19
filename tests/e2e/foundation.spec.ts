@@ -118,7 +118,7 @@ test('creates, cooks, edits, and archives a manual recipe', async ({
     page.getByRole('heading', { level: 1, name: 'Tomato pasta' }),
   ).toBeVisible();
   await expect(
-    page.getByText('Estimated from CoFID 2021 · Medium confidence'),
+    page.getByText('Estimated from nutrition database · Medium confidence'),
   ).toBeVisible();
 
   await page.getByLabel('Add photo').setInputFiles({
@@ -183,7 +183,7 @@ test('estimates an everyday recipe after known nutrition is removed', async ({
   await page.getByRole('button', { name: 'Save recipe' }).click();
 
   await expect(
-    page.getByText('Estimated from CoFID 2021 · Low confidence'),
+    page.getByText('Estimated from nutrition database · Low confidence'),
   ).toBeVisible();
   await page.getByText('How this was estimated').click();
   await expect(page.getByText(/baking potatoes.*250 g assumed/u)).toBeVisible();
@@ -222,13 +222,17 @@ test('explains why nutrition cannot be estimated', async ({ page }) => {
   await page.getByLabel('Ingredient 1 unit').fill('g');
   await page.getByLabel('Ingredient 1 name').fill('Mystery powder');
   await expect(
-    page.getByText('No safe CoFID match was found for Mystery powder.'),
+    page.getByText(
+      'No safe nutrition database match was found for Mystery powder.',
+    ),
   ).toBeVisible();
 
   await page.getByRole('button', { name: 'Save recipe' }).click();
   await expect(page.getByText('Nutrition needed')).toBeVisible();
   await expect(
-    page.getByText('No safe CoFID match was found for Mystery powder.'),
+    page.getByText(
+      'No safe nutrition database match was found for Mystery powder.',
+    ),
   ).toBeVisible();
 });
 
@@ -246,7 +250,11 @@ test('reviews Schema.org JSON before saving an imported recipe', async ({
       description: 'A quick imported dinner.',
       name: 'Imported tomato pasta',
       recipeCategory: 'Dinner',
-      recipeIngredient: ['200g pasta', '400g tomatoes, chopped'],
+      recipeIngredient: [
+        '200g pasta',
+        '400g tomatoes, chopped',
+        '1 scoop vanilla protein powder',
+      ],
       recipeInstructions: [{ '@type': 'HowToStep', text: 'Boil the pasta.' }],
       recipeYield: '2 servings',
       url: 'https://recipes.example.test/tomato-pasta',
@@ -263,7 +271,7 @@ test('reviews Schema.org JSON before saving an imported recipe', async ({
     'Example Cook',
   );
   await expect(
-    page.getByText('Current CoFID medium confidence estimate'),
+    page.getByText('Current nutrition database medium confidence estimate'),
   ).toBeVisible();
 
   await page.getByRole('button', { name: 'Save imported recipe' }).click();
@@ -274,7 +282,13 @@ test('reviews Schema.org JSON before saving an imported recipe', async ({
     page.getByRole('link', { name: 'Example Cook' }),
   ).toHaveAttribute('href', 'https://recipes.example.test/tomato-pasta');
   await expect(
-    page.getByText('Estimated from CoFID 2021 · Medium confidence'),
+    page.getByText('Estimated from nutrition database · Medium confidence'),
+  ).toBeVisible();
+  await page.getByText('How this was estimated').click();
+  await expect(
+    page.getByText(
+      'vanilla protein powder → Generic protein powder · Label profile 2026-08-19 · 30 g from label measure',
+    ),
   ).toBeVisible();
 });
 

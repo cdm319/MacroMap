@@ -48,7 +48,7 @@ flowchart LR
     DataApi --> Database["Aurora PostgreSQL Serverless v2"]
     ApiLambda --> Media
     ApiLambda --> OpenAI["OpenAI Responses API"]
-    ApiLambda --> Nutrition["CoFID data and USDA fallback"]
+    ApiLambda --> Nutrition["Bundled nutrition data and USDA fallback"]
 ```
 
 ## Technology baseline
@@ -245,10 +245,11 @@ is stored as household planning configuration and defaults to `0.15`.
 - `recipe_import`: the original import content, extracted draft, review
   warnings, and nullable link to the recipe created after explicit review.
 
-The MVP stores a compact snapshot of accepted CoFID matches, converted gram
-amounts, dataset version, and confidence in `recipe.nutrition_provenance`. That
+The MVP stores a compact snapshot of accepted nutrition matches, converted gram
+amounts, source version, and confidence in `recipe.nutrition_provenance`. That
 keeps each estimate reproducible without introducing canonical-ingredient or
-match tables before grocery planning needs them.
+match tables before grocery planning needs them. Existing CoFID-only snapshots
+remain valid as the bundled database gains versioned label profiles.
 
 Original ingredient text and source attribution are preserved even after
 normalisation. Imported or inferred data never bypasses the mandatory review
@@ -272,18 +273,18 @@ status-changing job. Past meal slots are immutable based on the current
 
 ## Nutrition and units
 
-The bundled, versioned CoFID dataset is the primary nutrition source for common
-UK ingredients. The free USDA FoodData Central API is a fallback for ingredients
-that cannot be matched with sufficient confidence. USDA responses and accepted
-matches are cached so ordinary planning does not require an external nutrition
-request.
+The bundled nutrition database combines the versioned CoFID dataset for common
+UK ingredients with a small number of explicit, versioned label profiles. The
+free USDA FoodData Central API is a fallback for ingredients that cannot be
+matched with sufficient confidence. USDA responses and accepted matches are
+cached so ordinary planning does not require an external nutrition request.
 
-The current CoFID slice stores:
+The current nutrition slice stores:
 
 - the user's original quantity and unit;
 - the converted mass for each accepted match;
-- the selected CoFID code and food name; and
-- the dataset version, conversion source, and match confidence.
+- the selected food code, name, data source, and version; and
+- the conversion source and match confidence.
 
 Metric and avoirdupois weights are converted directly. Common household
 measures use explicit ingredient densities, and a small set of common item

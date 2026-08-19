@@ -68,6 +68,8 @@ const unitNames = new Map(
     pinches: 'pinch',
     slice: 'slice',
     slices: 'slice',
+    scoop: 'scoop',
+    scoops: 'scoop',
     tbsp: 'tbsp',
     tablespoon: 'tbsp',
     tablespoons: 'tbsp',
@@ -263,7 +265,10 @@ function estimateNutrition(
   warnings: RecipeImportWarning[],
 ): {
   readonly nutrition: RecipeNutrition;
-  readonly provenance: Extract<RecipeNutritionProvenance, { source: 'cofid' }>;
+  readonly provenance: Extract<
+    RecipeNutritionProvenance,
+    { source: 'nutrition_database' }
+  >;
 } | null {
   const incomplete = ingredients.filter(
     ({ name, quantity, unit }) =>
@@ -299,7 +304,7 @@ function estimateNutrition(
   warn(
     warnings,
     'NUTRITION_ESTIMATED',
-    'Nutrition was estimated from CoFID 2021. Check the ingredient matches and per-serving values.',
+    'Nutrition was estimated from the bundled nutrition database. Check the ingredient matches and per-serving values.',
   );
   const reviewMatches = estimation.provenance.matches.filter(
     ({ matchConfidence, quantitySource }) =>
@@ -314,8 +319,8 @@ function estimateNutrition(
       'NUTRITION_MATCH_REVIEW_NEEDED',
       `${[
         ...reviewMatches.map(
-          ({ cofidName, grams, ingredientIndex }) =>
-            `${ingredients[ingredientIndex]?.name ?? 'ingredient'} → ${cofidName} (${Math.round(grams * 10) / 10} g)`,
+          ({ foodName, grams, ingredientIndex }) =>
+            `${ingredients[ingredientIndex]?.name ?? 'ingredient'} → ${foodName} (${Math.round(grams * 10) / 10} g)`,
         ),
         ...omissions.map(
           ({ ingredientName }) =>

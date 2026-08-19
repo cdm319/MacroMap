@@ -183,6 +183,30 @@ describe('shared API contracts', () => {
     );
   });
 
+  it('records nutrition database and label-profile matches', () => {
+    const provenance = {
+      confidence: 'high',
+      matches: [
+        {
+          canonicalName: 'vanilla protein powder',
+          foodCode: 'generic-protein-powder',
+          foodName: 'Generic protein powder',
+          foodSource: 'label',
+          foodVersion: '2026-08-19',
+          grams: 30,
+          ingredientIndex: 0,
+          matchConfidence: 'high',
+          quantitySource: 'label_measure',
+        },
+      ],
+      source: 'nutrition_database',
+    } as const;
+
+    expect(recipeNutritionProvenanceSchema.parse(provenance)).toEqual(
+      provenance,
+    );
+  });
+
   it('accepts only bounded supported recipe photos', () => {
     expect(
       recipePhotoUploadRequestSchema.parse({

@@ -182,13 +182,55 @@ describe('Schema.org recipe imports', () => {
       },
       nutritionProvenance: {
         confidence: 'medium',
-        datasetVersion: '2021',
-        source: 'cofid',
+        source: 'nutrition_database',
       },
     });
     expect(result.warnings.map(({ code }) => code)).toEqual([
       'NUTRITION_ESTIMATED',
       'NUTRITION_MATCH_REVIEW_NEEDED',
+      'PHOTO_NOT_COPIED',
+    ]);
+  });
+
+  it('structures protein powder scoops using the label profile', () => {
+    const result = parseSchemaOrgRecipe(
+      JSON.stringify({
+        ...recipe,
+        nutrition: undefined,
+        recipeIngredient: ['2 scoops chocolate protein powder'],
+        recipeYield: '1 serving',
+      }),
+    );
+
+    if (result.kind !== 'preview') throw new Error('Expected a preview.');
+    expect(result.draft).toMatchObject({
+      ingredients: [
+        {
+          name: 'chocolate protein powder',
+          quantity: 2,
+          unit: 'scoop',
+        },
+      ],
+      nutrition: {
+        carbsGrams: 4.08,
+        fatGrams: 2.7,
+        kcal: 222.6,
+        proteinGrams: 44.4,
+      },
+      nutritionProvenance: {
+        confidence: 'high',
+        matches: [
+          {
+            foodCode: 'generic-protein-powder',
+            foodSource: 'label',
+            quantitySource: 'label_measure',
+          },
+        ],
+        source: 'nutrition_database',
+      },
+    });
+    expect(result.warnings.map(({ code }) => code)).toEqual([
+      'NUTRITION_ESTIMATED',
       'PHOTO_NOT_COPIED',
     ]);
   });

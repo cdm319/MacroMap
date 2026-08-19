@@ -19,7 +19,7 @@ const recipe: RecipeInput = {
 describe('recipe nutrition preparation', () => {
   it('estimates missing nutrition from reviewed ingredients', () => {
     expect(prepareRecipeNutrition(recipe)).toMatchObject({
-      nutritionProvenance: { source: 'cofid' },
+      nutritionProvenance: { source: 'nutrition_database' },
       recipe: {
         nutrition: {
           carbsGrams: 75.6,

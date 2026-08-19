@@ -684,17 +684,18 @@ const pastaNutrition = {
 
 const pastaProvenance = {
   confidence: 'medium' as const,
-  datasetVersion: '2021' as const,
   matches: [
     {
       canonicalName: 'pasta',
-      cofidCode: '11-716',
-      cofidName: 'Pasta, white, dried, raw',
+      foodCode: '11-716',
+      foodName: 'Pasta, white, dried, raw',
+      foodSource: 'cofid' as const,
+      foodVersion: '2021',
       grams: 200,
       ingredientIndex: 0,
       matchConfidence: 'medium' as const,
       quantitySource: 'metric' as const,
     },
   ],
-  source: 'cofid' as const,
+  source: 'nutrition_database' as const,
 };

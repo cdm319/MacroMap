@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { estimateRecipeNutrition } from './nutrition.js';
 
-describe('CoFID nutrition estimation', () => {
+describe('nutrition database estimation', () => {
   it('calculates reproducible per-serving macros using fixed-point arithmetic', () => {
     const result = estimateRecipeNutrition(
       [
@@ -21,14 +21,80 @@ describe('CoFID nutrition estimation', () => {
       },
       provenance: {
         confidence: 'medium',
-        datasetVersion: '2021',
         matches: [
-          { cofidCode: '11-716', grams: 200, matchConfidence: 'medium' },
-          { cofidCode: '13-517', grams: 400, matchConfidence: 'medium' },
+          { foodCode: '11-716', grams: 200, matchConfidence: 'medium' },
+          { foodCode: '13-517', grams: 400, matchConfidence: 'medium' },
         ],
-        source: 'cofid',
+        source: 'nutrition_database',
       },
     });
+  });
+
+  it('uses the supplied protein powder label for grams and scoops', () => {
+    const grams = estimateRecipeNutrition(
+      [ingredient(30, 'g', 'vanilla protein powder')],
+      1,
+    );
+    const scoops = estimateRecipeNutrition(
+      [ingredient(2, 'scoops', 'protein powder chocolate')],
+      1,
+    );
+
+    expect(grams).toMatchObject({
+      kind: 'estimated',
+      nutrition: {
+        carbsGrams: 2.04,
+        fatGrams: 1.35,
+        kcal: 111.3,
+        proteinGrams: 22.2,
+      },
+      provenance: {
+        confidence: 'high',
+        matches: [
+          {
+            foodCode: 'generic-protein-powder',
+            foodSource: 'label',
+            foodVersion: '2026-08-19',
+            matchConfidence: 'high',
+            quantitySource: 'metric',
+          },
+        ],
+        source: 'nutrition_database',
+      },
+    });
+    expect(scoops).toMatchObject({
+      kind: 'estimated',
+      nutrition: {
+        carbsGrams: 4.08,
+        fatGrams: 2.7,
+        kcal: 222.6,
+        proteinGrams: 44.4,
+      },
+      provenance: {
+        confidence: 'high',
+        matches: [{ grams: 60, quantitySource: 'label_measure' }],
+      },
+    });
+  });
+
+  it('recognises the protein powder wording used by the Paprika archive', () => {
+    for (const name of [
+      'protein powder',
+      'chocolate protein powder',
+      'vanilla protein powder',
+      'strawberry or vanilla protein powder',
+      'chocolate or vanilla protein powder',
+      'protein powder chocolate',
+    ]) {
+      expect(
+        estimateRecipeNutrition([ingredient(30, 'g', name)], 1),
+      ).toMatchObject({
+        kind: 'estimated',
+        provenance: {
+          matches: [{ foodCode: 'generic-protein-powder' }],
+        },
+      });
+    }
   });
 
   it('uses exact CoFID names with high confidence and converts imperial mass', () => {
@@ -50,7 +116,7 @@ describe('CoFID nutrition estimation', () => {
         confidence: 'high',
         matches: [
           {
-            cofidCode: '13-499',
+            foodCode: '13-499',
             grams: 453.592,
             matchConfidence: 'high',
             quantitySource: 'avoirdupois',
@@ -172,7 +238,7 @@ describe('CoFID nutrition estimation', () => {
         kcal: 387,
         proteinGrams: 14.1,
       },
-      provenance: { matches: [{ cofidCode: '11-941' }] },
+      provenance: { matches: [{ foodCode: '11-941' }] },
     });
     expect(dried).toMatchObject({
       kind: 'estimated',
@@ -182,7 +248,7 @@ describe('CoFID nutrition estimation', () => {
         kcal: 1014,
         proteinGrams: 36,
       },
-      provenance: { matches: [{ cofidCode: '11-719' }] },
+      provenance: { matches: [{ foodCode: '11-719' }] },
     });
   });
 
@@ -225,11 +291,11 @@ describe('CoFID nutrition estimation', () => {
     if (result.kind !== 'estimated') return;
     expect(result.provenance.matches).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ cofidCode: '18-290', ingredientIndex: 0 }),
-        expect.objectContaining({ cofidCode: '12-937', ingredientIndex: 4 }),
-        expect.objectContaining({ cofidCode: '17-686', ingredientIndex: 5 }),
-        expect.objectContaining({ cofidCode: '13-352', ingredientIndex: 6 }),
-        expect.objectContaining({ cofidCode: '14-130', ingredientIndex: 8 }),
+        expect.objectContaining({ foodCode: '18-290', ingredientIndex: 0 }),
+        expect.objectContaining({ foodCode: '12-937', ingredientIndex: 4 }),
+        expect.objectContaining({ foodCode: '17-686', ingredientIndex: 5 }),
+        expect.objectContaining({ foodCode: '13-352', ingredientIndex: 6 }),
+        expect.objectContaining({ foodCode: '14-130', ingredientIndex: 8 }),
         expect.objectContaining({ grams: 42, ingredientIndex: 9 }),
         expect.objectContaining({ grams: 6, ingredientIndex: 11 }),
       ]),

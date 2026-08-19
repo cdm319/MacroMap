@@ -90,6 +90,10 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
   { aliases: ['baking potato'], foodCode: '13-489', countGrams: 250 },
   { aliases: ['banana'], foodCode: '14-318', countGrams: 120 },
   { aliases: ['basmati rice'], foodCode: '11-857' },
+  {
+    aliases: ['baby potato', 'baby new potato', 'new potato'],
+    foodCode: '13-618',
+  },
   { aliases: ['beef mince', 'minced beef'], foodCode: '18-469' },
   {
     aliases: ['blueberry', 'blueberries'],
@@ -134,9 +138,18 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
   },
   { aliases: ['chorizo'], foodCode: '19-516' },
   {
-    aliases: ['coconut milk'],
+    aliases: [
+      'coconut milk',
+      'coconut milk not light',
+      'full fat coconut milk',
+      'tinned coconut milk',
+    ],
     foodCode: '14-889',
     gramsPerMillilitre: 0.97,
+  },
+  {
+    aliases: ['desiccated coconut'],
+    foodCode: '14-873',
   },
   {
     aliases: ['coconut oil'],
@@ -194,6 +207,10 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     foodCode: '11-719',
   },
   {
+    aliases: ['frozen pea'],
+    foodCode: '13-527',
+  },
+  {
     aliases: ['garam masala'],
     foodCode: '13-829',
     gramsPerMillilitre: 0.4,
@@ -239,6 +256,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
   },
   { aliases: ['lemon'], foodCode: '14-130', countGrams: 58 },
   { aliases: ['lime'], foodCode: '14-131', countGrams: 44 },
+  { aliases: ['mangetout'], foodCode: '13-122' },
   {
     aliases: ['olive oil'],
     foodCode: '17-038',
@@ -249,7 +267,10 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     foodCode: '13-499',
     countGrams: 150,
   },
-  { aliases: ['pasta', 'dried pasta'], foodCode: '11-716' },
+  {
+    aliases: ['pasta', 'dried pasta', 'dried orzo', 'orzo'],
+    foodCode: '11-716',
+  },
   {
     aliases: ['passata', 'canned tomato'],
     foodCode: '13-530',
@@ -261,6 +282,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     gramsPerMillilitre: 0.53,
   },
   { aliases: ['potato'], foodCode: '13-489', countGrams: 175 },
+  { aliases: ['pork fillet'], foodCode: '18-510' },
   {
     aliases: ['rapeseed oil'],
     foodCode: '17-041',
@@ -271,9 +293,11 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     foodCode: '13-317',
     countGrams: 15,
   },
+  { aliases: ['raspberry'], foodCode: '14-375' },
+  { aliases: ['red lentil', 'dried red lentil'], foodCode: '13-657' },
   { aliases: ['red pepper'], foodCode: '13-524', countGrams: 160 },
   {
-    aliases: ['rolled oat', 'oat'],
+    aliases: ['rolled oat', 'oat', 'porridge oat'],
     foodCode: '11-788',
     gramsPerMillilitre: 0.34,
   },
@@ -304,7 +328,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     gramsPerMillilitre: 1.16,
   },
   {
-    aliases: ['spinach', 'baby spinach'],
+    aliases: ['spinach', 'baby spinach', 'baby spinach leaf'],
     foodCode: '13-521',
     measures: { handful: 30 },
   },
@@ -320,6 +344,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     gramsPerMillilitre: 0.85,
   },
   { aliases: ['sweet potato'], foodCode: '13-463', countGrams: 200 },
+  { aliases: ['sweetcorn'], foodCode: '13-622' },
   {
     aliases: ['sunflower oil'],
     foodCode: '17-045',
@@ -331,6 +356,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     foodCode: '13-531',
     gramsPerMillilitre: 1.05,
   },
+  { aliases: ['tuna steak'], foodCode: '16-399' },
   {
     aliases: ['vegetable oil', 'sunflower or vegetable oil for frying'],
     foodCode: '17-686',
@@ -346,6 +372,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     foodCode: '17-377',
     gramsPerMillilitre: 1,
   },
+  { aliases: ['walnut'], foodCode: '14-879' },
   { aliases: ['white rice'], foodCode: '11-861' },
   {
     aliases: ['whole milk'],
@@ -391,13 +418,18 @@ const negligibleSeasonings = new Set(
     'black pepper',
     'chilli flakes',
     'chilli powder',
+    'cinnamon',
     'cumin',
+    'ground cinnamon',
     'onion granules',
     'onion powder',
     'oregano',
     'paprika',
+    'pepper',
     'salt',
+    'salt and black pepper',
     'salt and pepper',
+    'sea salt',
     'smoked paprika',
     'turmeric',
     'white pepper',
@@ -749,6 +781,7 @@ function normaliseIngredientName(value: string): string {
 }
 
 function singular(value: string): string {
+  if (value === 'leaves') return 'leaf';
   if (value.endsWith('ies') && value.length > 4)
     return `${value.slice(0, -3)}y`;
   if (value.endsWith('oes') && value.length > 4) return value.slice(0, -2);

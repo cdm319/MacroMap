@@ -97,6 +97,34 @@ describe('nutrition database estimation', () => {
     }
   });
 
+  it('matches unambiguous foods found by the Paprika audit', () => {
+    const foods = [
+      ['baby potatoes', '13-618'],
+      ['tinned coconut milk', '14-889'],
+      ['desiccated coconut', '14-873'],
+      ['frozen peas', '13-527'],
+      ['mangetout', '13-122'],
+      ['dried orzo', '11-716'],
+      ['pork fillet', '18-510'],
+      ['raspberries', '14-375'],
+      ['dried red lentils', '13-657'],
+      ['porridge oats', '11-788'],
+      ['baby spinach leaves', '13-521'],
+      ['sweetcorn', '13-622'],
+      ['tuna steak', '16-399'],
+      ['walnuts', '14-879'],
+    ] as const;
+
+    for (const [name, foodCode] of foods) {
+      expect(
+        estimateRecipeNutrition([ingredient(100, 'g', name)], 1),
+      ).toMatchObject({
+        kind: 'estimated',
+        provenance: { matches: [{ foodCode }] },
+      });
+    }
+  });
+
   it('uses exact CoFID names with high confidence and converts imperial mass', () => {
     const result = estimateRecipeNutrition(
       [
@@ -180,6 +208,7 @@ describe('nutrition database estimation', () => {
         ingredient(2, 'clove', 'garlic'),
         ingredient(200, 'ml', 'chicken stock'),
         ingredient(1, 'tsp', 'smoked paprika'),
+        ingredient(1, 'tsp', 'ground cinnamon'),
       ],
       2,
     );
@@ -196,6 +225,10 @@ describe('nutrition database estimation', () => {
         omissions: [
           {
             ingredientName: 'smoked paprika',
+            reason: 'negligible_seasoning',
+          },
+          {
+            ingredientName: 'ground cinnamon',
             reason: 'negligible_seasoning',
           },
         ],

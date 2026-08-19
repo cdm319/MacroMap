@@ -171,9 +171,12 @@ exact or explicit alias matches. It contains CoFID 2021 and versioned label
 profiles such as generic protein powder. Nutrition-relevant qualifiers such as
 fresh, dried, and cooked are not discarded. Direct weights, common household
 measures, label measures, and a small set of explicit item weights are
-supported. The response records every converted or assumed weight; bounded
-negligible seasonings may be omitted and are recorded too. A complete estimate
-is stored with the recipe. Otherwise
+supported. Recipe imports also recognise leading list bullets, simple
+multiplicative masses such as `2 x 200g`, common written measures, and a
+standalone salt or pepper line as one pinch. These inferred structures remain
+editable during review. The response records every converted or assumed
+weight; bounded negligible seasonings may be omitted and are recorded too. A
+complete estimate is stored with the recipe. Otherwise
 nutrition stays absent and the recipe remains unavailable to the future
 planner. Confirmed manual or valid imported nutrition is retained. Missing
 instructions remain valid for storage, planning, and cooking. The editor and

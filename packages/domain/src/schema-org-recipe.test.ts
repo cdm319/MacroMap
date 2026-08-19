@@ -163,6 +163,53 @@ describe('Schema.org recipe imports', () => {
     );
   });
 
+  it('structures common Paprika quantities without guessing ambiguous foods', () => {
+    const result = parseSchemaOrgRecipe(
+      JSON.stringify({
+        ...recipe,
+        nutrition: undefined,
+        recipeIngredient: [
+          '2cm ginger',
+          '1 handful baby spinach leaves',
+          '- 2 x 200g chicken breasts',
+          'Salt and pepper',
+          'Pinch of black pepper',
+        ],
+        recipeYield: '2 servings',
+      }),
+    );
+
+    if (result.kind !== 'preview') throw new Error('Expected a preview.');
+    expect(result.draft.ingredients).toEqual([
+      { name: 'ginger', preparationNote: '', quantity: 2, unit: 'cm' },
+      {
+        name: 'baby spinach leaves',
+        preparationNote: '',
+        quantity: 1,
+        unit: 'handful',
+      },
+      {
+        name: 'chicken breasts',
+        preparationNote: '',
+        quantity: 400,
+        unit: 'g',
+      },
+      {
+        name: 'Salt and pepper',
+        preparationNote: '',
+        quantity: 1,
+        unit: 'pinch',
+      },
+      {
+        name: 'black pepper',
+        preparationNote: '',
+        quantity: 1,
+        unit: 'pinch',
+      },
+    ]);
+    expect(result.draft.nutrition).not.toBeNull();
+  });
+
   it('estimates missing nutrition from complete mass ingredients', () => {
     const result = parseSchemaOrgRecipe(
       JSON.stringify({

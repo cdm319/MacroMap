@@ -41,6 +41,7 @@ const unitNames = new Map(
     bunches: 'bunch',
     can: 'can',
     cans: 'can',
+    cm: 'cm',
     clove: 'clove',
     cloves: 'clove',
     cup: 'cup',
@@ -48,6 +49,8 @@ const unitNames = new Map(
     g: 'g',
     gram: 'g',
     grams: 'g',
+    handful: 'handful',
+    handfuls: 'handful',
     kg: 'kg',
     kilogram: 'kg',
     kilograms: 'kg',
@@ -92,6 +95,15 @@ const unicodeFractions: Readonly<Record<string, number>> = {
   '⅝': 5 / 8,
   '⅞': 7 / 8,
 };
+
+const quantitylessSeasonings = new Set([
+  'black pepper',
+  'pepper',
+  'salt',
+  'salt and black pepper',
+  'salt and pepper',
+  'sea salt',
+]);
 
 export function parseSchemaOrgRecipe(
   content: string,
@@ -335,11 +347,35 @@ function estimateNutrition(
 function parseIngredient(
   line: string,
 ): RecipeImportDraft['ingredients'][number] {
-  const [ingredientText, ...noteParts] = line.split(',');
+  const cleanedLine = line.replace(/^\s*(?:[-–—•]\s*)+/u, '');
+  const [ingredientText, ...noteParts] = cleanedLine.split(',');
   const main = ingredientText?.trim() ?? '';
   const preparationNote = noteParts.join(',').trim();
+  const multipliedMass =
+    /^(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*(g|kg)\b\s*(.+)$/iu.exec(main);
+  if (multipliedMass !== null) {
+    return {
+      name: multipliedMass[4]!.trim(),
+      preparationNote,
+      quantity: Number(multipliedMass[1]) * Number(multipliedMass[2]),
+      unit: multipliedMass[3]!.toLowerCase(),
+    };
+  }
+
   const quantity = leadingQuantity(main);
   if (quantity === null) {
+    const impliedMeasure = /^(pinch|handful)\s+(?:of\s+)?(.+)$/iu.exec(main);
+    if (impliedMeasure !== null) {
+      return {
+        name: impliedMeasure[2]!.trim(),
+        preparationNote,
+        quantity: 1,
+        unit: impliedMeasure[1]!.toLowerCase(),
+      };
+    }
+    if (quantitylessSeasonings.has(main.toLowerCase())) {
+      return { name: main, preparationNote, quantity: 1, unit: 'pinch' };
+    }
     return { name: main, preparationNote, quantity: null, unit: '' };
   }
 

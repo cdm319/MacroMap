@@ -160,11 +160,13 @@ requirements.
 A recipe document contains its title, description, serving count, ordered
 structured ingredients, zero or more ordered instructions, explicit meal types,
 editable cuisine/protein/flavour tags, and optional per-serving kcal, protein,
-carbohydrate, and fat. Responses include nullable `nutritionProvenance` and a
-nullable signed `photoUrl`. Provenance distinguishes confirmed manual values,
-reviewed Schema.org values, legacy CoFID estimates, and current bundled
-nutrition-database estimates with per-match source versions, confidence,
-converted mass, and selected ingredient matches.
+carbohydrate, and fat. An empty meal-type list marks a recipe as library-only
+and excludes it from planning. Responses include nullable
+`nutritionProvenance`, a nullable signed `photoUrl`, and a `planningStatus` of
+`ready`, `needs-nutrition`, or `library-only`. Provenance distinguishes
+confirmed manual values, reviewed Schema.org values, legacy CoFID estimates,
+and current bundled nutrition-database estimates with per-match source
+versions, confidence, converted mass, and selected ingredient matches.
 
 When nutrition is omitted, saving tries the bundled nutrition database using
 exact matches, explicit aliases, and bounded low-confidence rules for familiar

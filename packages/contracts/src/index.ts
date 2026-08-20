@@ -225,7 +225,6 @@ export const recipeInputSchema = z
     instructions: z.array(z.string().trim().min(1)),
     mealTypes: z
       .array(mealTypeSchema)
-      .min(1)
       .refine((values) => new Set(values).size === values.length),
     nutrition: recipeNutritionSchema.nullable(),
     servingCount: z.number().positive(),
@@ -341,7 +340,7 @@ export const recipeSchema = recipeInputSchema
     id: opaqueIdSchema,
     nutritionProvenance: recipeNutritionProvenanceSchema.nullable(),
     photoUrl: z.string().url().nullable(),
-    planningStatus: z.enum(['ready', 'needs-nutrition']),
+    planningStatus: z.enum(['ready', 'needs-nutrition', 'library-only']),
     updatedAt: z.string().datetime(),
   })
   .strict();

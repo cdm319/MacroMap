@@ -351,7 +351,7 @@ function invalidRecipe(requestId: string): APIGatewayProxyStructuredResultV2 {
   return errorResponse(
     400,
     'VALIDATION_FAILED',
-    'Enter a recipe with a title, usable servings, ingredients, and meal types.',
+    'Enter a recipe with a title, usable servings, and complete ingredients.',
     requestId,
   );
 }

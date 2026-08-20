@@ -188,7 +188,7 @@ export function RecipeForm({
     });
     if (!input.success) {
       setMessage(
-        'Add a title, serving count, meal type, and complete ingredients. Instructions are optional, but added steps cannot be blank.',
+        'Add a title, serving count, and complete ingredients. Instructions are optional, but added steps cannot be blank.',
       );
       return;
     }
@@ -288,6 +288,10 @@ export function RecipeForm({
               <span>{label}</span>
             </label>
           ))}
+          <p className="section-help">
+            Leave all unchecked to keep this recipe in the library without
+            including it in meal plans.
+          </p>
         </fieldset>
       </section>
 

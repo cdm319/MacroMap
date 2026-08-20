@@ -142,6 +142,9 @@ describe('shared API contracts', () => {
       recipeInputSchema.parse({ ...input, instructions: [] }).instructions,
     ).toEqual([]);
     expect(
+      recipeInputSchema.parse({ ...input, mealTypes: [] }).mealTypes,
+    ).toEqual([]);
+    expect(
       recipeSchema.parse({
         ...input,
         id: '00000000-0000-4000-8000-000000000201',
@@ -151,6 +154,17 @@ describe('shared API contracts', () => {
         updatedAt: '2026-08-17T12:00:00.000Z',
       }),
     ).toMatchObject({ title: 'Tomato pasta' });
+    expect(
+      recipeSchema.parse({
+        ...input,
+        id: '00000000-0000-4000-8000-000000000201',
+        mealTypes: [],
+        nutritionProvenance: null,
+        photoUrl: null,
+        planningStatus: 'library-only',
+        updatedAt: '2026-08-20T12:00:00.000Z',
+      }).planningStatus,
+    ).toBe('library-only');
   });
 
   it('records nutrition quantity assumptions and negligible omissions', () => {

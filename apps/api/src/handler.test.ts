@@ -1,4 +1,5 @@
 import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
+import type { RecipeInput } from '@macromap/contracts';
 import {
   HouseholdPeopleMismatchError,
   type HouseholdRepository,
@@ -269,24 +270,7 @@ describe('authenticated household API', () => {
 
   it('estimates missing nutrition before saving a recipe', async () => {
     const recipeId = '00000000-0000-4000-8000-000000000201';
-    const input = {
-      description: 'A quick dinner.',
-      ingredients: [
-        {
-          name: 'Pasta',
-          preparationNote: '',
-          quantity: 200,
-          unit: 'g',
-        },
-      ],
-      instructions: [],
-      mealTypes: ['dinner'],
-      nutrition: null,
-      servingCount: 2,
-      source: null,
-      tags: { cuisines: ['Italian'], flavours: [], proteins: [] },
-      title: 'Tomato pasta',
-    };
+    const input = recipeInput();
     const repository = createRepository(
       {},
       {
@@ -317,6 +301,46 @@ describe('authenticated household API', () => {
       pastaProvenance,
     );
     expect(response.statusCode).toBe(200);
+  });
+
+  it('saves a recipe without meal types as library-only', async () => {
+    const recipeId = '00000000-0000-4000-8000-000000000202';
+    const input = recipeInput({
+      mealTypes: [],
+      nutrition: pastaNutrition,
+      title: 'Library-only recipe',
+    });
+    const repository = createRepository(
+      {},
+      {
+        save: vi.fn().mockResolvedValue({
+          ...input,
+          id: recipeId,
+          nutritionProvenance: {
+            confidence: 'confirmed',
+            source: 'manual',
+          },
+          photoUpdatedAt: null,
+          planningStatus: 'library-only',
+          updatedAt: '2026-08-20T12:00:00.000Z',
+        }),
+      },
+    );
+
+    const response = await handleRequest(
+      repository,
+      event('PUT /v1/recipes/{recipeId}', {
+        body: input,
+        pathParameters: { recipeId },
+        subject: 'subject-1',
+      }),
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(JSON.parse(response.body ?? '{}')).toMatchObject({
+      mealTypes: [],
+      planningStatus: 'library-only',
+    });
   });
 
   it('creates a review preview before importing Schema.org JSON', async () => {
@@ -651,8 +675,19 @@ describe('authenticated household API', () => {
 
 function storedRecipe(recipeId: string) {
   return {
-    description: 'A quick dinner.',
+    ...recipeInput(),
     id: recipeId,
+    instructions: ['Boil the pasta.'],
+    nutritionProvenance: null,
+    photoUpdatedAt: null,
+    planningStatus: 'needs-nutrition' as const,
+    updatedAt: '2026-08-17T12:00:00.000Z',
+  };
+}
+
+function recipeInput(overrides: Partial<RecipeInput> = {}): RecipeInput {
+  return {
+    description: 'A quick dinner.',
     ingredients: [
       {
         name: 'Pasta',
@@ -661,17 +696,14 @@ function storedRecipe(recipeId: string) {
         unit: 'g',
       },
     ],
-    instructions: ['Boil the pasta.'],
-    mealTypes: ['dinner'] as const,
+    instructions: [],
+    mealTypes: ['dinner'],
     nutrition: null,
-    nutritionProvenance: null,
-    photoUpdatedAt: null,
-    planningStatus: 'needs-nutrition' as const,
     servingCount: 2,
     source: null,
     tags: { cuisines: ['Italian'], flavours: [], proteins: [] },
     title: 'Tomato pasta',
-    updatedAt: '2026-08-17T12:00:00.000Z',
+    ...overrides,
   };
 }
 

@@ -33,7 +33,7 @@ export interface StoredRecipeSummary {
   readonly nutrition: RecipeNutrition | null;
   readonly nutritionProvenance: RecipeNutritionProvenance | null;
   readonly photoUpdatedAt: string | null;
-  readonly planningStatus: 'needs-nutrition' | 'ready';
+  readonly planningStatus: 'library-only' | 'needs-nutrition' | 'ready';
   readonly servingCount: number;
   readonly title: string;
   readonly updatedAt: string;
@@ -207,12 +207,12 @@ export function createDataApiRecipeRepository(
 
       const last = visibleRows.at(-1);
       return {
-        items: visibleRows.map((recipe) => ({
-          ...readRecipeSummary(recipe),
-          mealTypes: mealTypes
+        items: visibleRows.map((recipe) => {
+          const recipeMealTypes = mealTypes
             .filter(({ recipeId }) => recipeId === recipe.id)
-            .map(({ value }) => value as MealType),
-        })),
+            .map(({ value }) => value as MealType);
+          return readRecipeSummary(recipe, recipeMealTypes);
+        }),
         nextCursor:
           rows.length > pageSize && last !== undefined
             ? { id: last.id, updatedAt: last.updatedAt }
@@ -333,8 +333,7 @@ export function createDataApiRecipeRepository(
           mealTypes: input.mealTypes,
           nutritionProvenance,
           photoUpdatedAt: existing?.photoUpdatedAt?.toISOString() ?? null,
-          planningStatus:
-            input.nutrition === null ? 'needs-nutrition' : 'ready',
+          planningStatus: planningStatus(input.mealTypes, input.nutrition),
           updatedAt: updatedAt.toISOString(),
         };
       });
@@ -401,10 +400,12 @@ function numeric(value: number | undefined): string | null {
 
 function readRecipeSummary(
   recipe: RecipeRow,
-): Omit<StoredRecipeSummary, 'mealTypes'> {
+  mealTypes: MealType[],
+): StoredRecipeSummary {
   const nutrition = readNutrition(recipe);
   return {
     id: recipe.id,
+    mealTypes,
     nutrition,
     nutritionProvenance:
       nutrition === null
@@ -413,7 +414,7 @@ function readRecipeSummary(
           ? { confidence: 'confirmed', source: 'manual' }
           : recipeNutritionProvenanceSchema.parse(recipe.nutritionProvenance),
     photoUpdatedAt: recipe.photoUpdatedAt?.toISOString() ?? null,
-    planningStatus: nutrition === null ? 'needs-nutrition' : 'ready',
+    planningStatus: planningStatus(mealTypes, nutrition),
     servingCount: Number(recipe.servingCount),
     title: recipe.title,
     updatedAt: recipe.updatedAt.toISOString(),
@@ -450,15 +451,16 @@ function readRecipe(
   steps: ReadonlyArray<{ instruction: string }>,
   tags: ReadonlyArray<{ category: string; value: string }>,
 ): StoredRecipe {
+  const mealTypes = tagValues(tags, 'meal_type') as MealType[];
   return {
-    ...readRecipeSummary(recipe),
+    ...readRecipeSummary(recipe, mealTypes),
     description: recipe.description,
     ingredients: ingredients.map((ingredient) => ({
       ...ingredient,
       quantity: Number(ingredient.quantity),
     })),
     instructions: steps.map(({ instruction }) => instruction),
-    mealTypes: tagValues(tags, 'meal_type') as MealType[],
+    mealTypes,
     source:
       recipe.sourceName === null && recipe.sourceUrl === null
         ? null
@@ -469,6 +471,14 @@ function readRecipe(
       proteins: tagValues(tags, 'protein'),
     },
   };
+}
+
+function planningStatus(
+  mealTypes: ReadonlyArray<MealType>,
+  nutrition: RecipeNutrition | null,
+): StoredRecipeSummary['planningStatus'] {
+  if (mealTypes.length === 0) return 'library-only';
+  return nutrition === null ? 'needs-nutrition' : 'ready';
 }
 
 function tagValues(

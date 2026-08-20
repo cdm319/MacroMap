@@ -109,6 +109,9 @@ primary protein, and flavour attributes may be inferred automatically but
 remain editable. These inferred attributes are used only as soft planning
 signals.
 
+A recipe may have no meal-type tags. It remains available in the recipe
+library and cooking mode but is explicitly excluded from automatic planning.
+
 Recipe photos are optional. Imported photos are copied into application
 storage; recipes without a photo use a neutral placeholder. When an import
 contains multiple photos, MacroMap keeps only its primary photo.

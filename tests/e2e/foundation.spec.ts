@@ -238,6 +238,21 @@ test('explains why nutrition cannot be estimated', async ({ page }) => {
   ).toBeVisible();
 });
 
+test('keeps recipes without a meal type out of planning', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Add recipe' }).click();
+
+  await page.getByLabel('Title').fill('Library-only dessert');
+  await page.getByLabel('Ingredient 1 amount').fill('100');
+  await page.getByLabel('Ingredient 1 unit').fill('g');
+  await page.getByLabel('Ingredient 1 name').fill('Dark chocolate');
+  await page.getByLabel('Dinner').uncheck();
+  await page.getByRole('button', { name: 'Save recipe' }).click();
+
+  await page.getByRole('button', { name: '← Recipe library' }).click();
+  await expect(page.getByText('Library only').first()).toBeVisible();
+});
+
 test('reviews Schema.org JSON before saving an imported recipe', async ({
   page,
 }) => {

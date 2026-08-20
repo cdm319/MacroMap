@@ -211,6 +211,11 @@
   color: #214b37;
 }
 
+.status-pill--library-only {
+  background: #e7e4dd;
+  color: #4f4a42;
+}
+
 .status-pill--needs-nutrition {
   background: #f3e1c4;
   color: #77501d;

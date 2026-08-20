@@ -499,7 +499,7 @@ describe('nutrition database estimation', () => {
       ['carrot', 80],
       ['cherry tomato', 20],
       ['chicken thigh', 100],
-      ['chipolata sausage', 60],
+      ['chipolata sausage', 31.25],
       ['chorizo', 60],
       ['chorizo sausage', 60],
       ['crusty bread', 40],
@@ -533,6 +533,11 @@ describe('nutrition database estimation', () => {
       ['fresh coriander', 1, 'packet', 30],
       ['fresh rosemary', 2, 'sprig', 2],
       ['baby corn', 1, 'packet', 175],
+      ['desiccated coconut', 2, 'tbsp', 10.6],
+      ['desiccated coconut', 2, 'tsp', 3.6],
+      ['chipolata sausages', 10, 'item', 312.5],
+      ['pork fillets', 2, 'item', 900],
+      ['peppercorn sauce', 1, 'item', 180],
     ] as const;
 
     for (const [name, quantity, unit, grams] of measures) {
@@ -609,6 +614,11 @@ describe('nutrition database estimation', () => {
       ['tuna steak', '16-399'],
       ['walnuts', '14-879'],
       ['pre-cooked brown basmati rice', '11-869'],
+      ['pre-cooked brown rice', '11-869'],
+      ['microwave brown rice', '11-869'],
+      ['amaranth seeds', 'reference-amaranth-grain'],
+      ['peppercorn sauce', 'reference-peppercorn-sauce'],
+      ['bamboo shoots', 'reference-bamboo-shoots'],
       ['quinoa (pre-cooked)', 'reference-cooked-quinoa'],
       ['sliced turkey', '19-543'],
       ['cooked penne', '11-1129'],
@@ -676,11 +686,7 @@ describe('nutrition database estimation', () => {
   });
 
   it('keeps genuine nutritional approximations at low confidence', () => {
-    for (const name of [
-      'amaranth seeds',
-      'bamboo shoots',
-      'peppercorn sauce',
-    ]) {
+    for (const name of ['jar tagine paste']) {
       expect(
         estimateRecipeNutrition([ingredient(100, 'g', name)], 1),
       ).toMatchObject({

@@ -239,6 +239,30 @@ const labelFoods: NutritionFood[] = [
     2.7,
   ),
   labelFood(
+    'reference-amaranth-grain',
+    'Reference uncooked amaranth grain',
+    371,
+    13.6,
+    65.2,
+    7.02,
+  ),
+  labelFood(
+    'reference-bamboo-shoots',
+    'Reference drained bamboo shoots',
+    13,
+    1.5,
+    0.7,
+    0,
+  ),
+  labelFood(
+    'reference-peppercorn-sauce',
+    'Reference peppercorn sauce',
+    90,
+    2.4,
+    5.8,
+    6.2,
+  ),
+  labelFood(
     'reference-raw-chicken-thigh',
     'Reference raw skinless chicken thigh',
     161,
@@ -484,6 +508,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
   {
     aliases: ['desiccated coconut'],
     foodCode: '14-873',
+    measures: { tbsp: 5.3, tsp: 1.8 },
   },
   {
     aliases: ['coconut oil'],
@@ -508,8 +533,11 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
   },
   {
     aliases: [
+      'cooked brown rice',
       'cooked brown basmati rice',
+      'microwave brown rice',
       'microwave brown basmati rice',
+      'pre cooked brown rice',
       'pre cooked brown basmati rice',
     ],
     foodCode: '11-869',
@@ -806,7 +834,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     gramsPerMillilitre: 0.53,
   },
   reviewedCount(['potato'], '13-489', 175),
-  { aliases: ['pork fillet'], countGrams: 150, foodCode: '18-510' },
+  reviewedCount(['pork fillet'], '18-510', 450),
   {
     aliases: ['prosciutto'],
     countGrams: 14,

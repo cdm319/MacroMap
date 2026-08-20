@@ -31,7 +31,6 @@ reference labels are medium confidence because the exact product may vary.
 | Carrot                        |   80 g |
 | Cherry tomato                 |   20 g |
 | Chicken thigh                 |  100 g |
-| Chipolata                     |   60 g |
 | Chorizo sausage               |   60 g |
 | Corncob                       |   60 g |
 | English muffin                |   70 g |
@@ -47,6 +46,15 @@ reference labels are medium confidence because the exact product may vary.
 
 Bean weights are per tin or can. Chickpeas and cannellini beans use the drained
 weight; baked beans use the full contents.
+
+One chipolata is 31.25 g, based on a 375 g pack of 12 [Tesco pork
+chipolatas](https://www.tesco.com/groceries/en-GB/products/260667515). Pork
+fillets are treated as 450 g each, within the current 420–500 g range shown by
+[Waitrose](https://www.waitrose.com/ecom/products/waitrose-free-range-british-pork-hampshire-breed-fillet/083765-42517-42518)
+and
+[ASDA](https://www.asda.com/groceries/product/pork-chops-steaks/asda-lean-pork-fillet-typically-0-5kg-/1927075).
+Desiccated coconut uses 5.3 g per tablespoon, with teaspoons calculated as one
+third of that amount.
 
 ## Protein powder
 
@@ -208,6 +216,16 @@ their own nutrition instead.
 | Chilli mix      | 100 g  |    271 |       7 |         45.4 |  4.5 | [Old El Paso](https://www.tesco.com/shop/en-GB/products/251975884)                                                                         |
 | Cottage pie mix | 100 g  |    320 |      14 |           56 |  2.7 | [Colman's](https://www.onestop.co.uk/wp-content/uploads/Colmans-Cottage-Pie-Recipe-Mix-45-g-389995.pdf)                                    |
 | Cajun mix       | 100 g  |    315 |    28.8 |         43.6 |    2 | [Colman's](https://www.nutracheck.co.uk/CaloriesIn/Product/01/Colman%27s%2BSeason%2B%26%2BShake%2BCajun%2BChicken%2BSeasoning%2BMix%2B45g) |
+
+Three further references are stored per 100 g:
+
+- Uncooked amaranth grain: 371 kcal, 13.6 g protein, 65.2 g carbohydrate and
+  7.02 g fat ([USDA FoodData Central](https://fdc.nal.usda.gov/fdc-app.html#/food-details/170682/nutrients)).
+- Drained bamboo shoots: 13 kcal, 1.5 g protein, 0.7 g carbohydrate and 0 g fat
+  ([Kingfisher via Tesco](https://www.tesco.com/shop/en-GB/products/265819146)).
+- Peppercorn sauce: 90 kcal, 2.4 g protein, 5.8 g carbohydrate and 6.2 g fat. A
+  pot is treated as 180 g
+  ([Waitrose](https://www.waitrose.com/ecom/products/waitrose-peppercorn-sauce/975328-1-2)).
 
 Cajun and jerk seasoning use 2.25 g per teaspoon. One prosciutto slice is
 treated as 14 g, based on the reference pack's six slices per 84 g.

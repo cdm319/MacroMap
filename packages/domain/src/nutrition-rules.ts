@@ -38,7 +38,10 @@ export const everydayIngredientRules: ReadonlyArray<IngredientRule> = [
     countGrams: 30,
     measures: { packet: 30 },
   }),
-  approximation('17-677', /\bpeppercorn sauce\b/u, { countGrams: 150 }),
+  rule('reference-peppercorn-sauce', /\bpeppercorn sauce\b/u, {
+    countGrams: 180,
+    countSource: 'household_measure',
+  }),
   rule('16-416', /\btuna in spring water\b/u),
   rule('11-888', /\bself raising flour\b/u),
   approximation('13-805', /\bmixed herb\b/u, {
@@ -191,7 +194,7 @@ export const everydayIngredientRules: ReadonlyArray<IngredientRule> = [
     countGrams: 150,
   }),
   rule('19-510', /\bchipolata sausage\b/u, {
-    countGrams: 60,
+    countGrams: 31.25,
     countSource: 'household_measure',
   }),
   rule('19-510', /\bsausage\b/u, { countGrams: 60 }),
@@ -215,7 +218,10 @@ export const everydayIngredientRules: ReadonlyArray<IngredientRule> = [
     countGrams: 30,
     countSource: 'household_measure',
   }),
-  rule('18-510', /\bpork fillet\b/u, { countGrams: 150 }),
+  rule('18-510', /\bpork fillet\b/u, {
+    countGrams: 450,
+    countSource: 'household_measure',
+  }),
   rule('18-518', /\bpork loin\b/u),
   rule('18-606', /\bpork mince\b/u),
   rule('18-608', /\bpork\b/u),
@@ -253,7 +259,10 @@ export const everydayIngredientRules: ReadonlyArray<IngredientRule> = [
   rule('11-902', /\bcooked couscous\b/u, { gramsPerMillilitre: 0.72 }),
   rule('11-901', /\bcouscous\b/u, { gramsPerMillilitre: 0.72 }),
   rule('11-878', /\barborio rice\b/u),
-  rule('11-869', /\b(?:cooked|microwave|pre cooked) brown basmati rice\b/u),
+  rule(
+    '11-869',
+    /\b(?:cooked|microwave|pre cooked|precooked) brown (?:basmati )?rice\b/u,
+  ),
   rule('11-866', /\bbrown basmati rice\b/u),
   rule('11-868', /\b(?:brown rice|wholemeal rice)\b/u),
   rule('11-868', /\brice wholemeal\b/u),
@@ -319,7 +328,7 @@ export const everydayIngredientRules: ReadonlyArray<IngredientRule> = [
     countSource: 'household_measure',
   }),
   rule('13-622', /\btinned sweetcorn\b/u, { countGrams: 60 }),
-  approximation('13-426', /\bbamboo shoot\b/u),
+  rule('reference-bamboo-shoots', /\bbamboo shoot\b/u),
   rule('13-517', /\b(?:cherry|ripe) tomato\b/u, {
     countGrams: 20,
     countSource: 'household_measure',
@@ -356,7 +365,7 @@ export const everydayIngredientRules: ReadonlyArray<IngredientRule> = [
   rule('reference-hemp-seed', /\bhemp seed\b/u, {
     gramsPerMillilitre: 0.65,
   }),
-  approximation('14-843', /\bamaranth seed\b/u, {
+  rule('reference-amaranth-grain', /\bamaranth seed\b/u, {
     gramsPerMillilitre: 0.75,
   }),
   rule('14-878', /\broasted peanut\b/u),

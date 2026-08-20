@@ -95,6 +95,7 @@ const unitNames = new Map(
     tsp: 'tsp',
     teaspoon: 'tsp',
     teaspoons: 'tsp',
+    tosp: 'tbsp',
     drizzle: 'tsp',
     drizzles: 'tsp',
   }),
@@ -207,9 +208,9 @@ function mapRecipe(
     );
   }
 
-  const ingredientLines = strings(recipe.recipeIngredient).filter(
-    (line) => !/^(?:ingredients|pizza toppings):?$/iu.test(line.trim()),
-  );
+  const ingredientLines = joinWrappedIngredientLines(
+    strings(recipe.recipeIngredient),
+  ).filter((line) => !/^(?:ingredients|pizza toppings):?$/iu.test(line.trim()));
   const parsedIngredients = ingredientLines.flatMap(parseIngredientLine);
   const { ingredients, substitutions } =
     applyHouseholdSubstitutions(parsedIngredients);
@@ -222,7 +223,7 @@ function mapRecipe(
   } else if (
     ingredients.some(
       ({ name, quantity, unit }) =>
-        name === '' || quantity === null || unit === '' || unit === 'item',
+        name === '' || quantity === null || unit === '',
     )
   ) {
     warn(
@@ -372,6 +373,28 @@ function estimateNutrition(
 }
 
 function parseIngredientLine(line: string): RecipeImportDraft['ingredients'] {
+  const gingerAndChilli =
+    /^(.*?\bginger\b(?:,\s*.*?))\s+((?:\d+(?:\.\d+)?|\d+\/\d+|[¼½¾⅓⅔⅛⅜⅝⅞])\s+(?:tsp|teaspoons?)\s+chilli flakes?)$/iu.exec(
+      line.trim(),
+    );
+  if (gingerAndChilli !== null) {
+    return [
+      parseIngredient(gingerAndChilli[1]!),
+      parseIngredient(gingerAndChilli[2]!),
+    ];
+  }
+
+  const curryAndCitrus =
+    /^(.+?\bcurry powder)\s+(juice(?: and zest)? of \d+ limes?)$/iu.exec(
+      line.trim(),
+    );
+  if (curryAndCitrus !== null) {
+    return [
+      parseIngredient(curryAndCitrus[1]!),
+      parseIngredient(curryAndCitrus[2]!),
+    ];
+  }
+
   const combinedCitrusAndCheese =
     /^(?:zest and juice|juice and zest)(?: of)? (\d+) (lemons?|limes?)\s+(\d+(?:\.\d+)?)\s*g\s+(.+)$/iu.exec(
       line.trim(),
@@ -419,13 +442,18 @@ function parseIngredient(
     );
   }
 
-  const countedSmallHandful =
-    /^(\d+(?:\.\d+)?)\s+small\s+handfuls?(?:\s+of)?\s+(.+)$/iu.exec(main);
-  if (countedSmallHandful !== null) {
+  const countedMeasure =
+    /^(\d+(?:\.\d+)?)\s+(?:(small|large)\s+)?(pinch(?:es)?|handfuls?|bunch(?:es)?|packs?|packets?|drizzles?|splashes?)(?:\s+of)?\s+(.+)$/iu.exec(
+      main,
+    );
+  if (countedMeasure !== null) {
+    const unit = unitNames.get(countedMeasure[3]!.toLowerCase())!;
     return ingredient(
-      countedSmallHandful[2]!,
-      Number(countedSmallHandful[1]) / 2,
-      'handful',
+      countedMeasure[4]!,
+      unit === 'handful' && countedMeasure[2]?.toLowerCase() === 'small'
+        ? Number(countedMeasure[1]) / 2
+        : Number(countedMeasure[1]),
+      unit,
       preparationNote,
     );
   }
@@ -489,7 +517,10 @@ function parseIngredient(
     return { name: main, preparationNote, quantity: null, unit: '' };
   }
 
-  const remainder = main.slice(quantity.characters).trim();
+  const remainder = main
+    .slice(quantity.characters)
+    .trim()
+    .replace(/^x\s+/iu, '');
   const unitMatch = /^([a-zA-Z]+)\b/u.exec(remainder);
   const unit = unitNames.get(unitMatch?.[1]?.toLowerCase() ?? '');
   const name =
@@ -577,7 +608,16 @@ function householdSubstitution(
   current: IngredientDraft,
   substitutions: Set<string>,
 ): IngredientDraft {
-  const name = current.name.trim().toLowerCase();
+  const name = current.name
+    .trim()
+    .toLowerCase()
+    .replace(/\([^)]*\)/gu, ' ')
+    .replace(
+      /\b(?:chopped|deseeded|diced|finely|large|medium|roughly|sliced|small|thinly)\b/gu,
+      ' ',
+    )
+    .replace(/\s+/gu, ' ')
+    .trim();
   if (/^onion (?:granules?|powder)$/u.test(name)) {
     if (name === 'onion granules') return current;
     substitutions.add('onion powder → onion granules');
@@ -610,6 +650,27 @@ function householdSubstitution(
     );
   }
   return current;
+}
+
+function joinWrappedIngredientLines(lines: ReadonlyArray<string>): string[] {
+  const joined: string[] = [];
+  for (const line of lines) {
+    const previous = joined.at(-1);
+    if (previous !== undefined && parenthesisBalance(previous) > 0) {
+      joined[joined.length - 1] = `${previous} ${line}`;
+    } else {
+      joined.push(line);
+    }
+  }
+  return joined;
+}
+
+function parenthesisBalance(value: string): number {
+  return [...value].reduce(
+    (balance, character) =>
+      balance + (character === '(' ? 1 : character === ')' ? -1 : 0),
+    0,
+  );
 }
 
 function substituteCount(

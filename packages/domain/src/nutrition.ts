@@ -205,6 +205,89 @@ const labelFoods: NutritionFood[] = [
   ),
   labelFood('reference-prosciutto', 'Reference prosciutto', 243, 26.6, 0.3, 15),
   labelFood(
+    'reference-smoked-paprika',
+    'Reference smoked paprika',
+    324,
+    14.8,
+    18.3,
+    13,
+  ),
+  labelFood('reference-mirin', 'Reference mirin', 272, 0, 68, 0),
+  labelFood(
+    'reference-ketjap-manis',
+    'Reference ketjap manis',
+    139,
+    1.2,
+    33.2,
+    0.1,
+  ),
+  labelFood('reference-harissa', 'Reference harissa paste', 97, 1.8, 10.5, 4.6),
+  labelFood(
+    'reference-mixed-berries',
+    'Reference mixed berries',
+    56,
+    0.8,
+    11,
+    0.5,
+  ),
+  labelFood(
+    'reference-cooked-quinoa',
+    'Reference cooked quinoa',
+    141,
+    4.3,
+    22.7,
+    2.7,
+  ),
+  labelFood(
+    'reference-raw-chicken-thigh',
+    'Reference raw skinless chicken thigh',
+    161,
+    18.3,
+    0,
+    9.8,
+  ),
+  labelFood(
+    'reference-almond-butter',
+    'Reference almond butter',
+    577,
+    21,
+    5.9,
+    52,
+  ),
+  labelFood(
+    'reference-hazelnut-butter',
+    'Reference hazelnut butter',
+    690,
+    19,
+    2.4,
+    65,
+  ),
+  labelFood('generic-stevia', 'Generic zero-calorie stevia', 0, 0, 0, 0),
+  labelFood(
+    'reference-old-el-paso-chilli-mix',
+    'Old El Paso chilli seasoning mix',
+    271,
+    7,
+    45.4,
+    4.5,
+  ),
+  labelFood(
+    'reference-colmans-cottage-pie-mix',
+    "Colman's cottage pie recipe mix",
+    320,
+    14,
+    56,
+    2.7,
+  ),
+  labelFood(
+    'reference-colmans-cajun-chicken-mix',
+    "Colman's Cajun chicken seasoning mix",
+    315,
+    28.8,
+    43.6,
+    2,
+  ),
+  labelFood(
     'heck-chicken-italia',
     'HECK Chicken Italia sausage, raw-weight equivalent',
     99.953,
@@ -262,7 +345,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     measures: { can: 400, tin: 400 },
   },
   reviewedCount(['baking potato'], '13-489', 250),
-  reviewedCount(['banana'], '14-318', 120),
+  reviewedCount(['banana', 'ripe banana'], '14-318', 120),
   { aliases: ['basmati rice'], foodCode: '11-857' },
   {
     aliases: ['basil', 'basil leaf', 'fresh basil'],
@@ -299,6 +382,10 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     gramsPerMillilitre: 0.62,
   },
   {
+    aliases: ['frozen fruit', 'mixed berry'],
+    foodCode: 'reference-mixed-berries',
+  },
+  {
     aliases: ['broccoli', 'tenderstem broccoli'],
     countGrams: 100,
     foodCode: '13-502',
@@ -331,7 +418,22 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     gramsPerMillilitre: 0.46,
   },
   { aliases: ['halloumi', 'halloumi cheese'], foodCode: '12-496' },
+  {
+    aliases: ['mozzarella'],
+    foodCode: '12-360',
+    measures: { packet: 125 },
+  },
+  {
+    aliases: ['low fat cream cheese', 'reduced fat cream cheese'],
+    foodCode: '12-537',
+  },
   reviewedCount(['chicken breast', 'chicken breast fillet'], '18-290', 200),
+  {
+    aliases: ['chicken thigh', 'skinless chicken thigh'],
+    countGrams: 100,
+    countSource: 'household_measure',
+    foodCode: 'reference-raw-chicken-thigh',
+  },
   {
     aliases: ['chicken stock', 'chicken stock cube'],
     countGrams: 200,
@@ -354,7 +456,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     foodCode: 'heck-chicken-italia',
     matchConfidence: 'high',
   },
-  { aliases: ['chorizo'], foodCode: '19-516' },
+  reviewedCount(['chorizo'], '19-516', 60),
   {
     aliases: [
       'coconut milk',
@@ -405,11 +507,29 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     gramsPerMillilitre: 0.67,
   },
   {
+    aliases: [
+      'cooked brown basmati rice',
+      'microwave brown basmati rice',
+      'pre cooked brown basmati rice',
+    ],
+    foodCode: '11-869',
+    gramsPerMillilitre: 0.67,
+  },
+  {
+    aliases: ['cooked quinoa', 'pre cooked quinoa', 'quinoa pre cooked'],
+    foodCode: 'reference-cooked-quinoa',
+  },
+  {
     aliases: ['coriander', 'coriander leaf', 'fresh coriander'],
     countGrams: 5,
     foodCode: '13-888',
     gramsPerMillilitre: 0.07,
     measures: freshHerbMeasures,
+  },
+  {
+    aliases: ['dried coriander', 'dried coriander leaf'],
+    foodCode: '13-818',
+    gramsPerMillilitre: 0.25,
   },
   {
     aliases: ['cacao powder', 'cocoa powder'],
@@ -426,6 +546,47 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     foodCode: 'generic-curry-powder',
     gramsPerMillilitre: 0.4,
     matchConfidence: 'high',
+  },
+  {
+    aliases: ['smoked paprika', 'sweet smoked paprika'],
+    foodCode: 'reference-smoked-paprika',
+    gramsPerMillilitre: 0.48,
+  },
+  {
+    aliases: ['mirin'],
+    foodCode: 'reference-mirin',
+    gramsPerMillilitre: 1,
+  },
+  {
+    aliases: ['ketjap manis'],
+    foodCode: 'reference-ketjap-manis',
+    gramsPerMillilitre: 1,
+  },
+  {
+    aliases: ['harissa', 'harissa paste'],
+    foodCode: 'reference-harissa',
+    gramsPerMillilitre: 1.1,
+  },
+  {
+    aliases: ['cajun chicken mix'],
+    countGrams: 45,
+    countSource: 'label_measure',
+    foodCode: 'reference-colmans-cajun-chicken-mix',
+    measures: { packet: { grams: 45, source: 'label_measure' } },
+  },
+  {
+    aliases: ["colman's cottage pie sachet", 'cottage pie sachet'],
+    countGrams: 45,
+    countSource: 'label_measure',
+    foodCode: 'reference-colmans-cottage-pie-mix',
+    measures: { packet: { grams: 45, source: 'label_measure' } },
+  },
+  {
+    aliases: ['old el paso chilli mix'],
+    countGrams: 39,
+    countSource: 'label_measure',
+    foodCode: 'reference-old-el-paso-chilli-mix',
+    measures: { packet: { grams: 39, source: 'label_measure' } },
   },
   {
     aliases: ['chipotle paste'],
@@ -478,6 +639,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     aliases: ['dried egg noodle'],
     foodCode: '11-719',
   },
+  { aliases: ['noodle'], foodCode: '11-941' },
   {
     aliases: ['frozen pea'],
     foodCode: '13-527',
@@ -507,7 +669,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     measures: { clove: 3 },
   },
   {
-    aliases: ['garlic powder'],
+    aliases: ['garlic granule', 'garlic powder'],
     foodCode: '13-830',
     gramsPerMillilitre: 0.62,
   },
@@ -532,6 +694,16 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     aliases: ['ground almond'],
     foodCode: '14-870',
     gramsPerMillilitre: 0.4,
+  },
+  {
+    aliases: ['almond butter'],
+    foodCode: 'reference-almond-butter',
+    measures: { tbsp: { grams: 15, source: 'label_measure' } },
+  },
+  {
+    aliases: ['hazelnut butter'],
+    foodCode: 'reference-hazelnut-butter',
+    measures: { tbsp: { grams: 15, source: 'label_measure' } },
   },
   {
     aliases: ['honey'],
@@ -602,6 +774,10 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     foodCode: '11-716',
   },
   {
+    aliases: ['cooked pasta', 'cooked penne'],
+    foodCode: '11-1129',
+  },
+  {
     aliases: ['parsley', 'parsley leaf', 'fresh parsley'],
     countGrams: 5,
     foodCode: '13-844',
@@ -636,6 +812,10 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     countGrams: 14,
     countSource: 'label_measure',
     foodCode: 'reference-prosciutto',
+    measures: {
+      slice: { grams: 14, source: 'label_measure' },
+      slices: { grams: 14, source: 'label_measure' },
+    },
   },
   {
     aliases: ['rapeseed oil'],
@@ -716,7 +896,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     gramsPerMillilitre: 1.1,
   },
   {
-    aliases: ['spinach', 'baby spinach', 'baby spinach leaf'],
+    aliases: ['spinach', 'spinach leaf', 'baby spinach', 'baby spinach leaf'],
     foodCode: '13-521',
     measures: { handful: 30 },
   },
@@ -738,6 +918,12 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     foodCode: '17-063',
     gramsPerMillilitre: 0.85,
   },
+  {
+    aliases: ['stevia', 'stevia sugar'],
+    foodCode: 'generic-stevia',
+    gramsPerMillilitre: 0.85,
+    matchConfidence: 'high',
+  },
   reviewedCount(['sweet potato'], '13-463', 200),
   { aliases: ['sweetcorn'], foodCode: '13-622' },
   {
@@ -754,6 +940,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
   },
   { aliases: ['tuna steak'], foodCode: '16-399' },
   { aliases: ['turkey breast'], foodCode: '18-349' },
+  { aliases: ['sliced turkey', 'turkey slices'], foodCode: '19-543' },
   {
     aliases: [
       'chilli flake',
@@ -878,12 +1065,15 @@ const negligibleSeasonings = new Set(
     'fennel',
     'fennel seed',
     'five spice',
+    'fresh oregano',
     'chinese five spice',
     'ground cardamom',
     'ground cinnamon',
     'ground coriander',
     'ground cumin',
     'mixed herb',
+    'italian herb',
+    'italian herb seasoning',
     'oregano',
     'dried oregano',
     'paprika',

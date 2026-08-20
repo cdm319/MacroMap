@@ -183,10 +183,12 @@ test('estimates an everyday recipe after known nutrition is removed', async ({
   await page.getByRole('button', { name: 'Save recipe' }).click();
 
   await expect(
-    page.getByText('Estimated from nutrition database · Low confidence'),
+    page.getByText('Estimated from nutrition database · Medium confidence'),
   ).toBeVisible();
   await page.getByText('How this was estimated').click();
-  await expect(page.getByText(/baking potatoes.*250 g assumed/u)).toBeVisible();
+  await expect(
+    page.getByText(/baking potatoes.*250 g converted/u),
+  ).toBeVisible();
 });
 
 test('saves a recipe without instructions and adds them later', async ({

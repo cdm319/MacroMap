@@ -26,12 +26,19 @@ export const freshHerbMeasures = {
 // Ordered from specific to broad. Literal aliases are medium confidence;
 // genuine approximations stay explicitly low.
 export const everydayIngredientRules: ReadonlyArray<IngredientRule> = [
-  approximation(
-    '13-876',
-    /\b(?:cajun chicken|garlic and herb chicken|peri peri chicken|nando s(?: medium)?|old el paso chilli|spicentice)(?: mix| sachet)\b/u,
-    { countGrams: 30, measures: { packet: 30 } },
-  ),
-  rule('17-677', /\bpeppercorn sauce\b/u, { countGrams: 150 }),
+  approximation('13-876', /\bnando s(?: medium)? mix\b/u, {
+    countGrams: 20,
+    measures: { packet: 20 },
+  }),
+  approximation('13-876', /\b(?:garlic and herb|peri peri) chicken mix\b/u, {
+    countGrams: 45,
+    measures: { packet: 45 },
+  }),
+  approximation('13-876', /\bspicentice(?: mix| sachet)?\b/u, {
+    countGrams: 30,
+    measures: { packet: 30 },
+  }),
+  approximation('17-677', /\bpeppercorn sauce\b/u, { countGrams: 150 }),
   rule('16-416', /\btuna in spring water\b/u),
   rule('11-888', /\bself raising flour\b/u),
   approximation('13-805', /\bmixed herb\b/u, {
@@ -54,7 +61,7 @@ export const everydayIngredientRules: ReadonlyArray<IngredientRule> = [
     countGrams: 60,
     countSource: 'household_measure',
   }),
-  rule('18-319', /\bchicken thigh\b/u, {
+  rule('reference-raw-chicken-thigh', /\bchicken thigh\b/u, {
     countGrams: 100,
     countSource: 'household_measure',
   }),
@@ -72,8 +79,11 @@ export const everydayIngredientRules: ReadonlyArray<IngredientRule> = [
       gramsPerMillilitre: 1.1,
     },
   ),
-  approximation('17-720', /\b(?:harissa|tagine) paste\b/u, {
+  approximation('17-720', /\btagine paste\b/u, {
     countGrams: 200,
+    gramsPerMillilitre: 1.1,
+  }),
+  rule('reference-harissa', /\bharissa paste\b/u, {
     gramsPerMillilitre: 1.1,
   }),
   rule('reference-chipotle-paste', /\bchipotle paste\b/u, {
@@ -82,8 +92,8 @@ export const everydayIngredientRules: ReadonlyArray<IngredientRule> = [
   rule('reference-hoisin-sauce', /\bhoisin(?: sauce)?\b/u, {
     gramsPerMillilitre: 1,
   }),
-  approximation('17-705', /\bmirin\b/u, {
-    gramsPerMillilitre: 1.1,
+  rule('reference-mirin', /\bmirin\b/u, {
+    gramsPerMillilitre: 1,
   }),
   rule('17-721', /\bfish sauce\b/u, { gramsPerMillilitre: 1.15 }),
   rule('17-719', /\b(?:chilli sauce|sriracha)\b/u, {
@@ -92,8 +102,8 @@ export const everydayIngredientRules: ReadonlyArray<IngredientRule> = [
   approximation('17-719', /\bnando s (?:medium )?sauce\b/u, {
     gramsPerMillilitre: 1.1,
   }),
-  approximation('17-721', /\bketjap mani(?:s)?\b/u, {
-    gramsPerMillilitre: 1.16,
+  rule('reference-ketjap-manis', /\bketjap mani(?:s)?\b/u, {
+    gramsPerMillilitre: 1,
   }),
   rule('17-339', /\b(?:cider|rice|wine) vinegar\b/u, {
     countGrams: 15,
@@ -122,6 +132,7 @@ export const everydayIngredientRules: ReadonlyArray<IngredientRule> = [
   rule('17-725', /\b(?:beef )?gravy\b/u, { gramsPerMillilitre: 1 }),
   rule('17-681', /\b(?:vegetable stock|stock cube|chicken stick)\b/u, {
     countGrams: 200,
+    countSource: 'household_measure',
     gramsPerMillilitre: 1,
   }),
   rule('14-331', /\bapple juice\b/u, { gramsPerMillilitre: 1 }),
@@ -162,7 +173,7 @@ export const everydayIngredientRules: ReadonlyArray<IngredientRule> = [
   }),
   rule('12-537', /\b(?:low fat )?cream cheese\b/u),
   rule('12-525', /\bfeta\b/u),
-  rule('12-360', /\bmoz+ar+el+la\b/u),
+  rule('12-360', /\bmoz+ar+el+la\b/u, { measures: { packet: 125 } }),
   approximation('12-360', /\bpizza topping\b/u),
   rule('12-526', /\b(?:parmesan|pecorino)\b/u, {
     gramsPerMillilitre: 0.4,
@@ -242,6 +253,7 @@ export const everydayIngredientRules: ReadonlyArray<IngredientRule> = [
   rule('11-902', /\bcooked couscous\b/u, { gramsPerMillilitre: 0.72 }),
   rule('11-901', /\bcouscous\b/u, { gramsPerMillilitre: 0.72 }),
   rule('11-878', /\barborio rice\b/u),
+  rule('11-869', /\b(?:cooked|microwave|pre cooked) brown basmati rice\b/u),
   rule('11-866', /\bbrown basmati rice\b/u),
   rule('11-868', /\b(?:brown rice|wholemeal rice)\b/u),
   rule('11-868', /\brice wholemeal\b/u),
@@ -250,6 +262,8 @@ export const everydayIngredientRules: ReadonlyArray<IngredientRule> = [
     /\b(?:microwave|pre cooked|precooked|tilda) (?:basmati )?rice\b/u,
     {
       countGrams: 250,
+      countSource: 'household_measure',
+      measures: { packet: 250 },
     },
   ),
   rule('11-884', /\brice pre cooked\b/u),
@@ -305,7 +319,7 @@ export const everydayIngredientRules: ReadonlyArray<IngredientRule> = [
     countSource: 'household_measure',
   }),
   rule('13-622', /\btinned sweetcorn\b/u, { countGrams: 60 }),
-  rule('13-426', /\bbamboo shoot\b/u),
+  approximation('13-426', /\bbamboo shoot\b/u),
   rule('13-517', /\b(?:cherry|ripe) tomato\b/u, {
     countGrams: 20,
     countSource: 'household_measure',
@@ -313,7 +327,7 @@ export const everydayIngredientRules: ReadonlyArray<IngredientRule> = [
   rule('14-378', /\bmango\b/u),
   rule('14-376', /\b(?:fresh |tinned )?pineapple\b/u),
   rule('14-388', /\bblackberr(?:y|ies)\b/u),
-  approximation('14-388', /\b(?:frozen fruit|mixed berr(?:y|ies))\b/u),
+  rule('reference-mixed-berries', /\b(?:frozen fruit|mixed berr(?:y|ies))\b/u),
   rule('14-375', /\b(?:frozen |ripe )?raspberr(?:y|ies)\b/u),
   rule('14-324', /\bfrozen strawberr(?:y|ies)\b/u),
   rule('14-226', /\bpomegranate seed\b/u),
@@ -342,7 +356,9 @@ export const everydayIngredientRules: ReadonlyArray<IngredientRule> = [
   rule('reference-hemp-seed', /\bhemp seed\b/u, {
     gramsPerMillilitre: 0.65,
   }),
-  rule('14-843', /\bamaranth seed\b/u, { gramsPerMillilitre: 0.75 }),
+  approximation('14-843', /\bamaranth seed\b/u, {
+    gramsPerMillilitre: 0.75,
+  }),
   rule('14-878', /\broasted peanut\b/u),
   rule('14-031', /\bdried apricot\b/u),
   rule('14-394', /\bdate\b/u),
@@ -375,7 +391,11 @@ export const everydayIngredientRules: ReadonlyArray<IngredientRule> = [
   rule(
     '11-1145',
     /\b(?:breadcrumb|crusty bread|sourdough bread|stale bread|thick white bread|thick slice stale bread|slice of toast|toast)\b/u,
-    { countGrams: 40 },
+    {
+      countGrams: 40,
+      countSource: 'household_measure',
+      measures: { slice: 40, slices: 40 },
+    },
   ),
   rule('11-886', /\b(?:all purpose |bread )?flour\b/u, {
     gramsPerMillilitre: 0.53,

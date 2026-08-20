@@ -280,6 +280,15 @@ describe('nutrition database estimation', () => {
       ],
       ['jerk seasoning', 'g', 'reference-jerk-seasoning', 209, 4.5, 24, 5.9],
       ['prosciutto', 'g', 'reference-prosciutto', 243, 26.6, 0.3, 15],
+      ['smoked paprika', 'g', 'reference-smoked-paprika', 324, 14.8, 18.3, 13],
+      ['mirin', 'ml', 'reference-mirin', 272, 0, 68, 0],
+      ['ketjap manis', 'ml', 'reference-ketjap-manis', 139, 1.2, 33.2, 0.1],
+      ['harissa paste', 'g', 'reference-harissa', 97, 1.8, 10.5, 4.6],
+      ['mixed berries', 'g', 'reference-mixed-berries', 56, 0.8, 11, 0.5],
+      ['cooked quinoa', 'g', 'reference-cooked-quinoa', 141, 4.3, 22.7, 2.7],
+      ['chicken thighs', 'g', 'reference-raw-chicken-thigh', 161, 18.3, 0, 9.8],
+      ['almond butter', 'g', 'reference-almond-butter', 577, 21, 5.9, 52],
+      ['hazelnut butter', 'g', 'reference-hazelnut-butter', 690, 19, 2.4, 65],
     ] as const;
 
     for (const [name, unit, foodCode, kcal, protein, carbs, fat] of foods) {
@@ -308,7 +317,7 @@ describe('nutrition database estimation', () => {
     }
   });
 
-  it('uses the approved label measures for spices and prosciutto', () => {
+  it('uses the approved label measures for spices, nut butters, and prosciutto', () => {
     const spices = estimateRecipeNutrition(
       [
         ingredient(1, 'tsp', 'Cajun seasoning'),
@@ -316,8 +325,12 @@ describe('nutrition database estimation', () => {
       ],
       1,
     );
-    const prosciutto = estimateRecipeNutrition(
-      [ingredient(2, 'items', 'prosciutto')],
+    const measured = estimateRecipeNutrition(
+      [
+        ingredient(2, 'slices', 'prosciutto'),
+        ingredient(1, 'tbsp', 'almond butter'),
+        ingredient(1, 'tbsp', 'hazelnut butter'),
+      ],
       1,
     );
 
@@ -339,7 +352,7 @@ describe('nutrition database estimation', () => {
         ],
       },
     });
-    expect(prosciutto).toMatchObject({
+    expect(measured).toMatchObject({
       kind: 'estimated',
       provenance: {
         confidence: 'medium',
@@ -347,6 +360,16 @@ describe('nutrition database estimation', () => {
           {
             foodCode: 'reference-prosciutto',
             grams: 28,
+            quantitySource: 'label_measure',
+          },
+          {
+            foodCode: 'reference-almond-butter',
+            grams: 15,
+            quantitySource: 'label_measure',
+          },
+          {
+            foodCode: 'reference-hazelnut-butter',
+            grams: 15,
             quantitySource: 'label_measure',
           },
         ],
@@ -477,7 +500,9 @@ describe('nutrition database estimation', () => {
       ['cherry tomato', 20],
       ['chicken thigh', 100],
       ['chipolata sausage', 60],
+      ['chorizo', 60],
       ['chorizo sausage', 60],
+      ['crusty bread', 40],
       ['corncob', 60],
       ['English muffin', 70],
       ['flatbread', 70],
@@ -523,6 +548,30 @@ describe('nutrition database estimation', () => {
     }
   });
 
+  it('uses reviewed slice and packet measures', () => {
+    const measures = [
+      ['prosciutto', 2, 'slice', 28, 'label_measure'],
+      ['crusty bread', 2, 'slice', 80, 'household_measure'],
+      ['mozzarella', 1, 'packet', 125, 'household_measure'],
+      ['mozzarrella', 1, 'packet', 125, 'household_measure'],
+      ['cajun chicken mix', 1, 'packet', 45, 'label_measure'],
+      ['old el paso chilli mix', 1, 'packet', 39, 'label_measure'],
+      ["Colman's cottage pie sachet", 1, 'packet', 45, 'label_measure'],
+      ["Nando's Medium Mix", 1, 'packet', 20, 'household_measure'],
+      ['Tilda Rice packets', 2, 'item', 500, 'household_measure'],
+      ['stock cube', 1, 'item', 200, 'household_measure'],
+    ] as const;
+
+    for (const [name, quantity, unit, grams, quantitySource] of measures) {
+      expect(
+        estimateRecipeNutrition([ingredient(quantity, unit, name)], 1),
+      ).toMatchObject({
+        kind: 'estimated',
+        provenance: { matches: [{ grams, quantitySource }] },
+      });
+    }
+  });
+
   it('recognises the protein powder wording used by the Paprika archive', () => {
     for (const name of [
       'protein powder',
@@ -559,6 +608,14 @@ describe('nutrition database estimation', () => {
       ['sweetcorn', '13-622'],
       ['tuna steak', '16-399'],
       ['walnuts', '14-879'],
+      ['pre-cooked brown basmati rice', '11-869'],
+      ['quinoa (pre-cooked)', 'reference-cooked-quinoa'],
+      ['sliced turkey', '19-543'],
+      ['cooked penne', '11-1129'],
+      ['noodles', '11-941'],
+      ['garlic granules', '13-830'],
+      ['dried coriander', '13-818'],
+      ['low fat cream cheese', '12-537'],
     ] as const;
 
     for (const [name, foodCode] of foods) {
@@ -571,16 +628,69 @@ describe('nutrition database estimation', () => {
     }
   });
 
-  it('keeps genuine nutritional approximations at low confidence', () => {
-    expect(
-      estimateRecipeNutrition([ingredient(100, 'g', 'mirin')], 1),
-    ).toMatchObject({
+  it('treats generic stevia as zero calorie', () => {
+    const result = estimateRecipeNutrition(
+      [ingredient(100, 'g', 'chicken breast'), ingredient(3, 'tbsp', 'stevia')],
+      1,
+    );
+
+    expect(result).toMatchObject({
       kind: 'estimated',
       provenance: {
-        confidence: 'low',
-        matches: [{ foodCode: '17-705', grams: 100, matchConfidence: 'low' }],
+        matches: [
+          { foodCode: '18-290' },
+          { foodCode: 'generic-stevia', matchConfidence: 'high' },
+        ],
       },
     });
+    if (result.kind !== 'estimated') throw new Error('Expected an estimate.');
+    expect(result.nutrition).toEqual(
+      expect.objectContaining({
+        carbsGrams: 0,
+        fatGrams: 1.1,
+        kcal: 106,
+        proteinGrams: 24,
+      }),
+    );
+  });
+
+  it('omits small fresh oregano and Italian herb quantities', () => {
+    const result = estimateRecipeNutrition(
+      [
+        ingredient(4, 'sprig', 'fresh oregano'),
+        ingredient(1, 'tsp', 'Italian herb seasoning'),
+        ingredient(100, 'g', 'chicken breast'),
+      ],
+      1,
+    );
+
+    expect(result).toMatchObject({
+      kind: 'estimated',
+      provenance: {
+        omissions: [
+          { ingredientName: 'fresh oregano' },
+          { ingredientName: 'Italian herb seasoning' },
+        ],
+      },
+    });
+  });
+
+  it('keeps genuine nutritional approximations at low confidence', () => {
+    for (const name of [
+      'amaranth seeds',
+      'bamboo shoots',
+      'peppercorn sauce',
+    ]) {
+      expect(
+        estimateRecipeNutrition([ingredient(100, 'g', name)], 1),
+      ).toMatchObject({
+        kind: 'estimated',
+        provenance: {
+          confidence: 'low',
+          matches: [{ grams: 100, matchConfidence: 'low' }],
+        },
+      });
+    }
   });
 
   it('treats literal wording variants as medium confidence', () => {
@@ -617,11 +727,11 @@ describe('nutrition database estimation', () => {
     ).toMatchObject({
       kind: 'estimated',
       provenance: {
-        confidence: 'low',
+        confidence: 'medium',
         matches: [
           {
-            grams: 250,
-            matchConfidence: 'low',
+            grams: 125,
+            matchConfidence: 'medium',
             quantitySource: 'household_measure',
           },
         ],
@@ -761,8 +871,8 @@ describe('nutrition database estimation', () => {
     expect(result).toMatchObject({
       kind: 'estimated',
       provenance: {
-        confidence: 'low',
-        matches: [{ foodCode: '13-876', grams: 25 }],
+        confidence: 'medium',
+        matches: [{ foodCode: 'reference-smoked-paprika', grams: 25 }],
       },
     });
     if (result.kind !== 'estimated') throw new Error('Expected an estimate.');

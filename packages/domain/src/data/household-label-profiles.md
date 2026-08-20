@@ -39,6 +39,11 @@ reference labels are medium confidence because the exact product may vary.
 | Pak choi                      |  150 g |
 | Leek                          |  125 g |
 | Baby-corn packet              |  175 g |
+| Bread slice                   |   40 g |
+| Mozzarella packet             |  125 g |
+| Colman's seasoning packet     |   45 g |
+| Old El Paso chilli packet     |   39 g |
+| Nando's Bag & Bake packet     |   20 g |
 
 Bean weights are per tin or can. Chickpeas and cannellini beans use the drained
 weight; baked beans use the full contents.
@@ -166,28 +171,48 @@ remain consistent.
 
 Source: [Tesco's current HECK Chicken Italia label](https://www.tesco.com/shop/en-GB/products/305052990).
 
+## Stevia
+
+Generic stevia is treated as a zero-calorie sweetener: 0 kcal and 0 g protein,
+carbohydrate, and fat. Sugar-containing stevia blends must be entered with
+their own nutrition instead.
+
 ## Approved UK reference labels
 
-| Ingredient      | Basis  | Energy | Protein | Carbohydrate |  Fat | Source                                                                                             |
-| --------------- | ------ | -----: | ------: | -----------: | ---: | -------------------------------------------------------------------------------------------------- |
-| Chipotle paste  | 100 g  |    171 |     2.5 |         26.7 |  5.1 | [Tesco](https://www.tesco.com/shop/en-GB/products/300808599)                                       |
-| Coconut water   | 100 ml |     18 |       0 |          4.5 |    0 | [Vita Coco](https://www.tesco.com/shop/en-GB/products/274623051)                                   |
-| Chia seeds      | 100 g  |    422 |    23.9 |          2.4 | 27.7 | [Tesco](https://www.tesco.com/shop/en-GB/products/309470252)                                       |
-| Baby corn       | 100 g  |     47 |     2.6 |          6.5 |  0.4 | [Tesco](https://www.tesco.com/shop/en-GB/products/293953719)                                       |
-| Lemongrass      | 100 g  |    113 |     1.8 |         25.3 |  0.5 | [Tesco](https://www.tesco.com/shop/en-GB/products/256731301)                                       |
-| Raw sea bass    | 100 g  |    128 |    23.6 |            0 |  3.6 | [Waitrose](https://www.waitrose.com/ecom/products/asc-organic-whole-sea-bass/439337-694277-694278) |
-| Hoisin sauce    | 100 ml |    308 |     2.5 |           70 |    2 | [Blue Dragon](https://www.tesco.com/shop/en-GB/products/303750852)                                 |
-| Oat drink       | 100 ml |     49 |       1 |          6.4 |  2.1 | [Minor Figures](https://www.tesco.com/shop/en-GB/products/312572162)                               |
-| Coconut drink   | 100 ml |     20 |     0.1 |          2.7 |  0.8 | [Alpro](https://www.tesco.com/shop/en-GB/products/282925010)                                       |
-| Flaxseed        | 100 g  |    505 |    24.1 |          4.9 | 38.1 | [Tesco](https://www.tesco.com/shop/en-GB/products/290594532)                                       |
-| Hemp seed       | 100 g  |    605 |      33 |          1.9 |   51 | [Linwoods](https://www.tesco.com/shop/en-GB/products/307145883)                                    |
-| Coconut flour   | 100 g  |    390 |    15.3 |         14.7 | 21.1 | [Tesco Finest](https://www.tesco.com/shop/en-GB/products/311787756)                                |
-| Cajun seasoning | 100 g  |    314 |    10.9 |         45.9 |  6.5 | [Tesco](https://www.tesco.com/shop/en-GB/products/289081921)                                       |
-| Jerk seasoning  | 100 g  |    209 |     4.5 |           24 |  5.9 | [Dunn's River](https://www.tesco.com/shop/en-GB/products/254352954)                                |
-| Prosciutto      | 100 g  |    243 |    26.6 |          0.3 |   15 | [Tesco](https://www.tesco.com/shop/en-GB/products/266517333)                                       |
+| Ingredient      | Basis  | Energy | Protein | Carbohydrate |  Fat | Source                                                                                                                                     |
+| --------------- | ------ | -----: | ------: | -----------: | ---: | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Chipotle paste  | 100 g  |    171 |     2.5 |         26.7 |  5.1 | [Tesco](https://www.tesco.com/shop/en-GB/products/300808599)                                                                               |
+| Coconut water   | 100 ml |     18 |       0 |          4.5 |    0 | [Vita Coco](https://www.tesco.com/shop/en-GB/products/274623051)                                                                           |
+| Chia seeds      | 100 g  |    422 |    23.9 |          2.4 | 27.7 | [Tesco](https://www.tesco.com/shop/en-GB/products/309470252)                                                                               |
+| Baby corn       | 100 g  |     47 |     2.6 |          6.5 |  0.4 | [Tesco](https://www.tesco.com/shop/en-GB/products/293953719)                                                                               |
+| Lemongrass      | 100 g  |    113 |     1.8 |         25.3 |  0.5 | [Tesco](https://www.tesco.com/shop/en-GB/products/256731301)                                                                               |
+| Raw sea bass    | 100 g  |    128 |    23.6 |            0 |  3.6 | [Waitrose](https://www.waitrose.com/ecom/products/asc-organic-whole-sea-bass/439337-694277-694278)                                         |
+| Hoisin sauce    | 100 ml |    308 |     2.5 |           70 |    2 | [Blue Dragon](https://www.tesco.com/shop/en-GB/products/303750852)                                                                         |
+| Oat drink       | 100 ml |     49 |       1 |          6.4 |  2.1 | [Minor Figures](https://www.tesco.com/shop/en-GB/products/312572162)                                                                       |
+| Coconut drink   | 100 ml |     20 |     0.1 |          2.7 |  0.8 | [Alpro](https://www.tesco.com/shop/en-GB/products/282925010)                                                                               |
+| Flaxseed        | 100 g  |    505 |    24.1 |          4.9 | 38.1 | [Tesco](https://www.tesco.com/shop/en-GB/products/290594532)                                                                               |
+| Hemp seed       | 100 g  |    605 |      33 |          1.9 |   51 | [Linwoods](https://www.tesco.com/shop/en-GB/products/307145883)                                                                            |
+| Coconut flour   | 100 g  |    390 |    15.3 |         14.7 | 21.1 | [Tesco Finest](https://www.tesco.com/shop/en-GB/products/311787756)                                                                        |
+| Cajun seasoning | 100 g  |    314 |    10.9 |         45.9 |  6.5 | [Tesco](https://www.tesco.com/shop/en-GB/products/289081921)                                                                               |
+| Jerk seasoning  | 100 g  |    209 |     4.5 |           24 |  5.9 | [Dunn's River](https://www.tesco.com/shop/en-GB/products/254352954)                                                                        |
+| Prosciutto      | 100 g  |    243 |    26.6 |          0.3 |   15 | [Tesco](https://www.tesco.com/shop/en-GB/products/266517333)                                                                               |
+| Smoked paprika  | 100 g  |    324 |    14.8 |         18.3 |   13 | [Tesco](https://www.tesco.com/shop/en-GB/products/255770365)                                                                               |
+| Mirin           | 100 ml |    272 |       0 |           68 |    0 | [Blue Dragon](https://www.tesco.com/shop/en-GB/products/315392796)                                                                         |
+| Ketjap manis    | 100 ml |    139 |     1.2 |         33.2 |  0.1 | [Tesco](https://www.tesco.com/shop/en-GB/products/282670045)                                                                               |
+| Harissa paste   | 100 g  |     97 |     1.8 |         10.5 |  4.6 | [Tesco](https://www.tesco.com/shop/en-GB/products/301554022)                                                                               |
+| Mixed berries   | 100 g  |     56 |     0.8 |           11 |  0.5 | [Tesco](https://www.tesco.com/shop/en-GB/products/295432279)                                                                               |
+| Cooked quinoa   | 100 g  |    141 |     4.3 |         22.7 |  2.7 | [Tesco](https://www.tesco.com/shop/en-GB/products/292010305)                                                                               |
+| Chicken thighs  | 100 g  |    161 |    18.3 |            0 |  9.8 | [Tesco](https://www.tesco.com/shop/en-GB/products/279455800)                                                                               |
+| Almond butter   | 100 g  |    577 |      21 |          5.9 |   52 | [Pip & Nut](https://www.tesco.com/shop/en-GB/products/309452239)                                                                           |
+| Hazelnut butter | 100 g  |    690 |      19 |          2.4 |   65 | [Bulk](https://www.bulk.com/uk/products/hazelnut-butter/bpf-hbut)                                                                          |
+| Chilli mix      | 100 g  |    271 |       7 |         45.4 |  4.5 | [Old El Paso](https://www.tesco.com/shop/en-GB/products/251975884)                                                                         |
+| Cottage pie mix | 100 g  |    320 |      14 |           56 |  2.7 | [Colman's](https://www.onestop.co.uk/wp-content/uploads/Colmans-Cottage-Pie-Recipe-Mix-45-g-389995.pdf)                                    |
+| Cajun mix       | 100 g  |    315 |    28.8 |         43.6 |    2 | [Colman's](https://www.nutracheck.co.uk/CaloriesIn/Product/01/Colman%27s%2BSeason%2B%26%2BShake%2BCajun%2BChicken%2BSeasoning%2BMix%2B45g) |
 
 Cajun and jerk seasoning use 2.25 g per teaspoon. One prosciutto slice is
 treated as 14 g, based on the reference pack's six slices per 84 g.
+Almond and hazelnut butter use 15 g per tablespoon. Mirin values shown on the
+label as less than 0.5 g are stored as zero rather than inventing precision.
 
 MacroMap calculates only energy, protein, carbohydrate, and fat. The other
 label values are retained here as source documentation but remain outside the

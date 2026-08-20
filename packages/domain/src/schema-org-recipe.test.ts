@@ -257,6 +257,9 @@ describe('Schema.org recipe imports', () => {
           '2 red chillies, sliced',
           '15g green chilli',
           '1 tsp chilli flakes',
+          '1 large onion finely diced',
+          '1 large red chilli',
+          '1 finely chopped green chilli',
         ],
         recipeYield: '2 servings',
       }),
@@ -270,6 +273,9 @@ describe('Schema.org recipe imports', () => {
       ingredient('chilli flakes', 2, 'tsp', 'sliced'),
       ingredient('chilli flakes', 1, 'tsp'),
       ingredient('chilli flakes', 1, 'tsp'),
+      ingredient('onion granules', 1, 'tbsp'),
+      ingredient('chilli flakes', 1, 'tsp'),
+      ingredient('chilli flakes', 1, 'tsp'),
     ]);
     expect(result.draft.nutritionProvenance).toMatchObject({
       confidence: 'medium',
@@ -280,6 +286,9 @@ describe('Schema.org recipe imports', () => {
         { foodCode: 'generic-chilli-flakes', grams: 4 },
         { foodCode: 'generic-chilli-flakes', grams: 2 },
         { foodCode: 'generic-chilli-flakes', grams: 2 },
+        { foodCode: 'generic-onion-granules', grams: 7 },
+        { foodCode: 'generic-chilli-flakes', grams: 2 },
+        { foodCode: 'generic-chilli-flakes', grams: 2 },
       ],
       source: 'nutrition_database',
     });
@@ -288,6 +297,57 @@ describe('Schema.org recipe imports', () => {
       message:
         'Applied household substitutions: onion → onion granules; onion powder → onion granules; fresh chilli → chilli flakes. Check them before saving.',
     });
+  });
+
+  it('repairs wrapped and combined Paprika ingredient lines', () => {
+    const result = parseSchemaOrgRecipe(
+      JSON.stringify({
+        ...recipe,
+        nutrition: undefined,
+        recipeIngredient: [
+          '2 tbsp ketjap manis (sweet',
+          'soy sauce)',
+          '20g fresh ginger, peeled and finely chopped 1 tsp chilli flakes',
+          '1 tbsp curry powder juice of 1 lime',
+        ],
+        recipeYield: '2 servings',
+      }),
+    );
+
+    if (result.kind !== 'preview') throw new Error('Expected a preview.');
+    expect(result.draft.ingredients).toEqual([
+      ingredient('ketjap manis (sweet soy sauce)', 2, 'tbsp'),
+      ingredient('fresh ginger', 20, 'g', 'peeled and finely chopped'),
+      ingredient('chilli flakes', 1, 'tsp'),
+      ingredient('curry powder', 1, 'tbsp'),
+      ingredient('lime', 1, 'item'),
+    ]);
+    expect(result.draft.nutrition).not.toBeNull();
+  });
+
+  it('structures Paprika count and measure shorthand', () => {
+    const result = parseSchemaOrgRecipe(
+      JSON.stringify({
+        ...recipe,
+        nutrition: undefined,
+        recipeIngredient: [
+          '1 small bunch coriander',
+          '2 x sea bass fillets',
+          '½ tosp groundnut oil',
+        ],
+        recipeYield: '2 servings',
+      }),
+    );
+
+    if (result.kind !== 'preview') throw new Error('Expected a preview.');
+    expect(result.draft.ingredients).toEqual([
+      ingredient('coriander', 1, 'bunch'),
+      ingredient('sea bass fillets', 2, 'item'),
+      ingredient('groundnut oil', 0.5, 'tbsp'),
+    ]);
+    expect(result.warnings.map(({ code }) => code)).not.toContain(
+      'INGREDIENT_REVIEW_NEEDED',
+    );
   });
 
   it('reads Paprika fraction characters before ingredient units', () => {
@@ -319,6 +379,7 @@ describe('Schema.org recipe imports', () => {
         nutrition: undefined,
         recipeIngredient: [
           'Ingredients',
+          'Pizza toppings',
           'Drizzle of olive oil',
           '3-4 spring onions, chopped',
           'juice and zest of 2 lemons 25g grated Parmesan cheese',

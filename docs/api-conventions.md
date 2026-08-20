@@ -162,15 +162,25 @@ structured ingredients, zero or more ordered instructions, explicit meal types,
 editable cuisine/protein/flavour tags, and optional per-serving kcal, protein,
 carbohydrate, and fat. Responses include nullable `nutritionProvenance` and a
 nullable signed `photoUrl`. Provenance distinguishes confirmed manual values,
-reviewed Schema.org values, and CoFID estimates with their dataset version,
-confidence, converted mass, and selected ingredient matches.
+reviewed Schema.org values, legacy CoFID estimates, and current bundled
+nutrition-database estimates with per-match source versions, confidence,
+converted mass, and selected ingredient matches.
 
-When nutrition is omitted, saving tries the bundled CoFID 2021 dataset using
-exact or explicit alias matches. Nutrition-relevant qualifiers such as fresh,
-dried, and cooked are not discarded. Direct weights, common household measures,
-and a small set of explicit item weights are supported. The response records
-every converted or assumed weight; bounded negligible seasonings may be omitted
-and are recorded too. A complete estimate is stored with the recipe. Otherwise
+When nutrition is omitted, saving tries the bundled nutrition database using
+exact matches, explicit aliases, and bounded low-confidence rules for familiar
+UK ingredient wording. It contains CoFID 2021 and versioned household or
+approved UK reference-label profiles. Unqualified egg noodles default to fresh; explicit fresh, dried,
+and cooked qualifiers are otherwise preserved. Direct weights,
+ingredient-specific measures, label measures, and conservative default
+household quantities are supported. Owner-reviewed household quantities are
+medium confidence; unreviewed defaults remain low confidence. Recipe imports also
+recognise leading list bullets, simple multiplicative masses such as `2 x
+200g`, common written and qualitative measures, citrus shorthand, and a
+standalone salt or pepper line as one pinch. These inferred structures remain
+editable during review. The response records every converted or assumed
+weight; explicitly allowlisted dried seasonings up to 10 g may be omitted and
+are recorded too. Curry powder, garam masala, sesame seeds, onion granules, and
+chilli flakes are always calculated. A complete estimate is stored with the recipe. Otherwise
 nutrition stays absent and the recipe remains unavailable to the future
 planner. Confirmed manual or valid imported nutrition is retained. Missing
 instructions remain valid for storage, planning, and cooking. The editor and
@@ -203,10 +213,15 @@ validated its actual bytes. Unfinished staging objects expire after one day.
   recipe link are retained. Reusing an import for another recipe returns `409`.
 
 Direct JSON importing performs no network or AI call. Valid supplied nutrition
-is retained; otherwise a structurally complete recipe receives the same CoFID
-attempt and review warnings before saving. Direct JSON previews identify a
+is retained; otherwise a structurally complete recipe receives the same bundled
+nutrition-database attempt and review warnings before saving. Direct JSON previews identify a
 primary photo but do not copy it. URL imports are limited to public IPv4 HTTP(S)
 targets on standard ports, five redirects, eight seconds, and 1 MiB. Every
 redirect is resolved and checked again. Photos are limited to 5 MiB and JPEG,
 PNG, or WebP content whose bytes match its declared type. Imported photos are
 published only when the reviewed recipe is saved.
+
+Before the preview, imported whole onion or red onion is converted to onion
+granules, onion powder is normalised to granules, and fresh chilli is converted
+to chilli flakes using the approved household measures. The original supplied
+content remains stored with the import.

@@ -96,6 +96,11 @@ correct:
 - Photo
 - Inferred descriptive attributes
 
+Before review, imports apply the household's approved cooking substitutions:
+whole onion or red onion becomes onion granules, onion powder is normalised to
+onion granules, and fresh chilli becomes chilli flakes. The imported source is
+retained unchanged alongside the editable normalised ingredients.
+
 Instructions are optional. A recipe without them can be saved, planned, and
 shown in cooking mode with a clear placeholder until instructions are added.
 
@@ -122,6 +127,9 @@ contains multiple photos, MacroMap keeps only its primary photo.
   planned, but displays a warning.
 - Editing ingredients triggers nutrition re-estimation unless the user has
   supplied authoritative values.
+- Up to 10 g of an allowlisted dried herb, spice, or baking agent may be
+  recorded and omitted as negligible. Curry powder, garam masala, sesame
+  seeds, onion granules, and chilli flakes are always calculated.
 
 ## Practical quantities
 

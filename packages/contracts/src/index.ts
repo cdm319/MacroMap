@@ -112,6 +112,22 @@ export const recipeNutritionSchema = z
   })
   .strict();
 
+const estimatedQuantitySourceSchema = z.enum([
+  'metric',
+  'avoirdupois',
+  'household_measure',
+  'estimated_count',
+  'label_measure',
+]);
+
+const nutritionOmissionSchema = z
+  .object({
+    ingredientIndex: z.number().int().nonnegative(),
+    ingredientName: z.string().min(1),
+    reason: z.literal('negligible_seasoning'),
+  })
+  .strict();
+
 export const recipeNutritionProvenanceSchema = z.discriminatedUnion('source', [
   z
     .object({
@@ -132,27 +148,36 @@ export const recipeNutritionProvenanceSchema = z.discriminatedUnion('source', [
             grams: z.number().positive(),
             ingredientIndex: z.number().int().nonnegative(),
             matchConfidence: z.enum(['high', 'medium', 'low']),
-            quantitySource: z.enum([
-              'metric',
-              'avoirdupois',
-              'household_measure',
-              'estimated_count',
+            quantitySource: estimatedQuantitySourceSchema.exclude([
+              'label_measure',
             ]),
           })
           .strict(),
       ),
-      omissions: z
-        .array(
-          z
-            .object({
-              ingredientIndex: z.number().int().nonnegative(),
-              ingredientName: z.string().min(1),
-              reason: z.literal('negligible_seasoning'),
-            })
-            .strict(),
-        )
-        .optional(),
+      omissions: z.array(nutritionOmissionSchema).optional(),
       source: z.literal('cofid'),
+    })
+    .strict(),
+  z
+    .object({
+      confidence: z.enum(['high', 'medium', 'low']),
+      matches: z.array(
+        z
+          .object({
+            canonicalName: z.string().min(1),
+            foodCode: z.string().min(1),
+            foodName: z.string().min(1),
+            foodSource: z.enum(['cofid', 'label']),
+            foodVersion: z.string().min(1),
+            grams: z.number().positive(),
+            ingredientIndex: z.number().int().nonnegative(),
+            matchConfidence: z.enum(['high', 'medium', 'low']),
+            quantitySource: estimatedQuantitySourceSchema,
+          })
+          .strict(),
+      ),
+      omissions: z.array(nutritionOmissionSchema).optional(),
+      source: z.literal('nutrition_database'),
     })
     .strict(),
 ]);
@@ -215,6 +240,7 @@ export const maxRecipeImportCharacters = 512 * 1024;
 export const recipeImportWarningSchema = z
   .object({
     code: z.enum([
+      'HOUSEHOLD_SUBSTITUTION_APPLIED',
       'INGREDIENT_REVIEW_NEEDED',
       'INVALID_NUTRITION',
       'INVALID_PHOTO',

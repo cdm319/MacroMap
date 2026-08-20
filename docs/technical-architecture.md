@@ -1,7 +1,7 @@
 # MacroMap technical architecture
 
-Status: Approved; Phase 2 implemented
-Last reviewed: 2026-08-18
+Status: Approved; Phase 3 in progress
+Last reviewed: 2026-08-20
 
 ## Purpose and authority
 
@@ -48,7 +48,7 @@ flowchart LR
     DataApi --> Database["Aurora PostgreSQL Serverless v2"]
     ApiLambda --> Media
     ApiLambda --> OpenAI["OpenAI Responses API"]
-    ApiLambda --> Nutrition["CoFID data and USDA fallback"]
+    ApiLambda --> Nutrition["Bundled nutrition data and USDA fallback"]
 ```
 
 ## Technology baseline
@@ -245,10 +245,11 @@ is stored as household planning configuration and defaults to `0.15`.
 - `recipe_import`: the original import content, extracted draft, review
   warnings, and nullable link to the recipe created after explicit review.
 
-The MVP stores a compact snapshot of accepted CoFID matches, converted gram
-amounts, dataset version, and confidence in `recipe.nutrition_provenance`. That
+The MVP stores a compact snapshot of accepted nutrition matches, converted gram
+amounts, source version, and confidence in `recipe.nutrition_provenance`. That
 keeps each estimate reproducible without introducing canonical-ingredient or
-match tables before grocery planning needs them.
+match tables before grocery planning needs them. Existing CoFID-only snapshots
+remain valid as the bundled database gains versioned label profiles.
 
 Original ingredient text and source attribution are preserved even after
 normalisation. Imported or inferred data never bypasses the mandatory review
@@ -272,26 +273,33 @@ status-changing job. Past meal slots are immutable based on the current
 
 ## Nutrition and units
 
-The bundled, versioned CoFID dataset is the primary nutrition source for common
-UK ingredients. The free USDA FoodData Central API is a fallback for ingredients
-that cannot be matched with sufficient confidence. USDA responses and accepted
-matches are cached so ordinary planning does not require an external nutrition
-request.
+The bundled nutrition database combines the versioned CoFID dataset for common
+UK ingredients with explicit household and approved UK reference-label profiles. The
+free USDA FoodData Central API is a fallback for ingredients that cannot be
+matched with sufficient confidence. USDA responses and accepted matches are
+cached so ordinary planning does not require an external nutrition request.
 
-The current CoFID slice stores:
+The current nutrition slice stores:
 
 - the user's original quantity and unit;
 - the converted mass for each accepted match;
-- the selected CoFID code and food name; and
-- the dataset version, conversion source, and match confidence.
+- the selected food code, name, data source, and version; and
+- the conversion source and match confidence.
 
 Metric and avoirdupois weights are converted directly. Common household
-measures use explicit ingredient densities, and a small set of common item
-units use explicit assumed weights. Assumed item weights make the overall
-estimate low confidence and are shown to the user. Small, explicitly allowlisted
-seasonings may be omitted as negligible; those omissions are also shown and
-make the estimate low confidence. Unknown or ambiguous ingredients remain
+measures prefer explicit ingredient densities and item weights. Owner-reviewed
+household measures are medium confidence; an unreviewed fallback remains low
+confidence. Bounded rules also map familiar UK wording to a close CoFID food at
+low confidence. Small, explicitly allowlisted seasonings may be omitted as
+negligible up to 10 g; those omissions remain visible and make the estimate
+medium unless another ingredient makes it low. Calorie-dense household
+exceptions such as curry powder, garam masala, sesame seeds, onion granules,
+and chilli flakes are always calculated. Unknown or ambiguous foods remain
 without estimated nutrition and are shown for review.
+
+Recipe imports apply the approved household onion and chilli substitutions
+before review so stored ingredients, nutrition, and future grocery quantities
+agree. The retained import content preserves the original source text.
 
 Only compatible dimensions and confidently equivalent ingredients are merged
 in the grocery list. Ambiguous count-to-weight conversions remain separate and

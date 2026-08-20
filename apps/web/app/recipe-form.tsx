@@ -100,8 +100,9 @@ export function RecipeForm({
   const [instructions, setInstructions] = useState<string[]>(
     initial?.instructions ?? [],
   );
+  const nutritionSource = initial?.nutritionProvenance?.source;
   const hasEstimatedNutrition =
-    initial?.nutritionProvenance?.source === 'cofid';
+    nutritionSource === 'cofid' || nutritionSource === 'nutrition_database';
   const [hasNutrition, setHasNutrition] = useState(
     initial !== undefined &&
       initial.nutrition !== null &&
@@ -530,7 +531,7 @@ function NutritionEstimate({
     return (
       <p className="notice">
         Complete the ingredient quantities, units, and serving count to preview
-        a CoFID estimate.
+        a nutrition database estimate.
       </p>
     );
   }
@@ -552,7 +553,8 @@ function NutritionEstimate({
   return (
     <div className="nutrition-estimate">
       <strong>
-        Current CoFID {result.provenance.confidence} confidence estimate
+        Current nutrition database {result.provenance.confidence} confidence
+        estimate
       </strong>
       <p>
         {formatNutrition(result.nutrition)} per serving. MacroMap will calculate

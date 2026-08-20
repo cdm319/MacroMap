@@ -32,6 +32,14 @@ export type SchemaOrgRecipeResult =
     };
 
 type JsonObject = Record<string, unknown>;
+type IngredientDraft = RecipeImportDraft['ingredients'][number];
+
+const gramsPerMassUnit: Readonly<Record<string, number>> = {
+  g: 1,
+  kg: 1_000,
+  lb: 453.59237,
+  oz: 28.349523125,
+};
 
 const unitNames = new Map(
   Object.entries({
@@ -41,6 +49,7 @@ const unitNames = new Map(
     bunches: 'bunch',
     can: 'can',
     cans: 'can',
+    cm: 'cm',
     clove: 'clove',
     cloves: 'clove',
     cup: 'cup',
@@ -48,6 +57,8 @@ const unitNames = new Map(
     g: 'g',
     gram: 'g',
     grams: 'g',
+    handful: 'handful',
+    handfuls: 'handful',
     kg: 'kg',
     kilogram: 'kg',
     kilograms: 'kg',
@@ -62,12 +73,20 @@ const unitNames = new Map(
     ounce: 'oz',
     ounces: 'oz',
     oz: 'oz',
+    pack: 'packet',
+    packs: 'packet',
     packet: 'packet',
     packets: 'packet',
     pinch: 'pinch',
     pinches: 'pinch',
     slice: 'slice',
     slices: 'slice',
+    scoop: 'scoop',
+    scoops: 'scoop',
+    splash: 'tsp',
+    splashes: 'tsp',
+    sprig: 'sprig',
+    sprigs: 'sprig',
     tbsp: 'tbsp',
     tablespoon: 'tbsp',
     tablespoons: 'tbsp',
@@ -76,6 +95,9 @@ const unitNames = new Map(
     tsp: 'tsp',
     teaspoon: 'tsp',
     teaspoons: 'tsp',
+    tosp: 'tbsp',
+    drizzle: 'tsp',
+    drizzles: 'tsp',
   }),
 );
 
@@ -90,6 +112,15 @@ const unicodeFractions: Readonly<Record<string, number>> = {
   '⅝': 5 / 8,
   '⅞': 7 / 8,
 };
+
+const quantitylessSeasonings = new Set([
+  'black pepper',
+  'pepper',
+  'salt',
+  'salt and black pepper',
+  'salt and pepper',
+  'sea salt',
+]);
 
 export function parseSchemaOrgRecipe(
   content: string,
@@ -177,8 +208,12 @@ function mapRecipe(
     );
   }
 
-  const ingredientLines = strings(recipe.recipeIngredient);
-  const ingredients = ingredientLines.map(parseIngredient);
+  const ingredientLines = joinWrappedIngredientLines(
+    strings(recipe.recipeIngredient),
+  ).filter((line) => !/^(?:ingredients|pizza toppings):?$/iu.test(line.trim()));
+  const parsedIngredients = ingredientLines.flatMap(parseIngredientLine);
+  const { ingredients, substitutions } =
+    applyHouseholdSubstitutions(parsedIngredients);
   if (ingredients.length === 0) {
     warn(
       warnings,
@@ -188,13 +223,20 @@ function mapRecipe(
   } else if (
     ingredients.some(
       ({ name, quantity, unit }) =>
-        name === '' || quantity === null || unit === '' || unit === 'item',
+        name === '' || quantity === null || unit === '',
     )
   ) {
     warn(
       warnings,
       'INGREDIENT_REVIEW_NEEDED',
       'Some ingredient quantities could not be structured. Check the highlighted fields before saving.',
+    );
+  }
+  if (substitutions.length > 0) {
+    warn(
+      warnings,
+      'HOUSEHOLD_SUBSTITUTION_APPLIED',
+      `Applied household substitutions: ${substitutions.join('; ')}. Check them before saving.`,
     );
   }
 
@@ -263,7 +305,10 @@ function estimateNutrition(
   warnings: RecipeImportWarning[],
 ): {
   readonly nutrition: RecipeNutrition;
-  readonly provenance: Extract<RecipeNutritionProvenance, { source: 'cofid' }>;
+  readonly provenance: Extract<
+    RecipeNutritionProvenance,
+    { source: 'nutrition_database' }
+  >;
 } | null {
   const incomplete = ingredients.filter(
     ({ name, quantity, unit }) =>
@@ -299,7 +344,7 @@ function estimateNutrition(
   warn(
     warnings,
     'NUTRITION_ESTIMATED',
-    'Nutrition was estimated from CoFID 2021. Check the ingredient matches and per-serving values.',
+    'Nutrition was estimated from the bundled nutrition database. Check the ingredient matches and per-serving values.',
   );
   const reviewMatches = estimation.provenance.matches.filter(
     ({ matchConfidence, quantitySource }) =>
@@ -314,8 +359,8 @@ function estimateNutrition(
       'NUTRITION_MATCH_REVIEW_NEEDED',
       `${[
         ...reviewMatches.map(
-          ({ cofidName, grams, ingredientIndex }) =>
-            `${ingredients[ingredientIndex]?.name ?? 'ingredient'} → ${cofidName} (${Math.round(grams * 10) / 10} g)`,
+          ({ foodName, grams, ingredientIndex }) =>
+            `${ingredients[ingredientIndex]?.name ?? 'ingredient'} → ${foodName} (${Math.round(grams * 10) / 10} g)`,
         ),
         ...omissions.map(
           ({ ingredientName }) =>
@@ -327,29 +372,327 @@ function estimateNutrition(
   return estimation;
 }
 
+function parseIngredientLine(line: string): RecipeImportDraft['ingredients'] {
+  const gingerAndChilli =
+    /^(.*?\bginger\b(?:,\s*.*?))\s+((?:\d+(?:\.\d+)?|\d+\/\d+|[¼½¾⅓⅔⅛⅜⅝⅞])\s+(?:tsp|teaspoons?)\s+chilli flakes?)$/iu.exec(
+      line.trim(),
+    );
+  if (gingerAndChilli !== null) {
+    return [
+      parseIngredient(gingerAndChilli[1]!),
+      parseIngredient(gingerAndChilli[2]!),
+    ];
+  }
+
+  const curryAndCitrus =
+    /^(.+?\bcurry powder)\s+(juice(?: and zest)? of \d+ limes?)$/iu.exec(
+      line.trim(),
+    );
+  if (curryAndCitrus !== null) {
+    return [
+      parseIngredient(curryAndCitrus[1]!),
+      parseIngredient(curryAndCitrus[2]!),
+    ];
+  }
+
+  const combinedCitrusAndCheese =
+    /^(?:zest and juice|juice and zest)(?: of)? (\d+) (lemons?|limes?)\s+(\d+(?:\.\d+)?)\s*g\s+(.+)$/iu.exec(
+      line.trim(),
+    );
+  if (combinedCitrusAndCheese !== null) {
+    return [
+      ingredient(
+        combinedCitrusAndCheese[2]!,
+        Number(combinedCitrusAndCheese[1]),
+        'item',
+      ),
+      ingredient(
+        combinedCitrusAndCheese[4]!,
+        Number(combinedCitrusAndCheese[3]),
+        'g',
+      ),
+    ];
+  }
+  return [parseIngredient(line)];
+}
+
 function parseIngredient(
   line: string,
 ): RecipeImportDraft['ingredients'][number] {
-  const [ingredientText, ...noteParts] = line.split(',');
+  const cleanedLine = line.replace(/^\s*(?:[-–—•]\s*)+/u, '');
+  const [ingredientText, ...noteParts] = cleanedLine.split(',');
   const main = ingredientText?.trim() ?? '';
   const preparationNote = noteParts.join(',').trim();
+  const citrus =
+    /^(?:juice(?: and zest)?|zest and juice)(?: of| from)?\s*(\d+)\s*(lemons?|limes?|oranges?)$/iu.exec(
+      main,
+    );
+  if (citrus !== null) {
+    return ingredient(citrus[2]!, Number(citrus[1]), 'item', preparationNote);
+  }
+
+  const totalMass =
+    /^\d+(?:\.\d+)?\s+(.+?)\s+\((\d+(?:\.\d+)?)\s*(g|kg)\)$/iu.exec(main);
+  if (totalMass !== null) {
+    return ingredient(
+      totalMass[1]!,
+      Number(totalMass[2]),
+      totalMass[3]!.toLowerCase(),
+      preparationNote,
+    );
+  }
+
+  const countedMeasure =
+    /^(\d+(?:\.\d+)?)\s+(?:(small|large)\s+)?(pinch(?:es)?|handfuls?|bunch(?:es)?|packs?|packets?|drizzles?|splashes?)(?:\s+of)?\s+(.+)$/iu.exec(
+      main,
+    );
+  if (countedMeasure !== null) {
+    const unit = unitNames.get(countedMeasure[3]!.toLowerCase())!;
+    return ingredient(
+      countedMeasure[4]!,
+      unit === 'handful' && countedMeasure[2]?.toLowerCase() === 'small'
+        ? Number(countedMeasure[1]) / 2
+        : Number(countedMeasure[1]),
+      unit,
+      preparationNote,
+    );
+  }
+
+  const impliedMeasure =
+    /^(?:a\s+)?(?:(small|large)\s+)?(pinch|handful|bunch|pack|drizzle|splash)(?:\s+of)?\s+(.+)$/iu.exec(
+      main,
+    );
+  if (impliedMeasure !== null) {
+    const measure = impliedMeasure[2]!.toLowerCase();
+    return ingredient(
+      impliedMeasure[3]!,
+      measure === 'handful' && impliedMeasure[1]?.toLowerCase() === 'small'
+        ? 0.5
+        : 1,
+      measure === 'pack'
+        ? 'packet'
+        : measure === 'drizzle' || measure === 'splash'
+          ? 'tsp'
+          : measure,
+      preparationNote,
+    );
+  }
+
+  const fewLeaves = /^(?:a\s+)?few leaves(?: of)?\s+(.+)$/iu.exec(main);
+  if (fewLeaves !== null) {
+    return ingredient(fewLeaves[1]!, 0.5, 'handful', preparationNote);
+  }
+
+  const range =
+    /^(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)\s+(spring onions?)$/iu.exec(
+      main,
+    );
+  if (range !== null) {
+    return ingredient(
+      range[3]!,
+      (Number(range[1]) + Number(range[2])) / 2,
+      'item',
+      preparationNote,
+    );
+  }
+
+  const multipliedMass =
+    /^(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*(g|kg)\b\s*(.+)$/iu.exec(main);
+  if (multipliedMass !== null) {
+    return {
+      name: multipliedMass[4]!.trim(),
+      preparationNote,
+      quantity: Number(multipliedMass[1]) * Number(multipliedMass[2]),
+      unit: multipliedMass[3]!.toLowerCase(),
+    };
+  }
+
   const quantity = leadingQuantity(main);
   if (quantity === null) {
+    if (quantitylessSeasonings.has(main.toLowerCase())) {
+      return { name: main, preparationNote, quantity: 1, unit: 'pinch' };
+    }
+    const inferred = inferQuantitylessIngredient(main, preparationNote);
+    if (inferred !== null) return inferred;
     return { name: main, preparationNote, quantity: null, unit: '' };
   }
 
-  const remainder = main.slice(quantity.characters).trim();
+  const remainder = main
+    .slice(quantity.characters)
+    .trim()
+    .replace(/^x\s+/iu, '');
   const unitMatch = /^([a-zA-Z]+)\b/u.exec(remainder);
   const unit = unitNames.get(unitMatch?.[1]?.toLowerCase() ?? '');
+  const name =
+    unit === undefined
+      ? remainder
+      : remainder
+          .slice(unitMatch![0].length)
+          .trim()
+          .replace(/^of\s+/iu, '');
   return {
-    name:
-      unit === undefined
-        ? remainder
-        : remainder.slice(unitMatch![0].length).trim(),
+    name: name === '' && unit === 'clove' ? 'garlic' : name,
     preparationNote,
     quantity: quantity.value,
     unit: unit ?? 'item',
   };
+}
+
+function inferQuantitylessIngredient(
+  value: string,
+  preparationNote: string,
+): RecipeImportDraft['ingredients'][number] | null {
+  if (/^garlic\s*\(lots\)$/iu.test(value.trim())) {
+    return ingredient('garlic', 3, 'clove', preparationNote);
+  }
+  const name = value.replace(/[)]+$/u, '').trim();
+  if (/^(?:ice|a tray of ice)$/iu.test(name)) {
+    return ingredient('ice', 1, 'handful', preparationNote);
+  }
+  if (/^tagliatelle$/iu.test(name)) {
+    return ingredient(name, 100, 'g', preparationNote);
+  }
+  if (/^onion$/iu.test(name)) {
+    return ingredient(name, 1, 'item', preparationNote);
+  }
+  if (/^spinach$/iu.test(name)) {
+    return ingredient(name, 1, 'handful', preparationNote);
+  }
+  if (/^sesame seeds$/iu.test(name)) {
+    return ingredient(name, 1, 'tsp', preparationNote);
+  }
+  if (/^soy sauce$/iu.test(name)) {
+    return ingredient(name, 1, 'tbsp', preparationNote);
+  }
+  if (/^(?:toasted )?pecans$/iu.test(name)) {
+    return ingredient(name, 1, 'tbsp', preparationNote);
+  }
+  if (
+    /^(?:chopped |flat leaf |fresh )?(?:coriander|chives|parsely|parsley)(?: to serve)?$/iu.test(
+      name,
+    )
+  ) {
+    return ingredient(name, 1, 'handful', preparationNote);
+  }
+  if (/^thumb-sized piece(?: of)? ginger$/iu.test(name)) {
+    return ingredient('ginger', 15, 'g', preparationNote);
+  }
+  return null;
+}
+
+function ingredient(
+  name: string,
+  quantity: number,
+  unit: string,
+  preparationNote = '',
+): RecipeImportDraft['ingredients'][number] {
+  return { name: name.trim(), preparationNote, quantity, unit };
+}
+
+function applyHouseholdSubstitutions(
+  ingredients: RecipeImportDraft['ingredients'],
+): {
+  readonly ingredients: RecipeImportDraft['ingredients'];
+  readonly substitutions: string[];
+} {
+  const substitutions = new Set<string>();
+  return {
+    ingredients: ingredients.map((current) =>
+      householdSubstitution(current, substitutions),
+    ),
+    substitutions: [...substitutions],
+  };
+}
+
+function householdSubstitution(
+  current: IngredientDraft,
+  substitutions: Set<string>,
+): IngredientDraft {
+  const name = current.name
+    .trim()
+    .toLowerCase()
+    .replace(/\([^)]*\)/gu, ' ')
+    .replace(
+      /\b(?:chopped|deseeded|diced|finely|large|medium|roughly|sliced|small|thinly)\b/gu,
+      ' ',
+    )
+    .replace(/\s+/gu, ' ')
+    .trim();
+  if (/^onion (?:granules?|powder)$/u.test(name)) {
+    if (name === 'onion granules') return current;
+    substitutions.add('onion powder → onion granules');
+    return { ...current, name: 'onion granules' };
+  }
+
+  if (/^(?:(?:small|medium|large) )?(?:red )?onions?$/u.test(name)) {
+    return substituteCount(
+      current,
+      150,
+      'onion granules',
+      'tbsp',
+      'onion → onion granules',
+      substitutions,
+    );
+  }
+
+  if (
+    /^(?:fresh )?(?:(?:red|green) )?(?:chilli(?:es|s)?|chillies|chili(?:es|s)?|chilies)$/u.test(
+      name,
+    )
+  ) {
+    return substituteCount(
+      current,
+      15,
+      'chilli flakes',
+      'tsp',
+      'fresh chilli → chilli flakes',
+      substitutions,
+    );
+  }
+  return current;
+}
+
+function joinWrappedIngredientLines(lines: ReadonlyArray<string>): string[] {
+  const joined: string[] = [];
+  for (const line of lines) {
+    const previous = joined.at(-1);
+    if (previous !== undefined && parenthesisBalance(previous) > 0) {
+      joined[joined.length - 1] = `${previous} ${line}`;
+    } else {
+      joined.push(line);
+    }
+  }
+  return joined;
+}
+
+function parenthesisBalance(value: string): number {
+  return [...value].reduce(
+    (balance, character) =>
+      balance + (character === '(' ? 1 : character === ')' ? -1 : 0),
+    0,
+  );
+}
+
+function substituteCount(
+  current: IngredientDraft,
+  gramsPerItem: number,
+  name: string,
+  unit: string,
+  description: string,
+  substitutions: Set<string>,
+): IngredientDraft {
+  if (current.quantity === null) return current;
+  const gramsPerUnit = gramsPerMassUnit[current.unit.toLowerCase()];
+  const quantity =
+    current.unit === 'item'
+      ? current.quantity
+      : gramsPerUnit === undefined
+        ? null
+        : Math.round((current.quantity * gramsPerUnit * 1_000) / gramsPerItem) /
+          1_000;
+  if (quantity === null) return current;
+  substitutions.add(description);
+  return { ...current, name, quantity, unit };
 }
 
 function leadingQuantity(
@@ -377,7 +720,18 @@ function leadingQuantity(
     };
   }
 
-  const unicode = /^(\d+)?([¼½¾⅓⅔⅛⅜⅝⅞])/u.exec(value);
+  const fractionSlash = /^(?:(\d+)\s+)?(\d+)⁄(\d+)/u.exec(value);
+  if (fractionSlash !== null) {
+    const denominator = Number(fractionSlash[3]);
+    if (denominator === 0) return null;
+    return {
+      characters: fractionSlash[0].length,
+      value:
+        Number(fractionSlash[1] ?? 0) + Number(fractionSlash[2]) / denominator,
+    };
+  }
+
+  const unicode = /^(?:(\d+)\s*)?([¼½¾⅓⅔⅛⅜⅝⅞])/u.exec(value);
   if (unicode !== null) {
     return {
       characters: unicode[0].length,

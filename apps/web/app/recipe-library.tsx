@@ -1,11 +1,6 @@
 'use client';
 
-import type {
-  Recipe,
-  RecipeInput,
-  RecipeNutritionProvenance,
-  RecipeSummary,
-} from '@macromap/contracts';
+import type { Recipe, RecipeInput, RecipeSummary } from '@macromap/contracts';
 import {
   describeNutritionEstimationIssue,
   estimateRecipeNutrition,
@@ -533,7 +528,7 @@ function Macro({
 function NutritionSource({ recipe }: { readonly recipe: Recipe }) {
   const provenance = recipe.nutritionProvenance;
   if (provenance === null) return null;
-  if (provenance.source !== 'cofid') {
+  if (provenance.confidence === 'confirmed') {
     return (
       <p className="nutrition-source">
         {provenance.source === 'manual'
@@ -542,20 +537,37 @@ function NutritionSource({ recipe }: { readonly recipe: Recipe }) {
       </p>
     );
   }
+  const matches =
+    provenance.source === 'cofid'
+      ? provenance.matches.map((match) => ({
+          ...match,
+          foodName: match.cofidName,
+          sourceLabel: `CoFID ${provenance.datasetVersion}`,
+        }))
+      : provenance.matches.map((match) => ({
+          ...match,
+          sourceLabel:
+            match.foodSource === 'cofid'
+              ? `CoFID ${match.foodVersion}`
+              : `Label profile ${match.foodVersion}`,
+        }));
   return (
     <div className="nutrition-source">
       <p>
-        Estimated from CoFID {provenance.datasetVersion} ·{' '}
-        {capitalize(provenance.confidence)} confidence
+        {provenance.source === 'cofid'
+          ? `Estimated from CoFID ${provenance.datasetVersion}`
+          : 'Estimated from nutrition database'}{' '}
+        · {capitalize(provenance.confidence)} confidence
       </p>
       <details>
         <summary>How this was estimated</summary>
         <ul>
-          {provenance.matches.map((match) => (
+          {matches.map((match) => (
             <li key={match.ingredientIndex}>
               {recipe.ingredients[match.ingredientIndex]?.name ?? 'Ingredient'}
               {' → '}
-              {match.cofidName} · {quantityDescription(match)}
+              {match.foodName} · {match.sourceLabel} ·{' '}
+              {quantityDescription(match)}
             </li>
           ))}
           {provenance.omissions?.map((omission) => (
@@ -592,16 +604,22 @@ function localRecipe(id: string, input: RecipeInput): Recipe {
   };
 }
 
-function quantityDescription(
-  match: Extract<
-    RecipeNutritionProvenance,
-    { source: 'cofid' }
-  >['matches'][number],
-): string {
+function quantityDescription(match: {
+  readonly grams: number;
+  readonly quantitySource:
+    | 'avoirdupois'
+    | 'estimated_count'
+    | 'household_measure'
+    | 'label_measure'
+    | 'metric';
+}): string {
   const grams = `${Math.round(match.grams * 10) / 10} g`;
   if (match.quantitySource === 'estimated_count') return `${grams} assumed`;
   if (match.quantitySource === 'household_measure') {
     return `${grams} converted`;
+  }
+  if (match.quantitySource === 'label_measure') {
+    return `${grams} from label measure`;
   }
   return grams;
 }

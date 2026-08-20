@@ -109,6 +109,8 @@
 }
 
 .recipe-card {
+  display: grid;
+  grid-template-rows: auto 1fr;
   overflow: hidden;
   padding: 0;
   border: 1px solid rgb(35 67 50 / 14%);

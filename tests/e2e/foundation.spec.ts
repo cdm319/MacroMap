@@ -322,6 +322,29 @@ test('keeps an unauthenticated household behind sign-in', async ({ page }) => {
   ).toBeVisible();
 });
 
+test('aligns recipe photos at the top of cards with different title lengths', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.locator('body').evaluate((body) => {
+    body.insertAdjacentHTML(
+      'beforeend',
+      `<div class="recipe-grid">
+        <button class="recipe-card"><img class="recipe-card-photo recipe-photo-image" alt=""><div><h2>Short title</h2></div></button>
+        <button class="recipe-card"><div class="recipe-card-photo recipe-photo-placeholder"></div><div><h2>A title<br>on two lines</h2></div></button>
+      </div>`,
+    );
+  });
+
+  const mediaTops = await page
+    .locator('.recipe-grid:last-child > .recipe-card > :first-child')
+    .evaluateAll((media) =>
+      media.map((item) => item.getBoundingClientRect().top),
+    );
+
+  expect(new Set(mediaTops).size).toBe(1);
+});
+
 test('saves targets through the authenticated API', async ({ page }) => {
   await page.addInitScript(() => {
     window.sessionStorage.setItem(

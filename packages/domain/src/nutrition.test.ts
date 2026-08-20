@@ -142,6 +142,385 @@ describe('nutrition database estimation', () => {
         matches: [{ foodCode: 'generic-turkey-mince', foodSource: 'label' }],
       },
     });
+    expect(
+      estimateRecipeNutrition(
+        [
+          ingredient(1, 'tbsp', 'onion granules'),
+          ingredient(1, 'tsp', 'chilli flakes'),
+        ],
+        1,
+      ),
+    ).toMatchObject({
+      kind: 'estimated',
+      nutrition: {
+        carbsGrams: 5.06,
+        fatGrams: 0.41,
+        kcal: 31.11,
+        proteinGrams: 0.94,
+      },
+      provenance: {
+        confidence: 'medium',
+        matches: [
+          {
+            foodCode: 'generic-onion-granules',
+            foodSource: 'label',
+            grams: 7,
+            matchConfidence: 'high',
+            quantitySource: 'household_measure',
+          },
+          {
+            foodCode: 'generic-chilli-flakes',
+            foodSource: 'label',
+            grams: 2,
+            matchConfidence: 'high',
+            quantitySource: 'household_measure',
+          },
+        ],
+      },
+    });
+    expect(
+      estimateRecipeNutrition([ingredient(100, 'g', 'maple syrup')], 1),
+    ).toMatchObject({
+      kind: 'estimated',
+      nutrition: {
+        carbsGrams: 67,
+        fatGrams: 0.1,
+        kcal: 270,
+        proteinGrams: 0,
+      },
+      provenance: {
+        confidence: 'high',
+        matches: [{ foodCode: 'generic-maple-syrup', foodSource: 'label' }],
+      },
+    });
+    expect(
+      estimateRecipeNutrition([ingredient(100, 'ml', 'fish sauce')], 1),
+    ).toMatchObject({
+      kind: 'estimated',
+      nutrition: {
+        carbsGrams: 11.6,
+        fatGrams: 0.5,
+        kcal: 73,
+        proteinGrams: 6.6,
+      },
+      provenance: {
+        confidence: 'medium',
+        matches: [
+          {
+            foodCode: 'generic-fish-sauce',
+            foodSource: 'label',
+            quantitySource: 'household_measure',
+          },
+        ],
+      },
+    });
+  });
+
+  it('uses the approved macro-equivalent ingredient mappings', () => {
+    const foods = [
+      ['basil', '13-804'],
+      ['parsley', '13-844'],
+      ['fresh coriander', '13-888'],
+      ['rosemary', '13-892'],
+      ['cacao powder', '12-545'],
+      ['pesto', '17-622'],
+      ['rice wine vinegar', '17-339'],
+      ['lean diced beef', '18-468'],
+      ['turkey breast', '18-349'],
+      ['cannellini beans', '13-666'],
+      ['chickpeas', '13-670'],
+      ['cherry tomatoes', '13-517'],
+      ['milk', '12-313'],
+      ['sriracha', '17-719'],
+      ['drinking chocolate', '17-498'],
+      ['egg white', '12-938'],
+      ['egg yolk', '12-939'],
+    ] as const;
+
+    for (const [name, foodCode] of foods) {
+      expect(
+        estimateRecipeNutrition([ingredient(100, 'g', name)], 1),
+      ).toMatchObject({
+        kind: 'estimated',
+        provenance: { matches: [{ foodCode, matchConfidence: 'medium' }] },
+      });
+    }
+  });
+
+  it('uses approved UK reference labels at medium confidence', () => {
+    const foods = [
+      ['chipotle paste', 'g', 'reference-chipotle-paste', 171, 2.5, 26.7, 5.1],
+      ['coconut water', 'ml', 'reference-coconut-water', 18, 0, 4.5, 0],
+      ['chia seeds', 'g', 'reference-chia-seeds', 422, 23.9, 2.4, 27.7],
+      ['baby corn', 'g', 'reference-baby-corn', 47, 2.6, 6.5, 0.4],
+      ['lemongrass', 'g', 'reference-lemongrass', 113, 1.8, 25.3, 0.5],
+      ['sea bass', 'g', 'reference-sea-bass', 128, 23.6, 0, 3.6],
+      ['hoisin sauce', 'ml', 'reference-hoisin-sauce', 308, 2.5, 70, 2],
+      ['oat milk', 'ml', 'reference-oat-drink', 49, 1, 6.4, 2.1],
+      [
+        'coconut milk drink',
+        'ml',
+        'reference-coconut-drink',
+        20,
+        0.1,
+        2.7,
+        0.8,
+      ],
+      ['flaxseed', 'g', 'reference-flaxseed', 505, 24.1, 4.9, 38.1],
+      ['hemp seeds', 'g', 'reference-hemp-seed', 605, 33, 1.9, 51],
+      ['coconut flour', 'g', 'reference-coconut-flour', 390, 15.3, 14.7, 21.1],
+      [
+        'cajun seasoning',
+        'g',
+        'reference-cajun-seasoning',
+        314,
+        10.9,
+        45.9,
+        6.5,
+      ],
+      ['jerk seasoning', 'g', 'reference-jerk-seasoning', 209, 4.5, 24, 5.9],
+      ['prosciutto', 'g', 'reference-prosciutto', 243, 26.6, 0.3, 15],
+    ] as const;
+
+    for (const [name, unit, foodCode, kcal, protein, carbs, fat] of foods) {
+      expect(
+        estimateRecipeNutrition([ingredient(100, unit, name)], 1),
+      ).toMatchObject({
+        kind: 'estimated',
+        nutrition: {
+          carbsGrams: carbs,
+          fatGrams: fat,
+          kcal,
+          proteinGrams: protein,
+        },
+        provenance: {
+          confidence: 'medium',
+          matches: [
+            {
+              foodCode,
+              foodSource: 'label',
+              foodVersion: '2026-08-20',
+              matchConfidence: 'medium',
+            },
+          ],
+        },
+      });
+    }
+  });
+
+  it('uses the approved label measures for spices and prosciutto', () => {
+    const spices = estimateRecipeNutrition(
+      [
+        ingredient(1, 'tsp', 'Cajun seasoning'),
+        ingredient(1, 'tsp', 'jerk seasoning'),
+      ],
+      1,
+    );
+    const prosciutto = estimateRecipeNutrition(
+      [ingredient(2, 'items', 'prosciutto')],
+      1,
+    );
+
+    expect(spices).toMatchObject({
+      kind: 'estimated',
+      provenance: {
+        confidence: 'medium',
+        matches: [
+          {
+            foodCode: 'reference-cajun-seasoning',
+            grams: 2.25,
+            quantitySource: 'household_measure',
+          },
+          {
+            foodCode: 'reference-jerk-seasoning',
+            grams: 2.25,
+            quantitySource: 'household_measure',
+          },
+        ],
+      },
+    });
+    expect(prosciutto).toMatchObject({
+      kind: 'estimated',
+      provenance: {
+        confidence: 'medium',
+        matches: [
+          {
+            foodCode: 'reference-prosciutto',
+            grams: 28,
+            quantitySource: 'label_measure',
+          },
+        ],
+      },
+    });
+  });
+
+  it('uses the HECK Chicken Italia label for weights and sausage counts', () => {
+    const grams = estimateRecipeNutrition(
+      [ingredient(255, 'g', 'chicken sausages')],
+      1,
+    );
+    const sausages = estimateRecipeNutrition(
+      [ingredient(6, 'items', 'HECK Chicken Italia sausages')],
+      1,
+    );
+
+    expect(grams).toMatchObject({
+      kind: 'estimated',
+      nutrition: {
+        carbsGrams: 7.34,
+        fatGrams: 5.83,
+        kcal: 254.88,
+        proteinGrams: 41.04,
+      },
+      provenance: {
+        confidence: 'high',
+        matches: [
+          {
+            foodCode: 'heck-chicken-italia',
+            foodSource: 'label',
+            grams: 255,
+            matchConfidence: 'high',
+            quantitySource: 'metric',
+          },
+        ],
+      },
+    });
+    expect(sausages).toMatchObject({
+      kind: 'estimated',
+      nutrition: grams.kind === 'estimated' ? grams.nutrition : {},
+      provenance: {
+        confidence: 'high',
+        matches: [
+          {
+            foodCode: 'heck-chicken-italia',
+            grams: 255,
+            quantitySource: 'label_measure',
+          },
+        ],
+      },
+    });
+  });
+
+  it('always calculates calorie-dense seasoning exceptions', () => {
+    const result = estimateRecipeNutrition(
+      [
+        ingredient(10, 'g', 'curry powder'),
+        ingredient(10, 'g', 'garam masala'),
+        ingredient(10, 'g', 'sesame seeds'),
+      ],
+      1,
+    );
+
+    expect(result).toMatchObject({
+      kind: 'estimated',
+      provenance: {
+        matches: [
+          { foodCode: 'generic-curry-powder', foodSource: 'label' },
+          { foodCode: 'generic-garam-masala', foodSource: 'label' },
+          { foodCode: '14-844' },
+        ],
+        source: 'nutrition_database',
+      },
+    });
+    if (result.kind !== 'estimated') throw new Error('Expected an estimate.');
+    expect(result.provenance.omissions).toBeUndefined();
+  });
+
+  it('uses household profiles for curry and chilli wording variants', () => {
+    const foods = [
+      ['mild curry powder', 'generic-curry-powder'],
+      ['hot curry powder', 'generic-curry-powder'],
+      ['dried chilli flakes', 'generic-chilli-flakes'],
+      ['crushed chillies', 'generic-chilli-flakes'],
+    ] as const;
+
+    for (const [name, foodCode] of foods) {
+      expect(
+        estimateRecipeNutrition([ingredient(20, 'g', name)], 1),
+      ).toMatchObject({
+        kind: 'estimated',
+        provenance: { matches: [{ foodCode, foodSource: 'label' }] },
+      });
+    }
+  });
+
+  it('uses validated household item weights at medium confidence', () => {
+    const foods = [
+      ['chicken breast', 200],
+      ['cod fillet', 150],
+      ['egg', 60],
+      ['large egg', 70],
+      ['garlic clove', 3],
+      ['lemon', 58],
+      ['lime', 44],
+      ['banana', 120],
+      ['sweet potato', 200],
+      ['baking potato', 250],
+      ['avocado', 150],
+      ['burger bun', 70],
+      ['bay leaf', 0.5],
+      ['lemongrass stalk', 12],
+      ['orange', 140],
+      ['potato', 175],
+      ['red pepper', 160],
+      ['green bell pepper', 160],
+      ['salmon fillet', 120],
+      ['baby corn', 10],
+      ['bacon medallion', 30],
+      ['egg white', 40],
+      ['egg yolk', 20],
+      ['apple', 150],
+      ['baby gem lettuce', 100],
+      ['bagel', 90],
+      ['cannelloni tube', 20],
+      ['carrot', 80],
+      ['cherry tomato', 20],
+      ['chicken thigh', 100],
+      ['chipolata sausage', 60],
+      ['chorizo sausage', 60],
+      ['corncob', 60],
+      ['English muffin', 70],
+      ['flatbread', 70],
+      ['pak choi', 150],
+      ['leek', 125],
+    ] as const;
+
+    for (const [name, grams] of foods) {
+      expect(
+        estimateRecipeNutrition([ingredient(1, 'item', name)], 1),
+      ).toMatchObject({
+        kind: 'estimated',
+        provenance: {
+          confidence: 'medium',
+          matches: [{ grams, quantitySource: 'household_measure' }],
+        },
+      });
+    }
+  });
+
+  it('uses reviewed herb and tin measures', () => {
+    const measures = [
+      ['baked beans', 1, 'tin', 400],
+      ['chickpeas', 1, 'tin', 240],
+      ['cannellini beans', 1, 'can', 240],
+      ['parsley', 1, 'handful', 15],
+      ['basil', 0.5, 'handful', 7.5],
+      ['fresh coriander', 1, 'packet', 30],
+      ['fresh rosemary', 2, 'sprig', 2],
+      ['baby corn', 1, 'packet', 175],
+    ] as const;
+
+    for (const [name, quantity, unit, grams] of measures) {
+      expect(
+        estimateRecipeNutrition([ingredient(quantity, unit, name)], 1),
+      ).toMatchObject({
+        kind: 'estimated',
+        provenance: {
+          confidence: 'medium',
+          matches: [{ grams, quantitySource: 'household_measure' }],
+        },
+      });
+    }
   });
 
   it('recognises the protein powder wording used by the Paprika archive', () => {
@@ -192,28 +571,41 @@ describe('nutrition database estimation', () => {
     }
   });
 
-  it('uses reviewable close matches for ordinary UK ingredient wording', () => {
+  it('keeps genuine nutritional approximations at low confidence', () => {
+    expect(
+      estimateRecipeNutrition([ingredient(100, 'g', 'mirin')], 1),
+    ).toMatchObject({
+      kind: 'estimated',
+      provenance: {
+        confidence: 'low',
+        matches: [{ foodCode: '17-705', grams: 100, matchConfidence: 'low' }],
+      },
+    });
+  });
+
+  it('treats literal wording variants as medium confidence', () => {
     const foods = [
-      ['chicken sausages', 1, 'item', '19-658', 60],
       ['wholemeal penne', 100, 'g', '11-718', 100],
       ['cornflour mixed with water', 1, 'tbsp', '11-1045', 8.25],
       ['Worcester sauce', 1, 'tbsp', '17-723', 16.5],
-      ['sriracha', 1, 'tbsp', '17-719', 16.5],
-      ['coconut flour', 100, 'g', '14-873', 100],
       ['white fish', 100, 'g', '16-372', 100],
       ['couscous', 100, 'g', '11-901', 100],
+      ['Thai red curry paste', 100, 'g', '17-720', 100],
+      ['coconut sugar', 100, 'g', '17-063', 100],
+      ['peanut butter', 100, 'g', '14-892', 100],
+      ['skimmed milk', 100, 'ml', '12-307', 103],
+      ['low-salt soy sauce', 1, 'tbsp', '17-721', 17.4],
+      ['tinned reduced-fat coconut milk', 100, 'ml', '14-890', 97],
     ] as const;
 
     for (const [name, quantity, unit, foodCode, grams] of foods) {
-      const result = estimateRecipeNutrition(
-        [ingredient(quantity, unit, name)],
-        1,
-      );
-      expect(result).toMatchObject({
+      expect(
+        estimateRecipeNutrition([ingredient(quantity, unit, name)], 1),
+      ).toMatchObject({
         kind: 'estimated',
         provenance: {
-          confidence: 'low',
-          matches: [{ foodCode, grams, matchConfidence: 'low' }],
+          confidence: 'medium',
+          matches: [{ foodCode, grams, matchConfidence: 'medium' }],
         },
       });
     }
@@ -300,12 +692,12 @@ describe('nutrition database estimation', () => {
         proteinGrams: 57.21,
       },
       provenance: {
-        confidence: 'low',
+        confidence: 'medium',
         matches: [
           {
             grams: 250,
             ingredientIndex: 0,
-            quantitySource: 'estimated_count',
+            quantitySource: 'household_measure',
           },
           { ingredientIndex: 1, quantitySource: 'metric' },
           {
@@ -331,7 +723,7 @@ describe('nutrition database estimation', () => {
         ingredient(1, 'tbsp', 'coconut oil'),
         ingredient(2, 'clove', 'garlic'),
         ingredient(200, 'ml', 'chicken stock'),
-        ingredient(1, 'tsp', 'smoked paprika'),
+        ingredient(1, 'tbsp', 'smoked paprika'),
         ingredient(1, 'tsp', 'ground cinnamon'),
       ],
       2,
@@ -340,7 +732,7 @@ describe('nutrition database estimation', () => {
     expect(result).toMatchObject({
       kind: 'estimated',
       provenance: {
-        confidence: 'low',
+        confidence: 'medium',
         matches: [
           { grams: 13.8, quantitySource: 'household_measure' },
           { grams: 6, quantitySource: 'household_measure' },
@@ -358,6 +750,23 @@ describe('nutrition database estimation', () => {
         ],
       },
     });
+  });
+
+  it('does not omit a dried seasoning above the 10g boundary', () => {
+    const result = estimateRecipeNutrition(
+      [ingredient(25, 'g', 'smoked paprika')],
+      1,
+    );
+
+    expect(result).toMatchObject({
+      kind: 'estimated',
+      provenance: {
+        confidence: 'low',
+        matches: [{ foodCode: '13-876', grams: 25 }],
+      },
+    });
+    if (result.kind !== 'estimated') throw new Error('Expected an estimate.');
+    expect(result.provenance.omissions).toBeUndefined();
   });
 
   it('keeps measure conversions for exact CoFID food names', () => {

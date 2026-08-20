@@ -240,6 +240,7 @@ export const maxRecipeImportCharacters = 512 * 1024;
 export const recipeImportWarningSchema = z
   .object({
     code: z.enum([
+      'HOUSEHOLD_SUBSTITUTION_APPLIED',
       'INGREDIENT_REVIEW_NEEDED',
       'INVALID_NUTRITION',
       'INVALID_PHOTO',

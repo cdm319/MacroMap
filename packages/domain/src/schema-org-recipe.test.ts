@@ -171,6 +171,11 @@ describe('Schema.org recipe imports', () => {
         recipeIngredient: [
           '2cm ginger',
           '1 handful baby spinach leaves',
+          '1 small handful parsley',
+          '4 sprigs of fresh thyme',
+          '1 pack baby corn',
+          '1 drizzle rice wine vinegar',
+          '2 large sweet potatoes (600g), scrubbed clean',
           '- 2 x 200g chicken breasts',
           'Salt and pepper',
           'Pinch of black pepper',
@@ -187,6 +192,36 @@ describe('Schema.org recipe imports', () => {
         preparationNote: '',
         quantity: 1,
         unit: 'handful',
+      },
+      {
+        name: 'parsley',
+        preparationNote: '',
+        quantity: 0.5,
+        unit: 'handful',
+      },
+      {
+        name: 'fresh thyme',
+        preparationNote: '',
+        quantity: 4,
+        unit: 'sprig',
+      },
+      {
+        name: 'baby corn',
+        preparationNote: '',
+        quantity: 1,
+        unit: 'packet',
+      },
+      {
+        name: 'rice wine vinegar',
+        preparationNote: '',
+        quantity: 1,
+        unit: 'tsp',
+      },
+      {
+        name: 'large sweet potatoes',
+        preparationNote: 'scrubbed clean',
+        quantity: 600,
+        unit: 'g',
       },
       {
         name: 'chicken breasts',
@@ -206,6 +241,73 @@ describe('Schema.org recipe imports', () => {
         quantity: 1,
         unit: 'pinch',
       },
+    ]);
+    expect(result.draft.nutrition).not.toBeNull();
+  });
+
+  it('applies approved household substitutions before review', () => {
+    const result = parseSchemaOrgRecipe(
+      JSON.stringify({
+        ...recipe,
+        nutrition: undefined,
+        recipeIngredient: [
+          '2 onions, finely chopped',
+          '150g red onion',
+          '1 tbsp onion powder',
+          '2 red chillies, sliced',
+          '15g green chilli',
+          '1 tsp chilli flakes',
+        ],
+        recipeYield: '2 servings',
+      }),
+    );
+
+    if (result.kind !== 'preview') throw new Error('Expected a preview.');
+    expect(result.draft.ingredients).toEqual([
+      ingredient('onion granules', 2, 'tbsp', 'finely chopped'),
+      ingredient('onion granules', 1, 'tbsp'),
+      ingredient('onion granules', 1, 'tbsp'),
+      ingredient('chilli flakes', 2, 'tsp', 'sliced'),
+      ingredient('chilli flakes', 1, 'tsp'),
+      ingredient('chilli flakes', 1, 'tsp'),
+    ]);
+    expect(result.draft.nutritionProvenance).toMatchObject({
+      confidence: 'medium',
+      matches: [
+        { foodCode: 'generic-onion-granules', grams: 14 },
+        { foodCode: 'generic-onion-granules', grams: 7 },
+        { foodCode: 'generic-onion-granules', grams: 7 },
+        { foodCode: 'generic-chilli-flakes', grams: 4 },
+        { foodCode: 'generic-chilli-flakes', grams: 2 },
+        { foodCode: 'generic-chilli-flakes', grams: 2 },
+      ],
+      source: 'nutrition_database',
+    });
+    expect(result.warnings).toContainEqual({
+      code: 'HOUSEHOLD_SUBSTITUTION_APPLIED',
+      message:
+        'Applied household substitutions: onion → onion granules; onion powder → onion granules; fresh chilli → chilli flakes. Check them before saving.',
+    });
+  });
+
+  it('reads Paprika fraction characters before ingredient units', () => {
+    const result = parseSchemaOrgRecipe(
+      JSON.stringify({
+        ...recipe,
+        nutrition: undefined,
+        recipeIngredient: [
+          '1⁄2 tsp black pepper',
+          '1 ½ tsp baking powder',
+          '1 green bell pepper',
+        ],
+      }),
+    );
+
+    if (result.kind !== 'preview') throw new Error('Expected a preview.');
+    expect(result.draft.ingredients).toEqual([
+      ingredient('black pepper', 0.5, 'tsp'),
+      ingredient('baking powder', 1.5, 'tsp'),
+      ingredient('green bell pepper', 1, 'item'),
     ]);
     expect(result.draft.nutrition).not.toBeNull();
   });

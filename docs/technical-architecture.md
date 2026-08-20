@@ -1,7 +1,7 @@
 # MacroMap technical architecture
 
-Status: Approved; Phase 2 implemented
-Last reviewed: 2026-08-18
+Status: Approved; Phase 3 in progress
+Last reviewed: 2026-08-20
 
 ## Purpose and authority
 
@@ -274,7 +274,7 @@ status-changing job. Past meal slots are immutable based on the current
 ## Nutrition and units
 
 The bundled nutrition database combines the versioned CoFID dataset for common
-UK ingredients with a small number of explicit, versioned label profiles. The
+UK ingredients with explicit household and approved UK reference-label profiles. The
 free USDA FoodData Central API is a fallback for ingredients that cannot be
 matched with sufficient confidence. USDA responses and accepted matches are
 cached so ordinary planning does not require an external nutrition request.
@@ -287,13 +287,19 @@ The current nutrition slice stores:
 - the conversion source and match confidence.
 
 Metric and avoirdupois weights are converted directly. Common household
-measures prefer explicit ingredient densities and item weights. Once a food has
-matched, a conservative default can cover an otherwise unsupported household
-unit; that assumption is stored and makes the match low confidence. Bounded
-rules also map familiar UK wording to a close CoFID food at low confidence.
-Small, explicitly allowlisted seasonings may be omitted as negligible; those
-omissions are also shown and make the estimate low confidence. Unknown or
-ambiguous foods remain without estimated nutrition and are shown for review.
+measures prefer explicit ingredient densities and item weights. Owner-reviewed
+household measures are medium confidence; an unreviewed fallback remains low
+confidence. Bounded rules also map familiar UK wording to a close CoFID food at
+low confidence. Small, explicitly allowlisted seasonings may be omitted as
+negligible up to 10 g; those omissions remain visible and make the estimate
+medium unless another ingredient makes it low. Calorie-dense household
+exceptions such as curry powder, garam masala, sesame seeds, onion granules,
+and chilli flakes are always calculated. Unknown or ambiguous foods remain
+without estimated nutrition and are shown for review.
+
+Recipe imports apply the approved household onion and chilli substitutions
+before review so stored ingredients, nutrition, and future grocery quantities
+agree. The retained import content preserves the original source text.
 
 Only compatible dimensions and confidently equivalent ingredients are merged
 in the grocery list. Ambiguous count-to-weight conversions remain separate and

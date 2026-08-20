@@ -6,6 +6,7 @@ import type {
 import { cofid2021Rows } from '@macromap/domain/cofid-2021-data';
 import {
   everydayIngredientRules,
+  freshHerbMeasures,
   type IngredientRule,
 } from '@macromap/domain/nutrition-rules';
 
@@ -53,57 +54,186 @@ export type NutritionEstimationResult =
 
 // Label source: data/household-label-profiles.md
 const labelFoods: NutritionFood[] = [
-  {
-    carbsThousandths: 0,
-    code: 'generic-almond-milk',
-    fatThousandths: 1_100,
-    foodSource: 'label',
-    foodVersion: '2026-08-19',
-    kcalThousandths: 15_000,
-    name: 'Generic almond milk',
-    proteinThousandths: 500,
-  },
-  {
-    carbsThousandths: 1_000,
-    code: 'beef-stock-cube',
-    fatThousandths: 150,
-    foodSource: 'label',
-    foodVersion: '2026-08-19',
-    kcalThousandths: 8_000,
-    name: 'Beef stock, prepared from a cube',
-    proteinThousandths: 500,
-  },
-  {
-    carbsThousandths: 1_400,
-    code: 'chicken-stock-cube',
-    fatThousandths: 285,
-    foodSource: 'label',
-    foodVersion: '2026-08-19',
-    kcalThousandths: 8_500,
-    name: 'Chicken stock, prepared from a cube',
-    proteinThousandths: 350,
-  },
-  {
-    carbsThousandths: 500,
-    code: 'generic-turkey-mince',
-    fatThousandths: 1_200,
-    foodSource: 'label',
-    foodVersion: '2026-08-19',
-    kcalThousandths: 119_000,
-    name: 'Generic turkey mince',
-    proteinThousandths: 27_000,
-  },
-  {
-    carbsThousandths: 6_800,
-    code: 'generic-protein-powder',
-    fatThousandths: 4_500,
-    foodSource: 'label',
-    foodVersion: '2026-08-19',
-    kcalThousandths: 371_000,
-    name: 'Generic protein powder',
-    proteinThousandths: 74_000,
-  },
+  labelFood(
+    'generic-almond-milk',
+    'Generic almond milk',
+    15,
+    0.5,
+    0,
+    1.1,
+    '2026-08-19',
+  ),
+  labelFood('generic-onion-granules', 'Generic onion granules', 337, 10, 64, 1),
+  labelFood('generic-chilli-flakes', 'Generic chilli flakes', 376, 12, 29, 17),
+  labelFood('generic-maple-syrup', 'Generic maple syrup', 270, 0, 67, 0.1),
+  labelFood(
+    'generic-fish-sauce',
+    'Generic fish sauce',
+    63.478,
+    5.739,
+    10.087,
+    0.435,
+  ),
+  labelFood(
+    'generic-garam-masala',
+    'Generic garam masala',
+    335,
+    13.7,
+    20,
+    13.8,
+  ),
+  labelFood(
+    'generic-curry-powder',
+    'Generic curry powder',
+    318,
+    11.1,
+    26.9,
+    11.8,
+  ),
+  labelFood(
+    'beef-stock-cube',
+    'Beef stock, prepared from a cube',
+    8,
+    0.5,
+    1,
+    0.15,
+    '2026-08-19',
+  ),
+  labelFood(
+    'chicken-stock-cube',
+    'Chicken stock, prepared from a cube',
+    8.5,
+    0.35,
+    1.4,
+    0.285,
+    '2026-08-19',
+  ),
+  labelFood(
+    'generic-turkey-mince',
+    'Generic turkey mince',
+    119,
+    27,
+    0.5,
+    1.2,
+    '2026-08-19',
+  ),
+  labelFood(
+    'generic-protein-powder',
+    'Generic protein powder',
+    371,
+    74,
+    6.8,
+    4.5,
+    '2026-08-19',
+  ),
+  labelFood(
+    'reference-chipotle-paste',
+    'Reference chipotle paste',
+    171,
+    2.5,
+    26.7,
+    5.1,
+  ),
+  labelFood(
+    'reference-coconut-water',
+    'Reference coconut water',
+    18,
+    0,
+    4.5,
+    0,
+  ),
+  labelFood(
+    'reference-chia-seeds',
+    'Reference chia seeds',
+    422,
+    23.9,
+    2.4,
+    27.7,
+  ),
+  labelFood('reference-baby-corn', 'Reference baby corn', 47, 2.6, 6.5, 0.4),
+  labelFood(
+    'reference-lemongrass',
+    'Reference lemongrass',
+    113,
+    1.8,
+    25.3,
+    0.5,
+  ),
+  labelFood('reference-sea-bass', 'Reference raw sea bass', 128, 23.6, 0, 3.6),
+  labelFood(
+    'reference-hoisin-sauce',
+    'Reference hoisin sauce',
+    308,
+    2.5,
+    70,
+    2,
+  ),
+  labelFood('reference-oat-drink', 'Reference oat drink', 49, 1, 6.4, 2.1),
+  labelFood(
+    'reference-coconut-drink',
+    'Reference coconut drink',
+    20,
+    0.1,
+    2.7,
+    0.8,
+  ),
+  labelFood('reference-flaxseed', 'Reference flaxseed', 505, 24.1, 4.9, 38.1),
+  labelFood('reference-hemp-seed', 'Reference hemp seed', 605, 33, 1.9, 51),
+  labelFood(
+    'reference-coconut-flour',
+    'Reference coconut flour',
+    390,
+    15.3,
+    14.7,
+    21.1,
+  ),
+  labelFood(
+    'reference-cajun-seasoning',
+    'Reference Cajun seasoning',
+    314,
+    10.9,
+    45.9,
+    6.5,
+  ),
+  labelFood(
+    'reference-jerk-seasoning',
+    'Reference jerk seasoning',
+    209,
+    4.5,
+    24,
+    5.9,
+  ),
+  labelFood('reference-prosciutto', 'Reference prosciutto', 243, 26.6, 0.3, 15),
+  labelFood(
+    'heck-chicken-italia',
+    'HECK Chicken Italia sausage, raw-weight equivalent',
+    99.953,
+    16.094,
+    2.88,
+    2.287,
+  ),
 ];
+
+function labelFood(
+  code: string,
+  name: string,
+  kcal: number,
+  protein: number,
+  carbs: number,
+  fat: number,
+  foodVersion = '2026-08-20',
+): NutritionFood {
+  return {
+    carbsThousandths: Math.round(carbs * 1_000),
+    code,
+    fatThousandths: Math.round(fat * 1_000),
+    foodSource: 'label',
+    foodVersion,
+    kcalThousandths: Math.round(kcal * 1_000),
+    name,
+    proteinThousandths: Math.round(protein * 1_000),
+  };
+}
 const foods: NutritionFood[] = [
   ...cofid2021Rows.trim().split('\n').map(readFood),
   ...labelFoods,
@@ -124,17 +254,36 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     matchConfidence: 'high',
     volumeSource: 'label_measure',
   },
-  { aliases: ['apple'], foodCode: '14-319', countGrams: 150 },
-  { aliases: ['avocado'], foodCode: '14-386', countGrams: 150 },
-  { aliases: ['baked beans', 'heinz baked beans'], foodCode: '13-532' },
-  { aliases: ['baking potato'], foodCode: '13-489', countGrams: 250 },
-  { aliases: ['banana'], foodCode: '14-318', countGrams: 120 },
+  reviewedCount(['apple'], '14-319', 150),
+  reviewedCount(['avocado'], '14-386', 150),
+  {
+    aliases: ['baked beans', 'heinz baked beans'],
+    foodCode: '13-532',
+    measures: { can: 400, tin: 400 },
+  },
+  reviewedCount(['baking potato'], '13-489', 250),
+  reviewedCount(['banana'], '14-318', 120),
   { aliases: ['basmati rice'], foodCode: '11-857' },
+  {
+    aliases: ['basil', 'basil leaf', 'fresh basil'],
+    countGrams: 5,
+    foodCode: '13-804',
+    gramsPerMillilitre: 0.07,
+    measures: freshHerbMeasures,
+  },
   {
     aliases: ['baby potato', 'baby new potato', 'new potato'],
     foodCode: '13-618',
   },
+  {
+    aliases: ['baby corn', 'baby sweetcorn'],
+    countGrams: 10,
+    countSource: 'household_measure',
+    foodCode: 'reference-baby-corn',
+    measures: { packet: 175 },
+  },
   { aliases: ['beef mince', 'minced beef'], foodCode: '18-469' },
+  { aliases: ['lean diced beef'], foodCode: '18-468' },
   {
     aliases: ['beef stock', 'beef stock cube'],
     countGrams: 200,
@@ -165,11 +314,16 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     foodCode: '17-661',
     gramsPerMillilitre: 0.96,
   },
-  { aliases: ['carrot'], foodCode: '13-496', countGrams: 80 },
+  reviewedCount(['carrot'], '13-496', 80),
   {
     aliases: ['cashew', 'cashew nut'],
     foodCode: '14-811',
     gramsPerMillilitre: 0.57,
+  },
+  {
+    aliases: ['chia seed'],
+    foodCode: 'reference-chia-seeds',
+    gramsPerMillilitre: 0.65,
   },
   {
     aliases: ['cheddar', 'cheddar cheese'],
@@ -177,11 +331,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     gramsPerMillilitre: 0.46,
   },
   { aliases: ['halloumi', 'halloumi cheese'], foodCode: '12-496' },
-  {
-    aliases: ['chicken breast', 'chicken breast fillet'],
-    foodCode: '18-290',
-    countGrams: 150,
-  },
+  reviewedCount(['chicken breast', 'chicken breast fillet'], '18-290', 200),
   {
     aliases: ['chicken stock', 'chicken stock cube'],
     countGrams: 200,
@@ -190,6 +340,19 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     gramsPerMillilitre: 1,
     matchConfidence: 'high',
     volumeSource: 'label_measure',
+  },
+  {
+    aliases: [
+      'chicken sausage',
+      'heck chicken italia',
+      'heck chicken italia sausage',
+      'heck chicken sausage',
+      'heck reduced fat sausage',
+    ],
+    countGrams: 42.5,
+    countSource: 'label_measure',
+    foodCode: 'heck-chicken-italia',
+    matchConfidence: 'high',
   },
   { aliases: ['chorizo'], foodCode: '19-516' },
   {
@@ -203,6 +366,20 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     gramsPerMillilitre: 0.97,
   },
   {
+    aliases: [
+      'reduced fat coconut milk',
+      'tin of reduced fat coconut milk',
+      'tinned reduced fat coconut milk',
+    ],
+    foodCode: '14-890',
+    gramsPerMillilitre: 0.97,
+  },
+  {
+    aliases: ['coconut water'],
+    foodCode: 'reference-coconut-water',
+    gramsPerMillilitre: 1,
+  },
+  {
     aliases: ['desiccated coconut'],
     foodCode: '14-873',
   },
@@ -213,14 +390,31 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     gramsPerMillilitre: 0.92,
   },
   {
+    aliases: ['coconut drink', 'coconut milk drink'],
+    foodCode: 'reference-coconut-drink',
+    gramsPerMillilitre: 1,
+  },
+  {
+    aliases: ['coconut flour'],
+    foodCode: 'reference-coconut-flour',
+    gramsPerMillilitre: 0.5,
+  },
+  {
     aliases: ['cooked basmati rice', 'pre cooked rice'],
     foodCode: '11-858',
     gramsPerMillilitre: 0.67,
   },
   {
-    aliases: ['coriander', 'coriander leaf'],
+    aliases: ['coriander', 'coriander leaf', 'fresh coriander'],
+    countGrams: 5,
     foodCode: '13-888',
     gramsPerMillilitre: 0.07,
+    measures: freshHerbMeasures,
+  },
+  {
+    aliases: ['cacao powder', 'cocoa powder'],
+    foodCode: '12-545',
+    gramsPerMillilitre: 0.45,
   },
   {
     aliases: ['corn flour', 'cornflour'],
@@ -228,12 +422,32 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     gramsPerMillilitre: 0.55,
   },
   {
-    aliases: ['curry powder'],
-    foodCode: '13-876',
+    aliases: ['curry powder', 'hot curry powder', 'mild curry powder'],
+    foodCode: 'generic-curry-powder',
     gramsPerMillilitre: 0.4,
+    matchConfidence: 'high',
   },
-  { aliases: ['egg'], foodCode: '12-937', countGrams: 50 },
-  { aliases: ['large egg'], foodCode: '12-937', countGrams: 60 },
+  {
+    aliases: ['chipotle paste'],
+    foodCode: 'reference-chipotle-paste',
+    gramsPerMillilitre: 1.1,
+  },
+  reviewedCount(['egg'], '12-937', 60),
+  reviewedCount(['large egg'], '12-937', 70),
+  {
+    aliases: ['cannellini bean'],
+    countGrams: 240,
+    countSource: 'household_measure',
+    foodCode: '13-666',
+    measures: { can: 240, tin: 240 },
+  },
+  {
+    aliases: ['chickpea'],
+    countGrams: 240,
+    countSource: 'household_measure',
+    foodCode: '13-670',
+    measures: { can: 240, tin: 240 },
+  },
   {
     aliases: [
       'protein powder',
@@ -270,13 +484,25 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
   },
   {
     aliases: ['garam masala'],
-    foodCode: '13-829',
+    foodCode: 'generic-garam-masala',
     gramsPerMillilitre: 0.4,
+    matchConfidence: 'high',
+  },
+  {
+    aliases: ['cajun seasoning', 'cajun spice'],
+    foodCode: 'reference-cajun-seasoning',
+    gramsPerMillilitre: 0.45,
+  },
+  {
+    aliases: ['jerk seasoning', 'jerk spice'],
+    foodCode: 'reference-jerk-seasoning',
+    gramsPerMillilitre: 0.45,
   },
   {
     aliases: ['garlic', 'garlic clove', 'minced garlic'],
     foodCode: '13-244',
     countGrams: 3,
+    countSource: 'household_measure',
     gramsPerMillilitre: 0.56,
     measures: { clove: 3 },
   },
@@ -312,13 +538,59 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     foodCode: '17-050',
     gramsPerMillilitre: 1.4,
   },
-  { aliases: ['lemon'], foodCode: '14-130', countGrams: 58 },
-  { aliases: ['lime'], foodCode: '14-131', countGrams: 44 },
+  {
+    aliases: ['hemp seed'],
+    foodCode: 'reference-hemp-seed',
+    gramsPerMillilitre: 0.65,
+  },
+  {
+    aliases: ['hoisin', 'hoisin sauce'],
+    foodCode: 'reference-hoisin-sauce',
+    gramsPerMillilitre: 1,
+  },
+  {
+    aliases: ['maple syrup'],
+    foodCode: 'generic-maple-syrup',
+    gramsPerMillilitre: 1.35,
+    matchConfidence: 'high',
+  },
+  {
+    aliases: ['lemon', 'lemon juice', 'lemon juice of'],
+    countGrams: 58,
+    countSource: 'household_measure',
+    foodCode: '14-130',
+    gramsPerMillilitre: 1,
+  },
+  {
+    aliases: ['lemongrass', 'lemongrass stalk'],
+    countGrams: 12,
+    countSource: 'household_measure',
+    foodCode: 'reference-lemongrass',
+    gramsPerMillilitre: 0.6,
+  },
+  {
+    aliases: ['lime', 'lime juice', 'lime juice of'],
+    countGrams: 44,
+    countSource: 'household_measure',
+    foodCode: '14-131',
+    gramsPerMillilitre: 1,
+  },
   { aliases: ['mangetout'], foodCode: '13-122' },
   {
     aliases: ['olive oil'],
     foodCode: '17-038',
     gramsPerMillilitre: 0.91,
+  },
+  {
+    aliases: ['oat drink', 'oat milk'],
+    foodCode: 'reference-oat-drink',
+    gramsPerMillilitre: 1,
+  },
+  {
+    aliases: ['onion granule', 'onion powder'],
+    foodCode: 'generic-onion-granules',
+    gramsPerMillilitre: 7 / 15,
+    matchConfidence: 'high',
   },
   {
     aliases: ['onion', 'red onion'],
@@ -328,6 +600,23 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
   {
     aliases: ['pasta', 'dried pasta', 'dried orzo', 'orzo'],
     foodCode: '11-716',
+  },
+  {
+    aliases: ['parsley', 'parsley leaf', 'fresh parsley'],
+    countGrams: 5,
+    foodCode: '13-844',
+    gramsPerMillilitre: 0.07,
+    measures: freshHerbMeasures,
+  },
+  {
+    aliases: ['pesto'],
+    foodCode: '17-622',
+    gramsPerMillilitre: 1.05,
+  },
+  {
+    aliases: ['flax seed', 'flaxseed', 'ground flaxseed'],
+    foodCode: 'reference-flaxseed',
+    gramsPerMillilitre: 0.65,
   },
   {
     aliases: ['passata', 'canned tomato'],
@@ -340,8 +629,14 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     foodCode: '11-886',
     gramsPerMillilitre: 0.53,
   },
-  { aliases: ['potato'], foodCode: '13-489', countGrams: 175 },
+  reviewedCount(['potato'], '13-489', 175),
   { aliases: ['pork fillet'], countGrams: 150, foodCode: '18-510' },
+  {
+    aliases: ['prosciutto'],
+    countGrams: 14,
+    countSource: 'label_measure',
+    foodCode: 'reference-prosciutto',
+  },
   {
     aliases: ['rapeseed oil'],
     countGrams: 14,
@@ -355,20 +650,37 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
   },
   { aliases: ['raspberry'], foodCode: '14-375' },
   { aliases: ['red lentil', 'dried red lentil'], foodCode: '13-657' },
-  { aliases: ['red pepper'], foodCode: '13-524', countGrams: 160 },
+  reviewedCount(['red pepper'], '13-524', 160),
+  {
+    aliases: [
+      'bell pepper',
+      'green bell pepper',
+      'green pepper',
+      'yellow pepper',
+    ],
+    countGrams: 160,
+    countSource: 'household_measure',
+    foodCode: '13-524',
+  },
   {
     aliases: ['rolled oat', 'oat', 'porridge oat'],
     foodCode: '11-788',
     gramsPerMillilitre: 0.34,
   },
+  reviewedCount(['salmon', 'salmon fillet'], '16-356', 120),
   {
-    aliases: ['salmon', 'salmon fillet'],
-    foodCode: '16-356',
-    countGrams: 120,
+    aliases: ['sea bass', 'sea bass fillet'],
+    countGrams: 150,
+    foodCode: 'reference-sea-bass',
   },
   {
-    aliases: ['semi skimmed milk'],
+    aliases: ['milk', 'semi skimmed milk'],
     foodCode: '12-313',
+    gramsPerMillilitre: 1.03,
+  },
+  {
+    aliases: ['skimmed milk'],
+    foodCode: '12-307',
     gramsPerMillilitre: 1.03,
   },
   {
@@ -383,9 +695,25 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
   },
   { aliases: ['sirloin steak'], foodCode: '18-064', countGrams: 200 },
   {
-    aliases: ['soy sauce', 'light soy sauce', 'dark soy sauce'],
+    aliases: [
+      'soy sauce',
+      'light soy sauce',
+      'dark soy sauce',
+      'low salt soy sauce',
+    ],
     foodCode: '17-721',
     gramsPerMillilitre: 1.16,
+  },
+  {
+    aliases: ['fish sauce'],
+    foodCode: 'generic-fish-sauce',
+    gramsPerMillilitre: 1.15,
+    matchConfidence: 'high',
+  },
+  {
+    aliases: ['sriracha'],
+    foodCode: '17-719',
+    gramsPerMillilitre: 1.1,
   },
   {
     aliases: ['spinach', 'baby spinach', 'baby spinach leaf'],
@@ -393,6 +721,13 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     measures: { handful: 30 },
   },
   { aliases: ['spring onion'], foodCode: '13-352', countGrams: 15 },
+  {
+    aliases: ['rosemary', 'fresh rosemary'],
+    countGrams: 5,
+    foodCode: '13-892',
+    gramsPerMillilitre: 0.07,
+    measures: freshHerbMeasures,
+  },
   {
     aliases: ['strawberry', 'strawberries'],
     foodCode: '14-324',
@@ -403,7 +738,7 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     foodCode: '17-063',
     gramsPerMillilitre: 0.85,
   },
-  { aliases: ['sweet potato'], foodCode: '13-463', countGrams: 200 },
+  reviewedCount(['sweet potato'], '13-463', 200),
   { aliases: ['sweetcorn'], foodCode: '13-622' },
   {
     aliases: ['sunflower oil'],
@@ -411,12 +746,25 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     gramsPerMillilitre: 0.91,
   },
   { aliases: ['tomato'], foodCode: '13-517', countGrams: 100 },
+  reviewedCount(['cherry tomato'], '13-517', 20),
   {
     aliases: ['tomato puree'],
     foodCode: '13-531',
     gramsPerMillilitre: 1.05,
   },
   { aliases: ['tuna steak'], foodCode: '16-399' },
+  { aliases: ['turkey breast'], foodCode: '18-349' },
+  {
+    aliases: [
+      'chilli flake',
+      'crushed chilli',
+      'crushed chillies',
+      'dried chilli flake',
+    ],
+    foodCode: 'generic-chilli-flakes',
+    gramsPerMillilitre: 0.4,
+    matchConfidence: 'high',
+  },
   {
     aliases: ['turkey mince', 'lean turkey mince', 'minced turkey'],
     foodCode: 'generic-turkey-mince',
@@ -428,7 +776,17 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     gramsPerMillilitre: 0.91,
   },
   {
-    aliases: ['vinegar', 'balsamic vinegar', 'red wine vinegar'],
+    aliases: [
+      'vinegar',
+      'apple cider vinegar',
+      'balsamic vinegar',
+      'cider vinegar',
+      'rice vinegar',
+      'rice wine vinegar',
+      'red wine vinegar',
+      'white wine vinegar',
+      'wine vinegar',
+    ],
     foodCode: '17-339',
     gramsPerMillilitre: 1,
   },
@@ -439,6 +797,11 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
     measures: { handful: 30 },
   },
   { aliases: ['walnut'], foodCode: '14-879' },
+  {
+    aliases: ['peanut butter', 'smooth peanut butter'],
+    foodCode: '14-892',
+    gramsPerMillilitre: 1.05,
+  },
   { aliases: ['white rice'], foodCode: '11-861' },
   {
     aliases: ['whole milk'],
@@ -447,6 +810,14 @@ const ingredientRules: ReadonlyArray<IngredientRule> = [
   },
   ...everydayIngredientRules,
 ];
+
+function reviewedCount(
+  aliases: ReadonlyArray<string>,
+  foodCode: string,
+  countGrams: number,
+): IngredientRule {
+  return { aliases, countGrams, countSource: 'household_measure', foodCode };
+}
 
 const ignoredNameWords = new Set([
   'beaten',
@@ -487,23 +858,50 @@ for (const rule of ingredientRules) {
 
 const negligibleSeasonings = new Set(
   [
+    'allspice',
+    'anise',
     'baking powder',
+    'bicarbonate of soda',
     'black pepper',
-    'chilli flakes',
+    'black peppercorn',
+    'cardamom',
+    'cardamom pod',
+    'cayenne pepper',
     'chilli powder',
+    'chilli powder salt and pepper',
     'cinnamon',
+    'cinnamon stick',
+    'coriander seed',
     'cumin',
+    'cumin powder',
+    'cumin seed',
+    'fennel',
+    'fennel seed',
+    'five spice',
+    'chinese five spice',
+    'ground cardamom',
     'ground cinnamon',
-    'onion granules',
-    'onion powder',
+    'ground coriander',
+    'ground cumin',
+    'mixed herb',
     'oregano',
+    'dried oregano',
     'paprika',
+    'hot paprika',
     'pepper',
+    'pink peppercorn',
+    'saffron',
+    'saffron strand',
     'salt',
     'salt and black pepper',
     'salt and pepper',
     'sea salt',
     'smoked paprika',
+    'star anise',
+    'stick of cinnamon',
+    'sprig of fresh oregano',
+    'sweet smoked paprika',
+    'sichuan peppercorn',
     'turmeric',
     'vanilla extract',
     'white pepper',
@@ -571,6 +969,7 @@ const defaultMeasureGrams = new Map([
   ['packet', 250],
   ['pinch', 0.5],
   ['slice', 30],
+  ['sprig', 1],
   ['tin', 400],
   ['unit', 100],
 ]);
@@ -729,6 +1128,15 @@ function readFood(row: string): NutritionFood {
 function matchFood(ingredientName: string): FoodMatch | null {
   const name = normaliseName(ingredientName);
   const rule = findIngredientRule(ingredientName);
+  const ruleFood =
+    rule === undefined ? undefined : foodsByCode.get(rule.foodCode);
+  if (rule !== undefined && ruleFood?.foodSource === 'label') {
+    return {
+      confidence: rule.matchConfidence ?? 'medium',
+      food: ruleFood,
+      rule,
+    };
+  }
   const exact = foodsByName.get(name);
   if (exact?.length === 1) {
     return {
@@ -739,10 +1147,9 @@ function matchFood(ingredientName: string): FoodMatch | null {
   }
 
   if (rule === undefined) return null;
-  const food = foodsByCode.get(rule.foodCode);
-  return food === undefined
+  return ruleFood === undefined
     ? null
-    : { confidence: rule.matchConfidence ?? 'medium', food, rule };
+    : { confidence: rule.matchConfidence ?? 'medium', food: ruleFood, rule };
 }
 
 function findIngredientRule(
@@ -831,24 +1238,10 @@ function measuredQuantity(
 
 function isNegligibleSeasoning(ingredient: RecipeIngredient): boolean {
   const name = normaliseIngredientName(ingredient.name);
-  if (
-    ![...negligibleSeasonings].some(
-      (seasoning) => name === seasoning || name.endsWith(` ${seasoning}`),
-    )
-  ) {
-    return false;
-  }
-
-  const unit = ingredient.unit.trim().toLowerCase();
-  const mass = massUnits.get(unit);
-  if (mass !== undefined) return ingredient.quantity * mass.grams <= 5;
-
-  const millilitres = volumeUnits.get(unit);
-  if (millilitres !== undefined) {
-    return ingredient.quantity * millilitres <= 5;
-  }
-
-  return ['pinch', 'pinches', ...countUnits].includes(unit);
+  if (!negligibleSeasonings.has(name)) return false;
+  const match = matchFood(ingredient.name);
+  const quantity = normaliseQuantity(ingredient, match?.rule);
+  return quantity !== null && quantity.milligrams <= 10_000n;
 }
 
 function nutritionConfidence(
@@ -856,7 +1249,6 @@ function nutritionConfidence(
   omissions: ReadonlyArray<unknown>,
 ): 'high' | 'low' | 'medium' {
   if (
-    omissions.length > 0 ||
     matches.some(
       ({ matchConfidence, quantitySource }) =>
         matchConfidence === 'low' || quantitySource === 'estimated_count',
@@ -864,10 +1256,11 @@ function nutritionConfidence(
   ) {
     return 'low';
   }
-  return matches.some(
-    ({ matchConfidence, quantitySource }) =>
-      matchConfidence !== 'high' || quantitySource === 'household_measure',
-  )
+  return omissions.length > 0 ||
+    matches.some(
+      ({ matchConfidence, quantitySource }) =>
+        matchConfidence !== 'high' || quantitySource === 'household_measure',
+    )
     ? 'medium'
     : 'high';
 }

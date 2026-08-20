@@ -276,16 +276,16 @@ export function RecipeLibrary({ api }: RecipeLibraryProps) {
               />
               <div>
                 <p className="recipe-tags">
-                  {recipe.mealTypes.map(capitalize).join(' · ')}
+                  {recipe.mealTypes.length === 0
+                    ? 'Library only'
+                    : recipe.mealTypes.map(capitalize).join(' · ')}
                 </p>
                 <h2>{recipe.title}</h2>
                 <p>{formatServings(recipe.servingCount)}</p>
                 <span
                   className={`status-pill status-pill--${recipe.planningStatus}`}
                 >
-                  {recipe.planningStatus === 'ready'
-                    ? 'Ready for planning'
-                    : 'Nutrition needed'}
+                  {planningStatusLabel(recipe.planningStatus)}
                 </span>
               </div>
             </button>
@@ -329,7 +329,9 @@ function RecipeDetail({
       ? estimateRecipeNutrition(recipe.ingredients, recipe.servingCount)
       : null;
   const tags = [
-    ...recipe.mealTypes.map(capitalize),
+    ...(recipe.mealTypes.length === 0
+      ? ['Library only']
+      : recipe.mealTypes.map(capitalize)),
     ...recipe.tags.cuisines,
     ...recipe.tags.proteins,
     ...recipe.tags.flavours,
@@ -599,7 +601,12 @@ function localRecipe(id: string, input: RecipeInput): Recipe {
           ? null
           : { confidence: 'confirmed', source: 'manual' },
     photoUrl: null,
-    planningStatus: nutrition === null ? 'needs-nutrition' : 'ready',
+    planningStatus:
+      input.mealTypes.length === 0
+        ? 'library-only'
+        : nutrition === null
+          ? 'needs-nutrition'
+          : 'ready',
     updatedAt: new Date().toISOString(),
   };
 }
@@ -651,6 +658,11 @@ function summaryFrom(recipe: Recipe): RecipeSummary {
 
 function capitalize(value: string): string {
   return `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`;
+}
+
+function planningStatusLabel(status: RecipeSummary['planningStatus']): string {
+  if (status === 'library-only') return 'Library only';
+  return status === 'ready' ? 'Ready for planning' : 'Nutrition needed';
 }
 
 function formatServings(value: number): string {

@@ -19,7 +19,7 @@ import {
   type StoredRecipe,
   type StoredRecipeSummary,
 } from '@macromap/database';
-import { errorResponse, jsonResponse } from './http.js';
+import { databaseErrorResponse, errorResponse, jsonResponse } from './http.js';
 import { prepareRecipeNutrition } from './nutrition.js';
 import {
   InvalidRecipePhotoError,
@@ -121,7 +121,12 @@ async function listRecipes(
     });
     if (response.success) return jsonResponse(200, response.data);
   } catch (error) {
-    return databaseError(error, 'recipe_list_failed', requestId);
+    return databaseErrorResponse(
+      error,
+      'recipe_list_failed',
+      requestId,
+      'MacroMap could not load your recipes.',
+    );
   }
 
   console.error(JSON.stringify({ event: 'invalid_recipe_list', requestId }));
@@ -143,7 +148,12 @@ async function findRecipe(
     );
     if (response.success) return jsonResponse(200, response.data);
   } catch (error) {
-    return databaseError(error, 'recipe_load_failed', requestId);
+    return databaseErrorResponse(
+      error,
+      'recipe_load_failed',
+      requestId,
+      'MacroMap could not load that recipe.',
+    );
   }
 
   console.error(
@@ -184,7 +194,12 @@ async function saveRecipe(
     if (response.success) return jsonResponse(200, response.data);
   } catch (error) {
     if (error instanceof RecipeNotFoundError) return recipeNotFound(requestId);
-    return databaseError(error, 'recipe_save_failed', requestId);
+    return databaseErrorResponse(
+      error,
+      'recipe_save_failed',
+      requestId,
+      'MacroMap could not save that recipe.',
+    );
   }
 
   console.error(
@@ -292,7 +307,12 @@ async function archiveRecipe(
     const archived = await repository.archive(subject, recipeId);
     return archived ? { statusCode: 204 } : recipeNotFound(requestId);
   } catch (error) {
-    return databaseError(error, 'recipe_archive_failed', requestId);
+    return databaseErrorResponse(
+      error,
+      'recipe_archive_failed',
+      requestId,
+      'MacroMap could not archive that recipe.',
+    );
   }
 }
 
@@ -385,26 +405,6 @@ function internalError(requestId: string): APIGatewayProxyStructuredResultV2 {
     500,
     'INTERNAL_ERROR',
     'MacroMap could not read that recipe.',
-    requestId,
-  );
-}
-
-function databaseError(
-  error: unknown,
-  event: string,
-  requestId: string,
-): APIGatewayProxyStructuredResultV2 {
-  console.error(
-    JSON.stringify({
-      errorName: error instanceof Error ? error.name : 'UnknownError',
-      event,
-      requestId,
-    }),
-  );
-  return errorResponse(
-    503,
-    'DATABASE_WAKING',
-    'MacroMap is waking its database. Please try again shortly.',
     requestId,
   );
 }

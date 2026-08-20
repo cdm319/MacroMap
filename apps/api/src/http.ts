@@ -22,3 +22,26 @@ export function errorResponse(
     error: { code, message, requestId },
   } satisfies ApiError);
 }
+
+export function databaseErrorResponse(
+  error: unknown,
+  event: string,
+  requestId: string,
+  message: string,
+): APIGatewayProxyStructuredResultV2 {
+  console.error(
+    JSON.stringify({
+      errorName: error instanceof Error ? error.name : 'UnknownError',
+      event,
+      requestId,
+    }),
+  );
+  return error instanceof Error && error.name === 'DatabaseResumingException'
+    ? errorResponse(
+        503,
+        'DATABASE_WAKING',
+        'MacroMap is waking its database. Please try again shortly.',
+        requestId,
+      )
+    : errorResponse(500, 'INTERNAL_ERROR', message, requestId);
+}

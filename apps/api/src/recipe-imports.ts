@@ -18,7 +18,7 @@ import {
 } from '@macromap/database';
 import { extractJsonLd } from '@macromap/domain/schema-org-html';
 import { parseSchemaOrgRecipe } from '@macromap/domain/schema-org-recipe';
-import { errorResponse, jsonResponse } from './http.js';
+import { databaseErrorResponse, errorResponse, jsonResponse } from './http.js';
 import { prepareRecipeNutrition } from './nutrition.js';
 import type { RecipePhotoStore } from './recipe-photo-store.js';
 import {
@@ -160,7 +160,12 @@ async function previewImport(
     );
     if (!created) return accountNotBootstrapped(requestId);
   } catch (error) {
-    return databaseError(error, 'recipe_import_preview_failed', requestId);
+    return databaseErrorResponse(
+      error,
+      'recipe_import_preview_failed',
+      requestId,
+      'MacroMap could not prepare that recipe import.',
+    );
   }
 
   return jsonResponse(
@@ -259,7 +264,12 @@ async function saveImport(
     );
   } catch (error) {
     if (error instanceof RecipeNotFoundError) return importConflict(requestId);
-    return databaseError(error, 'recipe_import_save_failed', requestId);
+    return databaseErrorResponse(
+      error,
+      'recipe_import_save_failed',
+      requestId,
+      'MacroMap could not save that recipe import.',
+    );
   }
 }
 
@@ -324,26 +334,6 @@ function accountNotBootstrapped(
     403,
     'ACCOUNT_NOT_BOOTSTRAPPED',
     'This account has not been connected to MacroMap yet.',
-    requestId,
-  );
-}
-
-function databaseError(
-  error: unknown,
-  event: string,
-  requestId: string,
-): APIGatewayProxyStructuredResultV2 {
-  console.error(
-    JSON.stringify({
-      errorName: error instanceof Error ? error.name : 'UnknownError',
-      event,
-      requestId,
-    }),
-  );
-  return errorResponse(
-    503,
-    'DATABASE_WAKING',
-    'MacroMap is waking its database. Please try again shortly.',
     requestId,
   );
 }

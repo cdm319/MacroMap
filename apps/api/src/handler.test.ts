@@ -155,9 +155,11 @@ describe('authenticated household API', () => {
   });
 
   it('returns a retryable waking response for database failures', async () => {
+    const resuming = new Error('database paused');
+    resuming.name = 'DatabaseResumingException';
     const response = await handleRequest(
       createRepository({
-        findBySubject: vi.fn().mockRejectedValue(new Error('database paused')),
+        findBySubject: vi.fn().mockRejectedValue(resuming),
       }),
       event('GET /v1/session', { subject: 'subject-1' }),
     );
@@ -165,6 +167,23 @@ describe('authenticated household API', () => {
     expect(response.statusCode).toBe(503);
     expect(JSON.parse(response.body ?? '{}')).toMatchObject({
       error: { code: 'DATABASE_WAKING' },
+    });
+  });
+
+  it('does not describe unexpected database failures as waking', async () => {
+    const response = await handleRequest(
+      createRepository({
+        findBySubject: vi.fn().mockRejectedValue(new Error('invalid query')),
+      }),
+      event('GET /v1/session', { subject: 'subject-1' }),
+    );
+
+    expect(response.statusCode).toBe(500);
+    expect(JSON.parse(response.body ?? '{}')).toMatchObject({
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'MacroMap could not load your household.',
+      },
     });
   });
 

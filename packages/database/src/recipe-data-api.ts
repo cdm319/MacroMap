@@ -304,7 +304,7 @@ export function createDataApiRecipeRepository(
             })),
           );
         }
-        await transaction.insert(recipeTags).values([
+        const tags = [
           ...input.mealTypes.map((value) => ({
             category: 'meal_type',
             recipeId,
@@ -325,7 +325,10 @@ export function createDataApiRecipeRepository(
             recipeId,
             value,
           })),
-        ]);
+        ];
+        if (tags.length > 0) {
+          await transaction.insert(recipeTags).values(tags);
+        }
 
         return {
           ...input,

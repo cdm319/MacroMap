@@ -18,7 +18,7 @@ import {
   createDataApiRecipeRepository,
   type RecipeRepository,
 } from '@macromap/database';
-import { errorResponse, jsonResponse } from './http.js';
+import { databaseErrorResponse, errorResponse, jsonResponse } from './http.js';
 import {
   createS3RecipePhotoStore,
   type RecipePhotoStore,
@@ -55,18 +55,11 @@ async function loadSession(
   try {
     session = await repository.findBySubject(subject);
   } catch (error) {
-    console.error(
-      JSON.stringify({
-        errorName: error instanceof Error ? error.name : 'UnknownError',
-        event: 'session_load_failed',
-        requestId,
-      }),
-    );
-    return errorResponse(
-      503,
-      'DATABASE_WAKING',
-      'MacroMap is waking its database. Please try again shortly.',
+    return databaseErrorResponse(
+      error,
+      'session_load_failed',
       requestId,
+      'MacroMap could not load your household.',
     );
   }
 
@@ -115,18 +108,11 @@ async function updateSettings(
     if (error instanceof HouseholdPeopleMismatchError) {
       return errorResponse(400, 'HOUSEHOLD_CHANGED', error.message, requestId);
     }
-    console.error(
-      JSON.stringify({
-        errorName: error instanceof Error ? error.name : 'UnknownError',
-        event: 'settings_update_failed',
-        requestId,
-      }),
-    );
-    return errorResponse(
-      503,
-      'DATABASE_WAKING',
-      'MacroMap is waking its database. Please try again shortly.',
+    return databaseErrorResponse(
+      error,
+      'settings_update_failed',
       requestId,
+      'MacroMap could not save your settings.',
     );
   }
 

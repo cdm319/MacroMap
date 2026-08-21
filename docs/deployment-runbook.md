@@ -1,7 +1,7 @@
 # MacroMap production deployment runbook
 
-Status: Phase 2 live
-Last reviewed: 2026-08-18
+Status: Phase 3 live
+Last reviewed: 2026-08-21
 
 ## Boundaries
 
@@ -102,6 +102,15 @@ check.
 - The automatic production deployment completed successfully.
 - The owner confirmed recipe photos can be added, displayed in the recipe
   library and cooking mode, replaced, and removed.
+
+## Phase 3 release record
+
+- Schema.org JSON and URL import, mandatory review, primary-photo copying, and
+  deterministic bundled nutrition estimation are live and owner-verified.
+- The owner completed the one-off Paprika library import locally; its private
+  source data and temporary import tool were not committed.
+- AI webpage extraction and USDA fallback are deliberately deferred to Phase N
+  rather than included in the MVP.
 
 ## Smoke and cost checks
 

@@ -75,12 +75,15 @@ at roughly USD 5. The existing USD 8 and USD 15 budgets remain the guardrail.
 The owner approved `gpt-5.6-luna` on 18 August 2026. Current official pricing
 was checked that day at USD 0.20 per million input tokens and USD 1.20 per
 million output tokens. At 5,000 input tokens and 1,000 output tokens, one call
-costs approximately USD 0.0022. One hundred imports of that size cost
+costs approximately USD 0.0022. One hundred calls of that size cost
 approximately USD 0.22 before any validation retries.
+
+No live AI path is part of the completed Phase 3. This budget remains reserved
+for later approved AI features, including conversational plan revisions.
 
 AI calls are limited by:
 
-- a maximum input size for fetched recipe content;
+- task-specific input size limits;
 - task-specific output token limits;
 - exactly one validation retry;
 - no higher-priced automatic fallback model;

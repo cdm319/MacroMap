@@ -80,8 +80,8 @@ Recipes can be added through:
 - Direct Schema.org `Recipe` JSON or JSON-LD
 - Manual entry
 
-URL imports first look for valid Schema.org recipe data. If it is missing or
-unusable, the application attempts AI-assisted extraction.
+URL imports require valid Schema.org recipe data. A recipe from a page without
+usable Schema.org data can still be entered manually.
 
 Every import opens a mandatory review screen before saving. The user can
 correct:
@@ -121,7 +121,7 @@ contains multiple photos, MacroMap keeps only its primary photo.
 - Manually confirmed nutrition takes precedence.
 - Valid imported nutrition is retained.
 - When nutrition is missing, it is estimated from structured ingredients using
-  a nutrition data source.
+  the bundled nutrition database.
 - Estimated values show their source and confidence.
 - Unrecognised or ambiguous ingredients are flagged for review.
 - A recipe without a usable yield or ingredient quantities is excluded from
@@ -236,3 +236,11 @@ Integrated timers and offline operation are not required.
 - Multiple households or separate household-member accounts
 - Grocery surplus reconciliation or purchase history
 - Nutrition and meal-plan analytics
+
+## Future improvements
+
+These are not MVP requirements:
+
+- AI-assisted extraction from recipe webpages without usable Schema.org data
+- Cached USDA FoodData Central fallback for ingredients that the bundled
+  nutrition database cannot match confidently

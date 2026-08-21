@@ -1,7 +1,7 @@
 # MacroMap technical architecture
 
-Status: Approved; Phase 3 in progress
-Last reviewed: 2026-08-20
+Status: Approved; Phase 3 complete
+Last reviewed: 2026-08-21
 
 ## Purpose and authority
 
@@ -48,7 +48,7 @@ flowchart LR
     DataApi --> Database["Aurora PostgreSQL Serverless v2"]
     ApiLambda --> Media
     ApiLambda --> OpenAI["OpenAI Responses API"]
-    ApiLambda --> Nutrition["Bundled nutrition data and USDA fallback"]
+    ApiLambda --> Nutrition["Bundled nutrition data"]
 ```
 
 ## Technology baseline
@@ -274,10 +274,8 @@ status-changing job. Past meal slots are immutable based on the current
 ## Nutrition and units
 
 The bundled nutrition database combines the versioned CoFID dataset for common
-UK ingredients with explicit household and approved UK reference-label profiles. The
-free USDA FoodData Central API is a fallback for ingredients that cannot be
-matched with sufficient confidence. USDA responses and accepted matches are
-cached so ordinary planning does not require an external nutrition request.
+UK ingredients with explicit household and approved UK reference-label
+profiles.
 
 The current nutrition slice stores:
 
@@ -335,7 +333,6 @@ consequential edit.
 
 OpenAI may be used only for:
 
-- fallback extraction when Schema.org recipe data is absent or invalid;
 - editable cuisine, protein, and flavour inference; and
 - translating a free-text weekly revision into a constrained structured intent.
 
@@ -349,6 +346,10 @@ AI does not provide authoritative nutrition, invent recipes, execute database
 operations, approve plans, or decide grocery quantities. Prompts, schemas,
 model name, token limits, retries, and fallbacks are versioned application
 contracts and cost-sensitive configuration.
+
+AI-assisted extraction from webpages without usable Schema.org data and a
+cached USDA nutrition fallback are deferred to Phase N. They are not MVP
+requirements or deployed application paths.
 
 ## API surface
 

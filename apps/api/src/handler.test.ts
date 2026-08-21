@@ -154,12 +154,14 @@ describe('authenticated household API', () => {
     });
   });
 
-  it('returns a retryable waking response for database failures', async () => {
+  it('returns a retryable waking response for wrapped resume failures', async () => {
     const resuming = new Error('database paused');
     resuming.name = 'DatabaseResumingException';
     const response = await handleRequest(
       createRepository({
-        findBySubject: vi.fn().mockRejectedValue(resuming),
+        findBySubject: vi
+          .fn()
+          .mockRejectedValue(new Error('query failed', { cause: resuming })),
       }),
       event('GET /v1/session', { subject: 'subject-1' }),
     );

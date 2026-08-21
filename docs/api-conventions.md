@@ -1,6 +1,7 @@
 # API conventions
 
-Status: Phase 3 in progress
+Status: Phase 3 complete
+Last reviewed: 2026-08-21
 
 ## Phase 1 session endpoint
 

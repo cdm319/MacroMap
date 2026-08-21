@@ -1,7 +1,7 @@
 # MacroMap MVP delivery plan
 
-Status: Approved implementation sequence; Phase 3 in progress
-Last reviewed: 2026-08-18
+Status: Approved implementation sequence; Phase 3 complete
+Last reviewed: 2026-08-21
 
 ## Delivery principles
 
@@ -21,10 +21,9 @@ Current progress:
   on 17 August 2026.
 - Phase 2 is complete. Macro targets, snack reserve settings, the manual recipe
   library, private photos, and cooking mode are implemented.
-- Phase 3 is in progress. Direct JSON and URL-based Schema.org import,
-  mandatory review, primary-photo copying, and deterministic CoFID 2021
-  nutrition estimates are complete. USDA and AI fallback remain later Phase 3
-  slices.
+- Phase 3 is complete. Direct JSON and URL-based Schema.org import, mandatory
+  review, primary-photo copying, and deterministic bundled nutrition estimates
+  are implemented.
 - Phases 4-6 have not started.
 
 ## Phase 0: Repository and contracts
@@ -110,10 +109,8 @@ Deliverables:
 
 - direct Schema.org `Recipe` JSON/JSON-LD import;
 - URL fetching with Schema.org extraction first;
-- bounded AI fallback extraction;
 - mandatory import-review screen;
 - versioned CoFID ingestion;
-- cached USDA FoodData Central fallback;
 - ingredient matching, confidence, provenance, and review warnings; and
 - deterministic recipe nutrition calculation.
 
@@ -124,13 +121,14 @@ Exit criteria:
   ambiguous quantities, prompt-injection text, redirect loops, private-network
   targets, oversized responses, invalid image data, and inaccessible URLs;
 - estimated nutrition is reproducible from stored matches and quantities; and
-- OpenAI failure or the AI budget ceiling does not block manual or valid
-  Schema.org imports.
+- nutrition-estimation failure does not block manual or valid Schema.org
+  imports.
 
-## Phase 4: Weekly planner and grocery list
+## Phase 4: Recipe discovery, weekly planner, and grocery list
 
 Deliverables:
 
+- recipe-library text search and user-selectable sorting;
 - Monday-to-Sunday meal slots and per-person attendance;
 - quarter-serving portion allocation and sensible batch rounding;
 - deterministic bounded planner with shortfall diagnostics;
@@ -143,6 +141,8 @@ Deliverables:
 
 Exit criteria:
 
+- search and sorting operate across the complete recipe library rather than
+  only the currently loaded page;
 - golden tests cover the full priority order, dinner repetition, attendance,
   partial days, impossible targets, deterministic tie-breaking, and DST;
 - the scheduler cannot create duplicate weekly drafts;
@@ -190,6 +190,18 @@ Exit criteria:
 - remaining limitations are documented without being disguised as completed;
   and
 - the human owner explicitly accepts the MVP.
+
+## Phase N: Future improvements
+
+These are deliberately outside the MVP delivery sequence and have no current
+delivery commitment:
+
+- AI-assisted extraction from recipe webpages without usable Schema.org data;
+  and
+- cached USDA FoodData Central fallback for ingredients that the bundled
+  nutrition database cannot match confidently; and
+- recipe-library filtering by structured attributes such as meal type,
+  planning readiness, cuisine, protein, or flavour.
 
 ## CI and deployment workflows
 

@@ -36,7 +36,7 @@ export function databaseErrorResponse(
       requestId,
     }),
   );
-  return error instanceof Error && error.name === 'DatabaseResumingException'
+  return isDatabaseResuming(error)
     ? errorResponse(
         503,
         'DATABASE_WAKING',
@@ -44,4 +44,12 @@ export function databaseErrorResponse(
         requestId,
       )
     : errorResponse(500, 'INTERNAL_ERROR', message, requestId);
+}
+
+function isDatabaseResuming(error: unknown): boolean {
+  while (error instanceof Error) {
+    if (error.name === 'DatabaseResumingException') return true;
+    error = error.cause;
+  }
+  return false;
 }

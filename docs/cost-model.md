@@ -122,9 +122,10 @@ Reference: [official OpenAI model documentation](https://developers.openai.com/a
 | Paid external services              | OpenAI only                                       |
 
 The scheduler and planner concurrency entries are maximums reserved for Phase
-4; Phase 1 intentionally creates neither resource. Phase 1 creates one API
-Lambda with reserved concurrency 4, one Aurora writer, and no NAT Gateway,
-endpoint, load balancer, proxy, container service, or read replica.
+4e; Phase 4c still creates neither resource and reuses the existing API Lambda.
+The deployed foundation has one API Lambda with reserved concurrency 4, one
+Aurora writer, and no NAT Gateway, endpoint, load balancer, proxy, container
+service, or read replica.
 
 The synthesised template also contains CDK-managed helper functions for static
 asset deployment and the cross-region certificate reference. They run only

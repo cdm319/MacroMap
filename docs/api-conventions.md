@@ -1,6 +1,6 @@
 # API conventions
 
-Status: Phase 4a complete
+Status: Phase 4c complete
 Last reviewed: 2026-08-21
 
 ## Phase 1 session endpoint
@@ -120,7 +120,8 @@ Common status mapping:
 
 ## Mutations and retries
 
-- Retriable create/generate operations accept an idempotency key.
+- Retriable create operations accept an idempotency key where a natural
+  resource key is insufficient.
 - Aggregates with realistic concurrent editors use a monotonically increasing
   version and reject stale updates with `409`.
 - Household settings are whole-form, last-write-wins in the single-login MVP.
@@ -128,6 +129,10 @@ Common status mapping:
 - Scheduled work uses a natural uniqueness key, such as household plus week
   start, in addition to an invocation idempotency key.
 - Mutations are transactional at the domain aggregate boundary.
+
+Interactive Phase 4c generation replaces the single draft identified by
+household and week start in one transaction. Phase 4e adds invocation
+idempotency before scheduled generation is enabled.
 
 ## Lists
 
@@ -231,3 +236,25 @@ Before the preview, imported whole onion or red onion is converted to onion
 granules, onion powder is normalised to granules, and fresh chilli is converted
 to chilli flakes using the approved household measures. The original supplied
 content remains stored with the import.
+
+## Weekly plan endpoints
+
+- `GET /v1/weekly-plans/{weekStart}` returns the authenticated household's
+  draft for a Monday `YYYY-MM-DD` week start. It returns `404 PLAN_NOT_FOUND`
+  before a draft exists.
+- `POST /v1/weekly-plans/{weekStart}/generate` deterministically creates or
+  replaces that draft. It returns `422 MACRO_TARGETS_REQUIRED` until every
+  active profile has complete targets.
+
+The response contains seven ordered days. Each day contains breakfast, lunch,
+and dinner slots; independently allocated quarter-serving portions; the total
+batch servings to cook; and planned-versus-target kcal, protein, carbohydrate,
+and fat for every profile. Targets already exclude the household snack reserve.
+Empty slots and unsatisfied objectives remain visible through machine-readable
+diagnostics rather than making generation fail.
+
+Only active, unarchived, planning-ready saved recipes are candidates. The
+planner uses the previous 14 days of stored dinners as a penalty and never
+calls AI. Generation changes only the selected week's current draft. Approval,
+revision, grocery generation, automatic Friday scheduling, and immutable meal
+snapshots are not part of these endpoints yet.

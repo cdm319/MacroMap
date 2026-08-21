@@ -9,10 +9,12 @@ import {
 import {
   createDataApiHouseholdRepository,
   createDataApiRecipeImportRepository,
+  createDataApiWeeklyPlanRepository,
   HouseholdPeopleMismatchError,
   type HouseholdRepository,
   type HouseholdSession,
   type RecipeImportRepository,
+  type WeeklyPlanRepository,
 } from '@macromap/database';
 import {
   createDataApiRecipeRepository,
@@ -29,6 +31,7 @@ import {
 } from './recipe-source-fetcher.js';
 import { handleRecipeRequest } from './recipes.js';
 import { handleRecipeImportRequest } from './recipe-imports.js';
+import { handleWeeklyPlanRequest } from './weekly-plans.js';
 
 function sessionResponse(
   session: HouseholdSession,
@@ -138,6 +141,7 @@ export interface ApplicationDependencies {
   readonly households: HouseholdRepository;
   readonly imports: RecipeImportRepository;
   readonly photos: RecipePhotoStore;
+  readonly plans: WeeklyPlanRepository;
   readonly recipes: RecipeRepository;
   readonly sources: RecipeSourceFetcher;
 }
@@ -156,6 +160,7 @@ function getDependencies(): ApplicationDependencies {
     photos: createS3RecipePhotoStore(
       requireEnvironment('RECIPE_PHOTO_BUCKET_NAME'),
     ),
+    plans: createDataApiWeeklyPlanRepository(config),
     recipes: createDataApiRecipeRepository(config),
     sources: createRecipeSourceFetcher(),
   };
@@ -198,6 +203,14 @@ export async function handleRequest(
     return handleRecipeRequest(
       dependencies.recipes,
       dependencies.photos,
+      event,
+      subject,
+      requestId,
+    );
+  }
+  if (event.routeKey.includes('/v1/weekly-plans')) {
+    return handleWeeklyPlanRequest(
+      dependencies.plans,
       event,
       subject,
       requestId,

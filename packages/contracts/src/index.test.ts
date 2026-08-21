@@ -12,6 +12,7 @@ import {
   recipeSchema,
   runtimeConfigSchema,
   sessionResponseSchema,
+  weeklyPlanSchema,
 } from './index.js';
 
 describe('shared API contracts', () => {
@@ -345,6 +346,80 @@ describe('shared API contracts', () => {
     ).toEqual({ content: '{"@type":"Recipe"}' });
     expect(() =>
       recipeImportPreviewRequestSchema.parse({ url: 'file:///etc/passwd' }),
+    ).toThrow();
+  });
+
+  it('accepts a seven-day plan with quarter-serving portions', () => {
+    const weekStart = '2026-08-24';
+    const plan = {
+      days: Array.from({ length: 7 }, (_, day) => ({
+        date: `2026-08-${String(24 + day).padStart(2, '0')}`,
+        macros: [
+          {
+            personId: '00000000-0000-4000-8000-000000000101',
+            planned: {
+              carbsGrams: 255,
+              fatGrams: 68,
+              kcal: 2_125,
+              proteinGrams: 153,
+            },
+            target: {
+              carbsGrams: 255,
+              fatGrams: 68,
+              kcal: 2_125,
+              proteinGrams: 153,
+            },
+          },
+        ],
+        slots: (['breakfast', 'lunch', 'dinner'] as const).map((mealType) => ({
+          meal: {
+            batchServings: 1.75,
+            portions: [
+              {
+                personId: '00000000-0000-4000-8000-000000000101',
+                servings: 0.75,
+              },
+            ],
+            recipeId: '00000000-0000-4000-8000-000000000201',
+            recipeTitle: 'Planning recipe',
+          },
+          mealType,
+        })),
+      })),
+      diagnostics: [],
+      generatedAt: '2026-08-21T12:00:00.000Z',
+      id: '00000000-0000-4000-8000-000000000401',
+      seed: weekStart,
+      status: 'draft',
+      version: 1,
+      weekStart,
+    };
+
+    expect(weeklyPlanSchema.parse(plan)).toEqual(plan);
+    expect(() =>
+      weeklyPlanSchema.parse({
+        ...plan,
+        days: plan.days.map((day, index) =>
+          index === 0
+            ? {
+                ...day,
+                slots: day.slots.map((slot, slotIndex) =>
+                  slotIndex === 0
+                    ? {
+                        ...slot,
+                        meal: {
+                          ...slot.meal,
+                          portions: [
+                            { ...slot.meal.portions[0], servings: 0.6 },
+                          ],
+                        },
+                      }
+                    : slot,
+                ),
+              }
+            : day,
+        ),
+      }),
     ).toThrow();
   });
 });

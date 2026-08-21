@@ -5,6 +5,7 @@ import {
   type HouseholdRepository,
   type RecipeImportRepository,
   type RecipeRepository,
+  type WeeklyPlanRepository,
 } from '@macromap/database';
 import { describe, expect, it, vi } from 'vitest';
 import { handleRequest, type ApplicationDependencies } from './handler.js';
@@ -50,6 +51,7 @@ function createRepository(
   photoOverrides: Partial<RecipePhotoStore> = {},
   importOverrides: Partial<RecipeImportRepository> = {},
   sourceOverrides: Partial<RecipeSourceFetcher> = {},
+  planOverrides: Partial<WeeklyPlanRepository> = {},
 ): ApplicationDependencies {
   return {
     households: {
@@ -73,6 +75,12 @@ function createRepository(
       stageImport: vi.fn(),
       viewUrl: vi.fn().mockResolvedValue('https://photos.example.test/recipe'),
       ...photoOverrides,
+    },
+    plans: {
+      find: vi.fn().mockResolvedValue(undefined),
+      loadContext: vi.fn().mockResolvedValue(undefined),
+      replace: vi.fn().mockResolvedValue(undefined),
+      ...planOverrides,
     },
     recipes: {
       archive: vi.fn().mockResolvedValue(true),
@@ -269,6 +277,147 @@ describe('authenticated household API', () => {
     expect(JSON.parse(changedResponse.body ?? '{}')).toMatchObject({
       error: { code: 'HOUSEHOLD_CHANGED' },
     });
+  });
+
+  it('generates and stores a deterministic weekly draft', async () => {
+    const target = {
+      carbsGrams: 200,
+      fatGrams: 80,
+      kcal: 2_000,
+      proteinGrams: 180,
+    };
+    const context = {
+      people: session.people.map((person) => ({
+        displayName: person.displayName,
+        id: person.id,
+        macroTargets: target,
+      })),
+      recentDinnerRecipeIds: [],
+      recipes: [
+        {
+          id: '00000000-0000-4000-8000-000000000201',
+          ingredients: ['oats'],
+          mealTypes: ['breakfast', 'lunch', 'dinner'] as const,
+          nutrition: {
+            carbsGrams: 50,
+            fatGrams: 20,
+            kcal: 500,
+            proteinGrams: 45,
+          },
+          nutritionConfidence: 'high' as const,
+          tags: { cuisines: [], flavours: [], proteins: [] },
+          title: 'Planning recipe',
+        },
+      ],
+      snackReserve: 0.15,
+    };
+    const replace = vi.fn(async (_subject, plan) => ({
+      ...plan,
+      generatedAt: '2026-08-21T12:00:00.000Z',
+      id: '00000000-0000-4000-8000-000000000401',
+      status: 'draft' as const,
+      version: 1,
+    }));
+    const repository = createRepository(
+      {},
+      {},
+      {},
+      {},
+      {},
+      {
+        loadContext: vi.fn().mockResolvedValue(context),
+        replace,
+      },
+    );
+
+    const response = await handleRequest(
+      repository,
+      event('POST /v1/weekly-plans/{weekStart}/generate', {
+        pathParameters: { weekStart: '2026-08-24' },
+        subject: 'subject-1',
+      }),
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(replace).toHaveBeenCalledWith(
+      'subject-1',
+      expect.objectContaining({ seed: '2026-08-24', weekStart: '2026-08-24' }),
+    );
+    expect(JSON.parse(response.body ?? '{}')).toMatchObject({
+      status: 'draft',
+      weekStart: '2026-08-24',
+    });
+  });
+
+  it('requires complete targets and a Monday before planning', async () => {
+    const missingTargets = createRepository(
+      {},
+      {},
+      {},
+      {},
+      {},
+      {
+        loadContext: vi.fn().mockResolvedValue({
+          people: session.people,
+          recentDinnerRecipeIds: [],
+          recipes: [],
+          snackReserve: 0.15,
+        }),
+      },
+    );
+    const targetsResponse = await handleRequest(
+      missingTargets,
+      event('POST /v1/weekly-plans/{weekStart}/generate', {
+        pathParameters: { weekStart: '2026-08-24' },
+        subject: 'subject-1',
+      }),
+    );
+    const invalidWeekResponse = await handleRequest(
+      missingTargets,
+      event('POST /v1/weekly-plans/{weekStart}/generate', {
+        pathParameters: { weekStart: '2026-08-25' },
+        subject: 'subject-1',
+      }),
+    );
+
+    expect(targetsResponse.statusCode).toBe(422);
+    expect(JSON.parse(targetsResponse.body ?? '{}')).toMatchObject({
+      error: { code: 'MACRO_TARGETS_REQUIRED' },
+    });
+    expect(invalidWeekResponse.statusCode).toBe(400);
+  });
+
+  it('loads an existing weekly draft for the authenticated household', async () => {
+    const plan = {
+      days: Array.from({ length: 7 }, (_, day) => ({
+        date: `2026-08-${String(24 + day).padStart(2, '0')}`,
+        macros: [],
+        slots: (['breakfast', 'lunch', 'dinner'] as const).map((mealType) => ({
+          meal: null,
+          mealType,
+        })),
+      })),
+      diagnostics: [],
+      generatedAt: '2026-08-21T12:00:00.000Z',
+      id: '00000000-0000-4000-8000-000000000401',
+      seed: '2026-08-24',
+      status: 'draft' as const,
+      version: 1,
+      weekStart: '2026-08-24',
+    };
+    const find = vi.fn().mockResolvedValue(plan);
+    const repository = createRepository({}, {}, {}, {}, {}, { find });
+
+    const response = await handleRequest(
+      repository,
+      event('GET /v1/weekly-plans/{weekStart}', {
+        pathParameters: { weekStart: '2026-08-24' },
+        subject: 'subject-1',
+      }),
+    );
+
+    expect(find).toHaveBeenCalledWith('subject-1', '2026-08-24');
+    expect(response.statusCode).toBe(200);
   });
 
   it('lists recipes for the authenticated subject', async () => {

@@ -20,6 +20,7 @@ if (databaseUrl === undefined) {
         'updates/003-recipe-photos.sql',
         'updates/004-recipe-imports.sql',
         'updates/005-recipe-nutrition-provenance.sql',
+        'updates/006-weekly-plans.sql',
       ]) {
         const sql = await readFile(
           new URL(`../sql/${filename}`, import.meta.url),
@@ -150,6 +151,72 @@ if (databaseUrl === undefined) {
       );
       expect(result.rows).toEqual([
         { recipe_id: null, source_kind: 'schema_org_json' },
+      ]);
+    });
+
+    it('stores one complete draft timetable for a household week', async () => {
+      const draft = {
+        days: [
+          {
+            date: '2026-08-24',
+            macros: [],
+            slots: [
+              {
+                meal: {
+                  batchServings: 1.75,
+                  portions: [
+                    {
+                      personId: '00000000-0000-4000-8000-000000000101',
+                      servings: 1,
+                    },
+                    {
+                      personId: '00000000-0000-4000-8000-000000000102',
+                      servings: 0.75,
+                    },
+                  ],
+                  recipeId: '00000000-0000-4000-8000-000000000211',
+                  recipeTitle: 'Planning dinner',
+                },
+                mealType: 'dinner',
+              },
+            ],
+          },
+        ],
+        diagnostics: [],
+        seed: '2026-08-24',
+        weekStart: '2026-08-24',
+      };
+      await client.pool.query(
+        `insert into weekly_plan (
+           id, household_id, week_start_date, draft
+         ) values ($1, $2, '2026-08-24', $3)`,
+        [
+          '00000000-0000-4000-8000-000000000401',
+          '00000000-0000-4000-8000-000000000001',
+          draft,
+        ],
+      );
+
+      const result = await client.pool.query<{
+        dinner: string;
+        portion_count: string;
+        week_start_date: string;
+      }>(
+        `select week_start_date::text,
+                draft #>> '{days,0,slots,0,meal,recipeTitle}' as dinner,
+                jsonb_array_length(
+                  draft #> '{days,0,slots,0,meal,portions}'
+                )::text as portion_count
+         from weekly_plan where id = $1`,
+        ['00000000-0000-4000-8000-000000000401'],
+      );
+
+      expect(result.rows).toEqual([
+        {
+          dinner: 'Planning dinner',
+          portion_count: '2',
+          week_start_date: '2026-08-24',
+        },
       ]);
     });
   });

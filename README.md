@@ -56,3 +56,8 @@ Infrastructure deploys automatically after a reviewed pull request is merged to
 `main`. Production was first deployed and initialized on 17 August 2026. The
 initial schema SQL remains source-controlled for reference and local integration
 tests, but must never be reapplied to production.
+
+Later additive schema updates live in `packages/database/sql/updates` and are
+applied manually by the owner before merging the code that uses them. Phase 4c
+requires `006-weekly-plans.sql`; it adds one draft-plan table without changing
+existing recipe data.

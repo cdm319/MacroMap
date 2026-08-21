@@ -124,10 +124,11 @@ Exit criteria:
 - nutrition-estimation failure does not block manual or valid Schema.org
   imports.
 
-## Phase 4: Weekly planner and grocery list
+## Phase 4: Recipe discovery, weekly planner, and grocery list
 
 Deliverables:
 
+- recipe-library text search and user-selectable sorting;
 - Monday-to-Sunday meal slots and per-person attendance;
 - quarter-serving portion allocation and sensible batch rounding;
 - deterministic bounded planner with shortfall diagnostics;
@@ -140,6 +141,8 @@ Deliverables:
 
 Exit criteria:
 
+- search and sorting operate across the complete recipe library rather than
+  only the currently loaded page;
 - golden tests cover the full priority order, dinner repetition, attendance,
   partial days, impossible targets, deterministic tie-breaking, and DST;
 - the scheduler cannot create duplicate weekly drafts;
@@ -196,7 +199,9 @@ delivery commitment:
 - AI-assisted extraction from recipe webpages without usable Schema.org data;
   and
 - cached USDA FoodData Central fallback for ingredients that the bundled
-  nutrition database cannot match confidently.
+  nutrition database cannot match confidently; and
+- recipe-library filtering by structured attributes such as meal type,
+  planning readiness, cuisine, protein, or flavour.
 
 ## CI and deployment workflows
 

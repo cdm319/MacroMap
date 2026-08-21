@@ -116,6 +116,9 @@ Recipe photos are optional. Imported photos are copied into application
 storage; recipes without a photo use a neutral placeholder. When an import
 contains multiple photos, MacroMap keeps only its primary photo.
 
+The recipe library supports text search and user-selectable sorting across the
+complete saved collection.
+
 ## Nutrition estimation
 
 - Manually confirmed nutrition takes precedence.
@@ -244,3 +247,5 @@ These are not MVP requirements:
 - AI-assisted extraction from recipe webpages without usable Schema.org data
 - Cached USDA FoodData Central fallback for ingredients that the bundled
   nutrition database cannot match confidently
+- Recipe-library filtering by structured attributes such as meal type,
+  planning readiness, cuisine, protein, or flavour

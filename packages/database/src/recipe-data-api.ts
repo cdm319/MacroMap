@@ -3,10 +3,24 @@ import {
   recipeNutritionProvenanceSchema,
   type MealType,
   type RecipeInput,
+  type RecipeListSort,
   type RecipeNutrition,
   type RecipeNutritionProvenance,
 } from '@macromap/contracts';
-import { and, asc, desc, eq, inArray, isNull, lt, or } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  exists,
+  gt,
+  ilike,
+  inArray,
+  isNull,
+  lt,
+  or,
+  sql,
+} from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/aws-data-api/pg';
 import type { DataApiDatabaseConfig } from './data-api.js';
 import {
@@ -17,9 +31,22 @@ import {
   recipeTags,
 } from './schema.js';
 
-export interface RecipePageCursor {
-  readonly id: string;
-  readonly updatedAt: Date;
+export type RecipePageCursor =
+  | {
+      readonly id: string;
+      readonly sort: 'updated';
+      readonly updatedAt: Date;
+    }
+  | {
+      readonly id: string;
+      readonly sort: 'title';
+      readonly titleKey: string;
+    };
+
+export interface RecipeListOptions {
+  readonly cursor?: RecipePageCursor;
+  readonly search?: string;
+  readonly sort: RecipeListSort;
 }
 
 export interface RecipePage {
@@ -46,7 +73,7 @@ export interface RecipeRepository {
   find(subject: string, recipeId: string): Promise<StoredRecipe | undefined>;
   list(
     subject: string,
-    cursor?: RecipePageCursor,
+    options: RecipeListOptions,
   ): Promise<RecipePage | undefined>;
   save(
     subject: string,
@@ -152,39 +179,66 @@ export function createDataApiRecipeRepository(
       return readRecipe(recipe, ingredients, steps, tags);
     },
 
-    async list(subject, cursor) {
-      const cursorFilter =
-        cursor === undefined
-          ? undefined
-          : or(
-              lt(recipes.updatedAt, cursor.updatedAt),
-              and(
-                eq(recipes.updatedAt, cursor.updatedAt),
-                lt(recipes.id, cursor.id),
-              ),
-            );
-      const rows = await database
-        .select(recipeColumns)
-        .from(recipes)
-        .innerJoin(
-          accountIdentities,
-          eq(accountIdentities.householdId, recipes.householdId),
-        )
-        .where(
-          and(
-            eq(accountIdentities.cognitoSubject, subject),
-            isNull(recipes.archivedAt),
-            cursorFilter,
-          ),
-        )
-        .orderBy(desc(recipes.updatedAt), desc(recipes.id))
-        .limit(pageSize + 1);
+    async list(subject, { cursor, search, sort }) {
+      if (cursor !== undefined && cursor.sort !== sort) {
+        throw new Error('Recipe cursor and sort order do not match.');
+      }
 
       const [identity] = await database
         .select({ householdId: accountIdentities.householdId })
         .from(accountIdentities)
         .where(eq(accountIdentities.cognitoSubject, subject));
       if (identity === undefined) return undefined;
+
+      const cursorFilter =
+        cursor === undefined
+          ? undefined
+          : cursor.sort === 'updated'
+            ? or(
+                lt(recipes.updatedAt, cursor.updatedAt),
+                and(
+                  eq(recipes.updatedAt, cursor.updatedAt),
+                  lt(recipes.id, cursor.id),
+                ),
+              )
+            : or(
+                gt(titleKey, cursor.titleKey),
+                and(eq(titleKey, cursor.titleKey), gt(recipes.id, cursor.id)),
+              );
+      const searchFilter =
+        search === undefined
+          ? undefined
+          : or(
+              ilike(recipes.title, searchPattern(search)),
+              exists(
+                database
+                  .select({ recipeId: recipeIngredients.recipeId })
+                  .from(recipeIngredients)
+                  .where(
+                    and(
+                      eq(recipeIngredients.recipeId, recipes.id),
+                      ilike(recipeIngredients.name, searchPattern(search)),
+                    ),
+                  ),
+              ),
+            );
+      const order =
+        sort === 'updated'
+          ? [desc(recipes.updatedAt), desc(recipes.id)]
+          : [asc(titleKey), asc(recipes.id)];
+      const rows = await database
+        .select({ ...recipeColumns, titleKey })
+        .from(recipes)
+        .where(
+          and(
+            eq(recipes.householdId, identity.householdId),
+            isNull(recipes.archivedAt),
+            searchFilter,
+            cursorFilter,
+          ),
+        )
+        .orderBy(...order)
+        .limit(pageSize + 1);
 
       const visibleRows = rows.slice(0, pageSize);
       const ids = visibleRows.map(({ id }) => id);
@@ -215,7 +269,9 @@ export function createDataApiRecipeRepository(
         }),
         nextCursor:
           rows.length > pageSize && last !== undefined
-            ? { id: last.id, updatedAt: last.updatedAt }
+            ? sort === 'updated'
+              ? { id: last.id, sort, updatedAt: last.updatedAt }
+              : { id: last.id, sort, titleKey: last.titleKey }
             : null,
       };
     },
@@ -380,6 +436,12 @@ const recipeColumns = {
   title: recipes.title,
   updatedAt: recipes.updatedAt,
 };
+
+const titleKey = sql<string>`lower(${recipes.title})`;
+
+function searchPattern(search: string): string {
+  return `%${search.replace(/[\\%_]/gu, '\\$&')}%`;
+}
 
 interface RecipeRow {
   readonly description: string;

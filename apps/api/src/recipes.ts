@@ -6,11 +6,14 @@ import type {
 import {
   opaqueIdSchema,
   recipeInputSchema,
+  recipeListCursorSchema,
+  recipeListQuerySchema,
   recipeListResponseSchema,
   recipePhotoResponseSchema,
   recipePhotoUploadRequestSchema,
   recipePhotoUploadResponseSchema,
   recipeSchema,
+  type RecipeListSort,
 } from '@macromap/contracts';
 import {
   RecipeNotFoundError,
@@ -97,9 +100,25 @@ async function listRecipes(
   subject: string,
   requestId: string,
 ): Promise<APIGatewayProxyStructuredResultV2> {
+  const query = recipeListQuerySchema.safeParse(
+    event.queryStringParameters ?? {},
+  );
+  if (!query.success) {
+    return errorResponse(
+      400,
+      'VALIDATION_FAILED',
+      'The recipe list query is invalid.',
+      requestId,
+    );
+  }
+
   let cursor: RecipePageCursor | undefined;
   try {
-    cursor = decodeCursor(event.queryStringParameters?.cursor);
+    cursor = decodeCursor(
+      query.data.cursor,
+      query.data.search,
+      query.data.sort,
+    );
   } catch {
     return errorResponse(
       400,
@@ -110,14 +129,20 @@ async function listRecipes(
   }
 
   try {
-    const page = await repository.list(subject, cursor);
+    const page = await repository.list(subject, {
+      ...(cursor === undefined ? {} : { cursor }),
+      ...(query.data.search === undefined ? {} : { search: query.data.search }),
+      sort: query.data.sort,
+    });
     if (page === undefined) return accountNotBootstrapped(requestId);
     const response = recipeListResponseSchema.safeParse({
       items: await Promise.all(
         page.items.map((recipe) => presentSummary(recipe, photos)),
       ),
       nextCursor:
-        page.nextCursor === null ? null : encodeCursor(page.nextCursor),
+        page.nextCursor === null
+          ? null
+          : encodeCursor(page.nextCursor, query.data.search),
     });
     if (response.success) return jsonResponse(200, response.data);
   } catch (error) {
@@ -316,28 +341,49 @@ async function archiveRecipe(
   }
 }
 
-function decodeCursor(value: string | undefined): RecipePageCursor | undefined {
+function decodeCursor(
+  value: string | undefined,
+  search: string | undefined,
+  sort: RecipeListSort,
+): RecipePageCursor | undefined {
   if (value === undefined) return undefined;
-  const parsed = JSON.parse(
-    Buffer.from(value, 'base64url').toString('utf8'),
-  ) as {
-    id?: unknown;
-    updatedAt?: unknown;
-  };
-  const id = opaqueIdSchema.parse(parsed.id);
-  if (typeof parsed.updatedAt !== 'string') throw new Error('Invalid date');
-  const updatedAt = new Date(parsed.updatedAt);
-  if (Number.isNaN(updatedAt.valueOf())) throw new Error('Invalid date');
-  return { id, updatedAt };
+  const parsed = recipeListCursorSchema.parse(
+    JSON.parse(Buffer.from(value, 'base64url').toString('utf8')),
+  );
+  if (parsed.search !== (search ?? null) || parsed.sort !== sort) {
+    throw new Error('Recipe cursor does not match the current query.');
+  }
+  return parsed.sort === 'updated'
+    ? {
+        id: parsed.id,
+        sort: parsed.sort,
+        updatedAt: new Date(parsed.updatedAt),
+      }
+    : { id: parsed.id, sort: parsed.sort, titleKey: parsed.titleKey };
 }
 
-function encodeCursor(cursor: RecipePageCursor): string {
-  return Buffer.from(
-    JSON.stringify({
-      id: cursor.id,
-      updatedAt: cursor.updatedAt.toISOString(),
-    }),
-  ).toString('base64url');
+function encodeCursor(
+  cursor: RecipePageCursor,
+  search: string | undefined,
+): string {
+  const encoded = recipeListCursorSchema.parse(
+    cursor.sort === 'updated'
+      ? {
+          id: cursor.id,
+          search: search ?? null,
+          sort: cursor.sort,
+          updatedAt: cursor.updatedAt.toISOString(),
+          version: 1,
+        }
+      : {
+          id: cursor.id,
+          search: search ?? null,
+          sort: cursor.sort,
+          titleKey: cursor.titleKey,
+          version: 1,
+        },
+  );
+  return Buffer.from(JSON.stringify(encoded)).toString('base64url');
 }
 
 async function presentRecipe(recipe: StoredRecipe, photos: RecipePhotoStore) {

@@ -278,15 +278,102 @@ describe('authenticated household API', () => {
       event('GET /v1/recipes', { subject: 'subject-1' }),
     );
 
-    expect(repository.recipes.list).toHaveBeenCalledWith(
-      'subject-1',
-      undefined,
-    );
+    expect(repository.recipes.list).toHaveBeenCalledWith('subject-1', {
+      sort: 'updated',
+    });
     expect(response.statusCode).toBe(200);
     expect(JSON.parse(response.body ?? '{}')).toEqual({
       items: [],
       nextCursor: null,
     });
+  });
+
+  it('searches and sorts the complete recipe collection', async () => {
+    const repository = createRepository();
+    const response = await handleRequest(
+      repository,
+      event('GET /v1/recipes', {
+        queryStringParameters: { search: '  chicken  ', sort: 'title' },
+        subject: 'subject-1',
+      }),
+    );
+
+    expect(repository.recipes.list).toHaveBeenCalledWith('subject-1', {
+      search: 'chicken',
+      sort: 'title',
+    });
+    expect(response.statusCode).toBe(200);
+  });
+
+  it('rejects unknown recipe-list filters', async () => {
+    const repository = createRepository();
+    const response = await handleRequest(
+      repository,
+      event('GET /v1/recipes', {
+        queryStringParameters: { mealType: 'dinner' },
+        subject: 'subject-1',
+      }),
+    );
+
+    expect(repository.recipes.list).not.toHaveBeenCalled();
+    expect(response.statusCode).toBe(400);
+    expect(JSON.parse(response.body ?? '{}')).toMatchObject({
+      error: { code: 'VALIDATION_FAILED' },
+    });
+  });
+
+  it('binds recipe page cursors to their search and sort', async () => {
+    const list = vi
+      .fn()
+      .mockResolvedValueOnce({
+        items: [],
+        nextCursor: {
+          id: '00000000-0000-4000-8000-000000000201',
+          sort: 'title',
+          titleKey: 'lemon chicken',
+        },
+      })
+      .mockResolvedValueOnce({ items: [], nextCursor: null });
+    const repository = createRepository({}, { list });
+    const first = await handleRequest(
+      repository,
+      event('GET /v1/recipes', {
+        queryStringParameters: { search: 'chicken', sort: 'title' },
+        subject: 'subject-1',
+      }),
+    );
+    const cursor = JSON.parse(first.body ?? '{}').nextCursor as string;
+
+    const second = await handleRequest(
+      repository,
+      event('GET /v1/recipes', {
+        queryStringParameters: { cursor, search: 'chicken', sort: 'title' },
+        subject: 'subject-1',
+      }),
+    );
+    const mismatched = await handleRequest(
+      repository,
+      event('GET /v1/recipes', {
+        queryStringParameters: { cursor, search: 'pasta', sort: 'title' },
+        subject: 'subject-1',
+      }),
+    );
+
+    expect(second.statusCode).toBe(200);
+    expect(list).toHaveBeenLastCalledWith('subject-1', {
+      cursor: {
+        id: '00000000-0000-4000-8000-000000000201',
+        sort: 'title',
+        titleKey: 'lemon chicken',
+      },
+      search: 'chicken',
+      sort: 'title',
+    });
+    expect(mismatched.statusCode).toBe(400);
+    expect(JSON.parse(mismatched.body ?? '{}')).toMatchObject({
+      error: { code: 'INVALID_CURSOR' },
+    });
+    expect(list).toHaveBeenCalledTimes(2);
   });
 
   it('estimates missing nutrition before saving a recipe', async () => {

@@ -24,26 +24,16 @@ draft automatically every week.
   - Protein: prioritise reaching the target
   - Carbohydrates and fat: approximately +/-15%
 - Targets apply to each person's complete day, not individual meals.
-- When both people attend a meal, they eat the same recipe but may receive
-  different portions.
+- Both people eat the same recipe at each meal but may receive different
+  portions.
 - Portions use quarter-serving increments.
 - The planner prioritises sensible serving sizes over mathematically perfect
   macro matching.
 
-## Attendance
-
-- Every week begins with breakfast, lunch, and dinner slots for Monday through
-  Sunday.
-- Attendance can be changed separately for each person and meal.
-- A meal with one attendee is scaled down to one person.
-- A meal with no attendees remains unplanned.
-- If someone is absent for a meal, the planner does not compensate by enlarging
-  their other meals.
-- That person's daily nutrition is labelled partial because the external meal's
-  macros are unknown.
-
 ## Weekly planning
 
+- Every week contains breakfast, lunch, and dinner slots for Monday through
+  Sunday, with both people included in every MVP slot.
 - A draft for the following Monday through Sunday is generated every Friday at
   17:00 in the `Europe/London` timezone.
 - Generation accounts for GMT and British Summer Time automatically.
@@ -116,8 +106,9 @@ Recipe photos are optional. Imported photos are copied into application
 storage; recipes without a photo use a neutral placeholder. When an import
 contains multiple photos, MacroMap keeps only its primary photo.
 
-The recipe library supports text search and user-selectable sorting across the
-complete saved collection.
+The recipe library supports case-insensitive search across recipe titles and
+ingredient names. It sorts by recent update by default and can be changed to
+title A-Z. Search and sorting apply to the complete saved collection.
 
 ## Nutrition estimation
 
@@ -140,7 +131,7 @@ complete saved collection.
 ## Practical quantities
 
 - Individual portions are allocated in quarter-serving increments.
-- The combined quantity for all attendees determines the batch being cooked.
+- The combined quantity for both people determines the batch being cooked.
 - The whole recipe is scaled proportionally.
 - Weights and volumes are displayed at sensible cooking precision rather than
   excessive mathematical precision.
@@ -152,7 +143,7 @@ complete saved collection.
 
 The weekly draft supports both:
 
-- Direct controls for attendance, portions, and recipe replacement
+- Direct controls for portions and recipe replacement
 - A free-text conversational interface
 
 Instructions such as "less chicken this week" apply only to that week and do
@@ -239,6 +230,7 @@ Integrated timers and offline operation are not required.
 - Multiple households or separate household-member accounts
 - Grocery surplus reconciliation or purchase history
 - Nutrition and meal-plan analytics
+- Per-person meal attendance and partial-day planning
 
 ## Future improvements
 
@@ -249,3 +241,4 @@ These are not MVP requirements:
   nutrition database cannot match confidently
 - Recipe-library filtering by structured attributes such as meal type,
   planning readiness, cuisine, protein, or flavour
+- Per-person meal attendance, including one-person and empty meal slots

@@ -5,6 +5,8 @@ import {
   recipeInputSchema,
   recipeImportPreviewRequestSchema,
   recipeImportResponseSchema,
+  recipeListCursorSchema,
+  recipeListQuerySchema,
   recipeNutritionProvenanceSchema,
   recipePhotoUploadRequestSchema,
   recipeSchema,
@@ -165,6 +167,25 @@ describe('shared API contracts', () => {
         updatedAt: '2026-08-20T12:00:00.000Z',
       }).planningStatus,
     ).toBe('library-only');
+  });
+
+  it('validates recipe search, sorting, and bound cursors', () => {
+    expect(
+      recipeListQuerySchema.parse({ search: '  chicken  ', sort: 'title' }),
+    ).toEqual({ search: 'chicken', sort: 'title' });
+    expect(recipeListQuerySchema.parse({})).toEqual({ sort: 'updated' });
+    expect(() => recipeListQuerySchema.parse({ sort: 'newest' })).toThrow();
+    expect(() => recipeListQuerySchema.parse({ filter: 'dinner' })).toThrow();
+
+    expect(
+      recipeListCursorSchema.parse({
+        id: '00000000-0000-4000-8000-000000000201',
+        search: 'chicken',
+        sort: 'title',
+        titleKey: 'lemon chicken',
+        version: 1,
+      }),
+    ).toMatchObject({ sort: 'title', titleKey: 'lemon chicken' });
   });
 
   it('records nutrition quantity assumptions and negligible omissions', () => {

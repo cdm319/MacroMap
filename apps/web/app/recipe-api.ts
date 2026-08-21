@@ -11,6 +11,7 @@ import {
   type RecipeInput,
   type RecipeImportResponse,
   type RecipeListResponse,
+  type RecipeListSort,
 } from '@macromap/contracts';
 
 export interface RecipeApiConfig {
@@ -18,12 +19,26 @@ export interface RecipeApiConfig {
   readonly baseUrl: string;
 }
 
+export interface RecipeListOptions {
+  readonly cursor?: string;
+  readonly search?: string;
+  readonly sort?: RecipeListSort;
+}
+
 export async function listRecipes(
   config: RecipeApiConfig,
-  cursor?: string,
+  options: RecipeListOptions = {},
 ): Promise<RecipeListResponse> {
   const url = new URL(`${config.baseUrl}/v1/recipes`);
-  if (cursor !== undefined) url.searchParams.set('cursor', cursor);
+  if (options.cursor !== undefined) {
+    url.searchParams.set('cursor', options.cursor);
+  }
+  if (options.search !== undefined) {
+    url.searchParams.set('search', options.search);
+  }
+  if (options.sort !== undefined && options.sort !== 'updated') {
+    url.searchParams.set('sort', options.sort);
+  }
   const response = await request(config, url);
   return recipeListResponseSchema.parse(await response.json());
 }

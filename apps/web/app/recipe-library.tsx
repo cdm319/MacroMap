@@ -1,11 +1,16 @@
 'use client';
 
-import type { Recipe, RecipeInput, RecipeSummary } from '@macromap/contracts';
+import type {
+  Recipe,
+  RecipeInput,
+  RecipeListSort,
+  RecipeSummary,
+} from '@macromap/contracts';
 import {
   describeNutritionEstimationIssue,
   estimateRecipeNutrition,
 } from '@macromap/domain/nutrition';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CookingMode } from './cooking-mode';
 import {
   archiveRecipe,
@@ -40,36 +45,65 @@ export function RecipeLibrary({ api }: RecipeLibraryProps) {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [view, setView] = useState<LibraryView>({ kind: 'list' });
   const [message, setMessage] = useState<string>();
-  const [loading, setLoading] = useState(api !== undefined);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sort, setSort] = useState<RecipeListSort>('updated');
+  const [refresh, setRefresh] = useState(0);
+  const [loadedQuery, setLoadedQuery] = useState<string>();
+  const queryKey = `${sort}\0${searchQuery}`;
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setSearchQuery(search.trim()), 300);
+    return () => window.clearTimeout(timeout);
+  }, [search]);
 
   useEffect(() => {
     if (api === undefined) return;
     let active = true;
-    void listRecipes(api)
+    void listRecipes(api, {
+      ...(searchQuery === '' ? {} : { search: searchQuery }),
+      sort,
+    })
       .then((page) => {
         if (!active) return;
         setRecipes(page.items);
         setNextCursor(page.nextCursor);
+        setLoadedQuery(queryKey);
       })
       .catch((error: unknown) => {
-        if (active) setMessage(messageFrom(error));
-      })
-      .finally(() => {
-        if (active) setLoading(false);
+        if (!active) return;
+        setRecipes([]);
+        setNextCursor(null);
+        setLoadedQuery(queryKey);
+        setMessage(messageFrom(error));
       });
     return () => {
       active = false;
     };
-  }, [api]);
+  }, [api, queryKey, refresh, searchQuery, sort]);
 
-  const visibleRecipes = api === undefined ? localRecipes : recipes;
+  const loadingResults = api !== undefined && loadedQuery !== queryKey;
+
+  const visibleRecipes = useMemo(
+    () =>
+      api === undefined
+        ? findLocalRecipes(localRecipes, search, sort)
+        : recipes,
+    [api, localRecipes, recipes, search, sort],
+  );
+  const hasSearch = (api === undefined ? search.trim() : searchQuery) !== '';
 
   async function loadMore(): Promise<void> {
     if (api === undefined || nextCursor === null) return;
     setLoading(true);
     setMessage(undefined);
     try {
-      const page = await listRecipes(api, nextCursor);
+      const page = await listRecipes(api, {
+        cursor: nextCursor,
+        ...(searchQuery === '' ? {} : { search: searchQuery }),
+        sort,
+      });
       setRecipes((current) => [...current, ...page.items]);
       setNextCursor(page.nextCursor);
     } catch (error) {
@@ -126,6 +160,7 @@ export function RecipeLibrary({ api }: RecipeLibraryProps) {
         summaryFrom(saved),
         ...current.filter(({ id }) => id !== saved.id),
       ]);
+      setRefresh((current) => current + 1);
     }
     setView({ kind: 'view', recipe: saved });
   }
@@ -151,6 +186,7 @@ export function RecipeLibrary({ api }: RecipeLibraryProps) {
       summaryFrom(recipe),
       ...current.filter(({ id }) => id !== recipe.id),
     ]);
+    if (api !== undefined) setRefresh((current) => current + 1);
     setView({ kind: 'view', recipe });
   }
 
@@ -249,17 +285,57 @@ export function RecipeLibrary({ api }: RecipeLibraryProps) {
         </div>
       </div>
 
+      <div className="recipe-library-tools">
+        <label className="recipe-search">
+          <span>Search recipes</span>
+          <input
+            maxLength={100}
+            onChange={(event) => {
+              setMessage(undefined);
+              setSearch(event.target.value);
+            }}
+            placeholder="Search by title or ingredient"
+            type="search"
+            value={search}
+          />
+        </label>
+        <label className="recipe-sort">
+          <span>Sort by</span>
+          <select
+            onChange={(event) => {
+              setMessage(undefined);
+              setSort(event.target.value as RecipeListSort);
+            }}
+            value={sort}
+          >
+            <option value="updated">Recently updated</option>
+            <option value="title">Title A–Z</option>
+          </select>
+        </label>
+      </div>
+
       {message === undefined ? null : (
         <p className="notice" role="alert">
           {message}
         </p>
       )}
-      {loading && visibleRecipes.length === 0 ? (
+      {(loading || loadingResults) && visibleRecipes.length === 0 ? (
         <p className="empty-state">Loading recipes…</p>
       ) : visibleRecipes.length === 0 ? (
         <div className="empty-state">
-          <h2>Your recipe book is empty</h2>
-          <p>Add the first meal you would be happy to see in a weekly plan.</p>
+          <h2>
+            {hasSearch ? 'No recipes found' : 'Your recipe book is empty'}
+          </h2>
+          <p>
+            {hasSearch
+              ? 'Try another title or ingredient.'
+              : 'Add the first meal you would be happy to see in a weekly plan.'}
+          </p>
+          {hasSearch ? (
+            <button className="text-button" onClick={() => setSearch('')}>
+              Clear search
+            </button>
+          ) : null}
         </div>
       ) : (
         <div className="recipe-grid">
@@ -292,7 +368,7 @@ export function RecipeLibrary({ api }: RecipeLibraryProps) {
           ))}
         </div>
       )}
-      {api !== undefined && nextCursor !== null ? (
+      {api !== undefined && !loadingResults && nextCursor !== null ? (
         <button
           className="secondary-button load-more"
           disabled={loading}
@@ -303,6 +379,31 @@ export function RecipeLibrary({ api }: RecipeLibraryProps) {
       ) : null}
     </section>
   );
+}
+
+function findLocalRecipes(
+  recipes: ReadonlyArray<Recipe>,
+  search: string,
+  sort: RecipeListSort,
+): Recipe[] {
+  const query = search.trim().toLocaleLowerCase('en-GB');
+  return recipes
+    .filter(
+      (recipe) =>
+        query === '' ||
+        recipe.title.toLocaleLowerCase('en-GB').includes(query) ||
+        recipe.ingredients.some((ingredient) =>
+          ingredient.name.toLocaleLowerCase('en-GB').includes(query),
+        ),
+    )
+    .toSorted((left, right) =>
+      sort === 'title'
+        ? left.title.localeCompare(right.title, 'en-GB', {
+            sensitivity: 'base',
+          }) || left.id.localeCompare(right.id)
+        : right.updatedAt.localeCompare(left.updatedAt) ||
+          right.id.localeCompare(left.id),
+    );
 }
 
 function RecipeDetail({

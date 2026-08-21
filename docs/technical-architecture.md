@@ -1,6 +1,6 @@
 # MacroMap technical architecture
 
-Status: Approved; Phase 3 complete
+Status: Approved; Phase 4a complete
 Last reviewed: 2026-08-21
 
 ## Purpose and authority
@@ -259,7 +259,7 @@ step.
 
 - `weekly_plan`: one Monday-to-Sunday plan with `draft` or `approved` status,
   generation diagnostics, and an optimistic-concurrency version.
-- `meal_slot`: date, breakfast/lunch/dinner type, and attendance per person.
+- `meal_slot`: date and breakfast/lunch/dinner type.
 - `planned_meal`: selected source recipe, per-person quarter-serving portions,
   and combined batch scale.
 - `planned_meal_snapshot`: immutable recipe instructions, ingredients,
@@ -311,7 +311,7 @@ an AI model to select meals or calculate macros.
 
 The MVP uses a bounded, seeded search:
 
-1. Build eligible candidates for every attended meal slot.
+1. Build eligible candidates for every meal slot.
 2. Reject candidates that violate hard eligibility or portion constraints.
 3. Explore recipe and quarter-serving combinations with a bounded beam search.
 4. Score complete and partial plans in the exact priority order defined by the
@@ -373,11 +373,12 @@ machine-readable code and a safe human-readable message.
 
 Recipes use a client-generated UUID and a whole-document `PUT`, making creation
 and retries idempotent without another key mechanism. `GET /v1/recipes` uses an
-opaque cursor and returns active recipe summaries; the item endpoint reads,
-replaces, or soft-archives one recipe. Ingredient, optional instruction, tag,
-and recipe rows are saved in one transaction. Every query derives the household
-from the validated Cognito `sub`; an identifier owned by another household is
-reported as absent.
+opaque cursor, supports bounded case-insensitive title and ingredient search,
+and sorts by recent update or title across the complete active collection. The
+item endpoint reads, replaces, or soft-archives one recipe. Ingredient,
+optional instruction, tag, and recipe rows are saved in one transaction. Every
+query derives the household from the validated Cognito `sub`; an identifier
+owned by another household is reported as absent.
 
 ## Security and observability
 

@@ -32,6 +32,25 @@ const householdSession = {
   ],
 };
 
+function recipeSummary(id: string, title: string, updatedAt: string) {
+  return {
+    id,
+    mealTypes: ['dinner'],
+    nutrition: {
+      carbsGrams: 50,
+      fatGrams: 15,
+      kcal: 500,
+      proteinGrams: 40,
+    },
+    nutritionProvenance: { confidence: 'confirmed', source: 'manual' },
+    photoUrl: null,
+    planningStatus: 'ready',
+    servingCount: 2,
+    title,
+    updatedAt,
+  };
+}
+
 async function useCognitoConfig(page: Page): Promise<void> {
   await page.route('**/config.json', (route) =>
     route.fulfill({
@@ -343,6 +362,73 @@ test('aligns recipe photos at the top of cards with different title lengths', as
     );
 
   expect(new Set(mediaTops).size).toBe(1);
+});
+
+test('searches and sorts the complete authenticated recipe library', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem(
+      'macromap.tokens',
+      JSON.stringify({
+        accessToken: 'test-access-token',
+        expiresAt: Date.now() + 60_000,
+      }),
+    );
+  });
+  await useCognitoConfig(page);
+  await page.route('https://api.example.test/v1/session', (route) =>
+    route.fulfill({ contentType: 'application/json', json: householdSession }),
+  );
+
+  const noodles = recipeSummary(
+    '00000000-0000-4000-8000-000000000201',
+    'Weeknight noodles',
+    '2026-08-21T12:00:00.000Z',
+  );
+  const crumble = recipeSummary(
+    '00000000-0000-4000-8000-000000000202',
+    'Apple crumble',
+    '2026-08-20T12:00:00.000Z',
+  );
+  const recentlyUpdated = [noodles, crumble];
+  const requestedQueries: string[] = [];
+  await page.route('https://api.example.test/v1/recipes*', (route) => {
+    const url = new URL(route.request().url());
+    requestedQueries.push(url.search);
+    const searched =
+      url.searchParams.get('search') === 'chicken'
+        ? [noodles]
+        : recentlyUpdated;
+    const items =
+      url.searchParams.get('sort') === 'title'
+        ? [...searched].sort((left, right) =>
+            left.title.localeCompare(right.title),
+          )
+        : searched;
+    return route.fulfill({
+      contentType: 'application/json',
+      json: { items, nextCursor: null },
+    });
+  });
+
+  await page.goto('/');
+  await expect(page.locator('.recipe-card h2')).toHaveText([
+    'Weeknight noodles',
+    'Apple crumble',
+  ]);
+
+  await page.getByLabel('Sort by').selectOption('title');
+  await expect(page.locator('.recipe-card h2')).toHaveText([
+    'Apple crumble',
+    'Weeknight noodles',
+  ]);
+
+  await page.getByLabel('Search recipes').fill('chicken');
+  await expect(page.locator('.recipe-card h2')).toHaveText([
+    'Weeknight noodles',
+  ]);
+  expect(requestedQueries).toContain('?search=chicken&sort=title');
 });
 
 test('saves targets through the authenticated API', async ({ page }) => {

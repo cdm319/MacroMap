@@ -357,6 +357,37 @@ export const recipeSummarySchema = recipeSchema.pick({
   updatedAt: true,
 });
 
+export const recipeListSortSchema = z.enum(['updated', 'title']);
+
+export const recipeListQuerySchema = z
+  .object({
+    cursor: z.string().min(1).optional(),
+    search: z.string().trim().min(1).max(100).optional(),
+    sort: recipeListSortSchema.default('updated'),
+  })
+  .strict();
+
+export const recipeListCursorSchema = z.discriminatedUnion('sort', [
+  z
+    .object({
+      id: opaqueIdSchema,
+      search: z.string().max(100).nullable(),
+      sort: z.literal('updated'),
+      updatedAt: z.string().datetime(),
+      version: z.literal(1),
+    })
+    .strict(),
+  z
+    .object({
+      id: opaqueIdSchema,
+      search: z.string().max(100).nullable(),
+      sort: z.literal('title'),
+      titleKey: z.string(),
+      version: z.literal(1),
+    })
+    .strict(),
+]);
+
 export const recipeListResponseSchema = z
   .object({
     items: z.array(recipeSummarySchema),
@@ -380,6 +411,7 @@ export type RecipeImportWarning = z.infer<typeof recipeImportWarningSchema>;
 export type RecipeIngredient = z.infer<typeof recipeIngredientSchema>;
 export type RecipeInput = z.infer<typeof recipeInputSchema>;
 export type RecipeListResponse = z.infer<typeof recipeListResponseSchema>;
+export type RecipeListSort = z.infer<typeof recipeListSortSchema>;
 export type RecipeNutrition = z.infer<typeof recipeNutritionSchema>;
 export type RecipeNutritionProvenance = z.infer<
   typeof recipeNutritionProvenanceSchema

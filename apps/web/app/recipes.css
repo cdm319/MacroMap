@@ -228,6 +228,41 @@
   margin: 2rem auto 0;
 }
 
+.recipe-library-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 12rem;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.recipe-search,
+.recipe-sort {
+  display: grid;
+  gap: 0.4rem;
+  color: #536158;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.recipe-search input,
+.recipe-sort select {
+  width: 100%;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid #c9cec6;
+  border-radius: 0.65rem;
+  outline: 0;
+  background: white;
+  color: #18231d;
+  font: inherit;
+}
+
+.recipe-search input:focus,
+.recipe-sort select:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgb(33 75 55 / 12%);
+}
+
 .library-actions,
 .import-candidates,
 .import-methods {
@@ -782,6 +817,7 @@
 
   .recipe-grid,
   .recipe-detail-grid,
+  .recipe-library-tools,
   .form-grid,
   .form-grid--three,
   .form-grid--four {

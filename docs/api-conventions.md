@@ -1,6 +1,6 @@
 # API conventions
 
-Status: Phase 3 complete
+Status: Phase 4a complete
 Last reviewed: 2026-08-21
 
 ## Phase 1 session endpoint
@@ -144,8 +144,11 @@ requirements.
 
 ## Recipe library endpoints
 
-- `GET /v1/recipes` returns active recipe summaries in descending update order.
-  An optional opaque `cursor` continues the list.
+- `GET /v1/recipes` returns active recipe summaries. `sort=updated` is the
+  default; `sort=title` provides case-insensitive A-Z order. An optional
+  case-insensitive `search` matches recipe titles and ingredient names. Search
+  is limited to 100 characters. An optional opaque `cursor` continues the same
+  search and sort; a cursor cannot be reused with different list settings.
 - `GET /v1/recipes/{recipeId}` returns the complete editable recipe.
 - `PUT /v1/recipes/{recipeId}` creates or replaces that recipe as one
   transaction. The client supplies the UUID, so retrying the same request does

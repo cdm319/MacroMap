@@ -1,6 +1,6 @@
 # MacroMap MVP delivery plan
 
-Status: Approved implementation sequence; Phase 3 complete
+Status: Approved implementation sequence; Phase 4a complete
 Last reviewed: 2026-08-21
 
 ## Delivery principles
@@ -24,7 +24,9 @@ Current progress:
 - Phase 3 is complete. Direct JSON and URL-based Schema.org import, mandatory
   review, primary-photo copying, and deterministic bundled nutrition estimates
   are implemented.
-- Phases 4-6 have not started.
+- Phase 4a is complete. Recipe search and sorting cover the full saved
+  collection.
+- Phases 4c-6 have not started.
 
 ## Phase 0: Repository and contracts
 
@@ -124,27 +126,28 @@ Exit criteria:
 - nutrition-estimation failure does not block manual or valid Schema.org
   imports.
 
-## Phase 4: Recipe discovery, weekly planner, and grocery list
+## Phase 4: Weekly planner and grocery list
 
 Deliverables:
 
-- recipe-library text search and user-selectable sorting;
-- Monday-to-Sunday meal slots and per-person attendance;
-- quarter-serving portion allocation and sensible batch rounding;
-- deterministic bounded planner with shortfall diagnostics;
-- five-distinct-dinner target and two-week history penalty;
-- per-person daily macro summaries with partial-day handling;
-- provisional and approved grocery lists;
-- compatible-unit and canonical-ingredient consolidation;
-- immutable approved recipe snapshots; and
-- idempotent Friday 17:00 `Europe/London` draft generation.
+- **4a — Recipe discovery:** case-insensitive title and ingredient search, plus
+  recent-update and A-Z sorting, across the complete recipe library.
+- **4c — Timetable and planning:** Monday-to-Sunday breakfast, lunch, and dinner
+  slots; quarter-serving portion allocation; sensible batch rounding; a
+  deterministic bounded planner; shortfall diagnostics; daily macro summaries;
+  the five-distinct-dinner target; and the two-week history penalty.
+- **4d — Grocery generation:** a provisional grocery list generated from the
+  current plan, with compatible-unit and canonical-ingredient consolidation.
+- **4e — Hardening:** immutable planned-meal recipe snapshots, deterministic
+  tie-breaking, exact grocery reconciliation to snapshots, and idempotent
+  Friday 17:00 `Europe/London` draft generation.
 
 Exit criteria:
 
 - search and sorting operate across the complete recipe library rather than
   only the currently loaded page;
-- golden tests cover the full priority order, dinner repetition, attendance,
-  partial days, impossible targets, deterministic tie-breaking, and DST;
+- golden tests cover the full priority order, dinner repetition, impossible
+  targets, deterministic tie-breaking, and DST;
 - the scheduler cannot create duplicate weekly drafts;
 - grocery totals exactly reconcile to planned recipe snapshots; and
 - no AI call occurs during ordinary plan generation.
@@ -153,7 +156,7 @@ Exit criteria:
 
 Deliverables:
 
-- direct attendance, portion, and recipe replacement controls;
+- direct portion and recipe replacement controls;
 - structured interpretation of conversational revisions;
 - minimal-change re-planning and a consequential-change summary;
 - draft approval and active grocery list;
@@ -201,7 +204,9 @@ delivery commitment:
 - cached USDA FoodData Central fallback for ingredients that the bundled
   nutrition database cannot match confidently; and
 - recipe-library filtering by structured attributes such as meal type,
-  planning readiness, cuisine, protein, or flavour.
+  planning readiness, cuisine, protein, or flavour; and
+- per-person meal attendance, including partial-day macro handling and
+  one-person or empty meal slots.
 
 ## CI and deployment workflows
 

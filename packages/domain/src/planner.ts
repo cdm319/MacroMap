@@ -7,6 +7,7 @@ const mealShares: Record<MealType, number> = {
   lunch: 0.3,
   dinner: 0.45,
 };
+const partialDayShares = [0, mealShares.breakfast, 1 - mealShares.dinner];
 const servingOptions = [0.5, 0.75, 1, 1.25, 1.5];
 const beamWidth = 80;
 
@@ -83,14 +84,32 @@ export interface WeeklyPlanningInput {
 }
 
 interface Candidate {
+  readonly ingredientKeys: ReadonlyArray<string>;
   readonly meal: PlannedMeal;
   readonly recipe: PlanningRecipe;
+  readonly tagKeys: {
+    readonly cuisines: NormalisedValues;
+    readonly flavours: NormalisedValues;
+    readonly proteins: NormalisedValues;
+  };
+}
+
+interface NormalisedValues {
+  readonly all: ReadonlyArray<string>;
+  readonly unique: ReadonlySet<string>;
 }
 
 interface PlanState {
-  readonly ingredientUses: ReadonlyMap<string, number>;
+  readonly completedMacroPenalty: number;
+  readonly dinnerRepetition: number;
+  readonly flavourRepetition: number;
+  readonly historyPenalty: number;
+  readonly ingredientReuse: number;
+  readonly lastDinner: Candidate | null;
   readonly meals: ReadonlyArray<Candidate | null>;
   readonly tieBreaker: number;
+  readonly usedDinnerIds: ReadonlySet<string>;
+  readonly usedIngredients: ReadonlySet<string>;
 }
 
 export function generateWeeklyPlan(
@@ -101,6 +120,7 @@ export function generateWeeklyPlan(
   const candidates = new Map(
     mealTypes.map((mealType) => [mealType, createCandidates(input, mealType)]),
   );
+  const recentDinnerIds = new Set(input.recentDinnerRecipeIds);
   let states: ReadonlyArray<PlanState> = [emptyState()];
 
   for (
@@ -110,16 +130,28 @@ export function generateWeeklyPlan(
   ) {
     const mealType = mealTypes[slotIndex % mealTypes.length]!;
     const options = candidates.get(mealType)!;
+    const mealOptions: ReadonlyArray<Candidate | null> =
+      options.length === 0 ? [null] : options;
     const expanded = states.flatMap((state) =>
-      options.length === 0
-        ? [{ ...state, meals: [...state.meals, null] }]
-        : options.map((candidate) => addCandidate(state, candidate)),
+      mealOptions.map((candidate) => {
+        const proposed = proposeMeal(
+          state,
+          candidate,
+          mealType,
+          input,
+          recentDinnerIds,
+        );
+        return {
+          candidate,
+          score: scoreState(proposed, input),
+          state: proposed,
+        };
+      }),
     );
     states = expanded
-      .map((state) => ({ state, score: scoreState(state, input, slotIndex) }))
       .sort((left, right) => compareScores(left.score, right.score))
       .slice(0, beamWidth)
-      .map(({ state }) => state);
+      .map(({ candidate, state }) => commitMeal(state, candidate, mealType));
   }
 
   const winner = states[0] ?? emptyState();
@@ -166,6 +198,7 @@ function createCandidates(
         ),
       }));
       return {
+        ingredientKeys: [...new Set(recipe.ingredients.map(normalise))],
         meal: {
           batchServings: portions.reduce(
             (total, portion) => total + portion.servings,
@@ -176,6 +209,11 @@ function createCandidates(
           recipeTitle: recipe.title,
         },
         recipe,
+        tagKeys: {
+          cuisines: normaliseValues(recipe.tags.cuisines),
+          flavours: normaliseValues(recipe.tags.flavours),
+          proteins: normaliseValues(recipe.tags.proteins),
+        },
       };
     })
     .sort(
@@ -219,73 +257,109 @@ function portionMacroDistance(
   );
 }
 
-function addCandidate(state: PlanState, candidate: Candidate): PlanState {
-  const ingredientUses = new Map(state.ingredientUses);
-  for (const ingredient of new Set(
-    candidate.recipe.ingredients.map(normalise),
-  )) {
-    ingredientUses.set(ingredient, (ingredientUses.get(ingredient) ?? 0) + 1);
-  }
-  return {
-    ingredientUses,
+function proposeMeal(
+  state: PlanState,
+  candidate: Candidate | null,
+  mealType: MealType,
+  input: WeeklyPlanningInput,
+  recentDinnerIds: ReadonlySet<string>,
+): PlanState {
+  const dinner = mealType === 'dinner' ? candidate : null;
+  const proposed: PlanState = {
+    completedMacroPenalty: state.completedMacroPenalty,
+    dinnerRepetition:
+      state.dinnerRepetition +
+      (dinner !== null && state.usedDinnerIds.has(dinner.recipe.id) ? 1 : 0),
+    flavourRepetition:
+      state.flavourRepetition +
+      (dinner !== null && state.lastDinner !== null
+        ? dinnerSimilarity(state.lastDinner, dinner)
+        : 0),
+    historyPenalty:
+      state.historyPenalty +
+      (dinner !== null && recentDinnerIds.has(dinner.recipe.id) ? 1 : 0),
+    ingredientReuse:
+      state.ingredientReuse +
+      (candidate?.ingredientKeys.filter((ingredient) =>
+        state.usedIngredients.has(ingredient),
+      ).length ?? 0),
+    lastDinner: dinner ?? state.lastDinner,
     meals: [...state.meals, candidate],
     tieBreaker:
       state.tieBreaker +
-      stableHash(`${state.meals.length}:${candidate.recipe.id}`),
+      (candidate === null
+        ? 0
+        : stableHash(`${state.meals.length}:${candidate.recipe.id}`)),
+    usedDinnerIds: state.usedDinnerIds,
+    usedIngredients: state.usedIngredients,
   };
+  return mealType === 'dinner'
+    ? {
+        ...proposed,
+        completedMacroPenalty:
+          state.completedMacroPenalty +
+          dayMacroPenalty(
+            proposed,
+            input,
+            Math.floor(state.meals.length / mealTypes.length),
+            1,
+          ),
+      }
+    : proposed;
+}
+
+function commitMeal(
+  state: PlanState,
+  candidate: Candidate | null,
+  mealType: MealType,
+): PlanState {
+  if (candidate === null) return state;
+  const usedIngredients = new Set(state.usedIngredients);
+  for (const ingredient of candidate.ingredientKeys) {
+    usedIngredients.add(ingredient);
+  }
+  const usedDinnerIds =
+    mealType === 'dinner'
+      ? new Set(state.usedDinnerIds).add(candidate.recipe.id)
+      : state.usedDinnerIds;
+  return { ...state, usedDinnerIds, usedIngredients };
 }
 
 function emptyState(): PlanState {
   return {
-    ingredientUses: new Map(),
+    completedMacroPenalty: 0,
+    dinnerRepetition: 0,
+    flavourRepetition: 0,
+    historyPenalty: 0,
+    ingredientReuse: 0,
+    lastDinner: null,
     meals: [],
     tieBreaker: 0,
+    usedDinnerIds: new Set(),
+    usedIngredients: new Set(),
   };
 }
 
 function scoreState(
   state: PlanState,
   input: WeeklyPlanningInput,
-  slotIndex: number,
 ): ReadonlyArray<number> {
-  const completedDays = Math.floor((slotIndex + 1) / mealTypes.length);
-  const mealsIntoCurrentDay = (slotIndex + 1) % mealTypes.length;
-  let macroPenalty = 0;
-
-  for (let dayIndex = 0; dayIndex < completedDays; dayIndex += 1) {
-    macroPenalty += dayMacroPenalty(state, input, dayIndex, 1);
-  }
+  const mealsIntoCurrentDay = state.meals.length % mealTypes.length;
+  let macroPenalty = state.completedMacroPenalty;
   if (mealsIntoCurrentDay > 0) {
-    const share = mealTypes
-      .slice(0, mealsIntoCurrentDay)
-      .reduce((total, mealType) => total + mealShares[mealType], 0);
-    macroPenalty += dayMacroPenalty(state, input, completedDays, share);
+    macroPenalty += dayMacroPenalty(
+      state,
+      input,
+      Math.floor((state.meals.length - 1) / mealTypes.length),
+      partialDayShares[mealsIntoCurrentDay]!,
+    );
   }
-
-  const dinners = state.meals
-    .filter((_, index) => mealTypes[index % mealTypes.length] === 'dinner')
-    .filter((meal): meal is Candidate => meal !== null);
-  const dinnerCounts = countBy(dinners.map(({ recipe }) => recipe.id));
-  const dinnerRepetition = [...dinnerCounts.values()].reduce(
-    (total, count) => total + Math.max(0, count - 1),
-    0,
-  );
-  const flavourRepetition = consecutiveDinnerSimilarity(dinners);
-  const recentDinners = new Set(input.recentDinnerRecipeIds);
-  const historyPenalty = dinners.filter(({ recipe }) =>
-    recentDinners.has(recipe.id),
-  ).length;
-  const ingredientReuse = [...state.ingredientUses.values()].reduce(
-    (total, uses) => total + Math.max(0, uses - 1),
-    0,
-  );
-
   return [
     roundScore(macroPenalty),
-    dinnerRepetition,
-    flavourRepetition,
-    historyPenalty,
-    -ingredientReuse,
+    state.dinnerRepetition,
+    state.flavourRepetition,
+    state.historyPenalty,
+    -state.ingredientReuse,
     state.tieBreaker,
   ];
 }
@@ -490,26 +564,21 @@ function relativeDifference(actual: number, target: number): number {
   return Math.abs(safeRatio(actual, target) - 1);
 }
 
-function consecutiveDinnerSimilarity(
-  dinners: ReadonlyArray<Candidate>,
-): number {
-  let repeats = 0;
-  for (let index = 1; index < dinners.length; index += 1) {
-    const previous = dinners[index - 1]!.recipe.tags;
-    const current = dinners[index]!.recipe.tags;
-    repeats += overlap(previous.cuisines, current.cuisines);
-    repeats += overlap(previous.flavours, current.flavours);
-    repeats += overlap(previous.proteins, current.proteins);
-  }
-  return repeats;
+function dinnerSimilarity(previous: Candidate, current: Candidate): number {
+  return (
+    overlap(previous.tagKeys.cuisines, current.tagKeys.cuisines) +
+    overlap(previous.tagKeys.flavours, current.tagKeys.flavours) +
+    overlap(previous.tagKeys.proteins, current.tagKeys.proteins)
+  );
 }
 
-function overlap(
-  left: ReadonlyArray<string>,
-  right: ReadonlyArray<string>,
-): number {
-  const rightValues = new Set(right.map(normalise));
-  return left.filter((value) => rightValues.has(normalise(value))).length;
+function overlap(left: NormalisedValues, right: NormalisedValues): number {
+  return left.all.filter((value) => right.unique.has(value)).length;
+}
+
+function normaliseValues(values: ReadonlyArray<string>): NormalisedValues {
+  const all = values.map(normalise);
+  return { all, unique: new Set(all) };
 }
 
 function normalise(value: string): string {

@@ -167,12 +167,18 @@ describe('weekly planner', () => {
   it('handles a 222-recipe library without candidate-score explosion', () => {
     const recipes = Array.from({ length: 222 }, (_, index) =>
       recipe(index + 100, `Recipe ${index + 1}`, 'breakfast', dinnerNutrition, {
+        ingredients: Array.from(
+          { length: 12 },
+          (_, ingredient) => `ingredient ${index}-${ingredient}`,
+        ),
         mealTypes: ['breakfast', 'lunch', 'dinner'],
       }),
     );
 
     const plan = generateWeeklyPlan(planningInput(recipes));
+    const reordered = generateWeeklyPlan(planningInput([...recipes].reverse()));
 
+    expect(reordered).toEqual(plan);
     expect(plan.days).toHaveLength(7);
     expect(plan.days.every(({ slots }) => slots.length === 3)).toBe(true);
   });

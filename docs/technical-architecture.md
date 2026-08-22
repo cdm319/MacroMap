@@ -345,6 +345,10 @@ between successive breakfasts, lunches, and dinners rather than only between
 dinners. A single opaque weighted sum must not allow one objective to silently
 overwhelm the others.
 
+The search first applies the normal same-day and meal-type repetition limits.
+If that draft breaches a daily macro guardrail, it retries with those limits
+relaxed and keeps whichever draft has the smaller material macro shortfall.
+
 Revision requests pin every unaffected meal. The planner first tries the
 explicit change alone, then portion changes, then an increasing number of meal
 substitutions. It stops at the smallest feasible change set and reports every

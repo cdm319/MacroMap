@@ -207,16 +207,44 @@ describe('weekly planner', () => {
     const plan = generateWeeklyPlan(
       planningInput([...breakfasts, ...lunches, ...dinners]),
     );
-    const breakfastCounts = recipeCounts(plan, 'breakfast');
-    const lunchCounts = recipeCounts(plan, 'lunch');
-    const dinnerCounts = recipeCounts(plan, 'dinner');
 
-    expect(breakfastCounts.size).toBeGreaterThanOrEqual(3);
-    expect(Math.max(...breakfastCounts.values())).toBeLessThanOrEqual(3);
-    expect(lunchCounts.size).toBeGreaterThanOrEqual(4);
-    expect(Math.max(...lunchCounts.values())).toBeLessThanOrEqual(2);
-    expect(dinnerCounts.size).toBeGreaterThanOrEqual(5);
-    expect(Math.max(...dinnerCounts.values())).toBeLessThanOrEqual(2);
+    expectVariationTargets(plan);
+  });
+
+  it('keeps normal variety when recipes need complementary meals', () => {
+    const breakfasts = [1, 0.7, 1.3, 0.8].map((factor, index) =>
+      recipe(
+        index + 50,
+        `Breakfast ${index + 1}`,
+        'breakfast',
+        scaleNutrition(breakfast.nutrition, factor),
+      ),
+    );
+    const lunches = [1, 0.7, 1.3, 0.8, 1.2].map((factor, index) =>
+      recipe(
+        index + 60,
+        `Lunch ${index + 1}`,
+        'lunch',
+        scaleNutrition(lunch.nutrition, factor),
+      ),
+    );
+    const dinners = [1, 0.8, 1.2, 0.85, 1.15, 0.9].map((factor, index) =>
+      recipe(
+        index + 70,
+        `Dinner ${index + 1}`,
+        'dinner',
+        scaleNutrition(dinnerNutrition, factor),
+      ),
+    );
+
+    const plan = generateWeeklyPlan(
+      planningInput([...breakfasts, ...lunches, ...dinners]),
+    );
+
+    expectVariationTargets(plan);
+    expect(plan.diagnostics).not.toContainEqual(
+      expect.objectContaining({ code: 'DAILY_MACROS_OUTSIDE_TARGET' }),
+    );
   });
 
   it('keeps a macro-suitable meal when the alternatives are materially worse', () => {
@@ -368,4 +396,19 @@ function recipeCounts(
     }
   }
   return counts;
+}
+
+function expectVariationTargets(
+  plan: ReturnType<typeof generateWeeklyPlan>,
+): void {
+  const breakfastCounts = recipeCounts(plan, 'breakfast');
+  const lunchCounts = recipeCounts(plan, 'lunch');
+  const dinnerCounts = recipeCounts(plan, 'dinner');
+
+  expect(breakfastCounts.size).toBeGreaterThanOrEqual(3);
+  expect(Math.max(...breakfastCounts.values())).toBeLessThanOrEqual(3);
+  expect(lunchCounts.size).toBeGreaterThanOrEqual(4);
+  expect(Math.max(...lunchCounts.values())).toBeLessThanOrEqual(2);
+  expect(dinnerCounts.size).toBeGreaterThanOrEqual(5);
+  expect(Math.max(...dinnerCounts.values())).toBeLessThanOrEqual(2);
 }

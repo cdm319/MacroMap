@@ -137,7 +137,8 @@ Deliverables:
 - **4a — Recipe discovery:** case-insensitive title and ingredient search, plus
   recent-update and A-Z sorting, across the complete recipe library.
 - **4c — Timetable and planning:** Monday-to-Sunday breakfast, lunch, and dinner
-  slots; quarter-serving portion allocation; sensible batch rounding; a
+  slots; quarter-serving portion allocation capped at one serving per person;
+  sensible batch rounding; a
   deterministic bounded planner; shortfall diagnostics; daily macro summaries;
   same-day duplicate avoidance; the three-breakfast, four-lunch, and five-dinner
   variety targets; and the two-week dinner-history penalty.
@@ -210,6 +211,8 @@ delivery commitment:
   nutrition database cannot match confidently; and
 - recipe-library filtering by structured attributes such as meal type,
   planning readiness, cuisine, protein, or flavour; and
+- recipe difficulty and preparation, cooking, and total time, with a weekly cap
+  on demanding recipes; and
 - per-person meal attendance, including partial-day macro handling and
   one-person or empty meal slots.
 

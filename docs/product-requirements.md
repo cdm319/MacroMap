@@ -17,16 +17,16 @@ draft automatically every week.
   - Protein
   - Carbohydrates
   - Fat
-- The application reserves 15% of each target for snacks, which it does not
-  plan.
-- On complete days, all planned meals are evaluated against the remaining 85%:
-  - Calories target: approximately +/-10%
-  - Protein: prioritise reaching the target
-  - Carbohydrates and fat: approximately +/-15%
+- The application reserves 15% of daily calories for snacks, which it does not
+  plan. It does not reserve a fixed share of each macro.
+- On complete days, all planned meals are evaluated against these ranges:
+  - Calories: the remaining 85%, approximately +/-10%
+  - Protein: at least 90% of the full daily target
+  - Carbohydrates and fat: 70-110% of the full daily targets
 - Targets apply to each person's complete day, not individual meals.
 - Both people eat the same recipe at each meal but may receive different
   portions.
-- Portions use quarter-serving increments.
+- Portions use quarter-serving increments from 0.25 to one serving per person.
 - The planner prioritises sensible serving sizes over mathematically perfect
   macro matching.
 
@@ -47,13 +47,19 @@ draft automatically every week.
 Planner priorities, in order:
 
 1. Sensible portions and cooking quantities
-2. Proximity to daily macro targets
+2. Avoidance of material daily macro-range shortfalls
 3. Avoidance of the same recipe in multiple slots on one day
 4. Dinner uniqueness
 5. Breakfast and lunch repetition targets
 6. Flavour and cuisine variation within each meal type
 7. Avoidance of recently served dinners
-8. Reuse of ingredients across the week
+8. Exact calorie and protein proximity within the acceptable ranges
+9. Reuse of ingredients across the week
+
+Plans inside the accepted calorie, protein, carbohydrate, and fat guardrails
+are compared on variety before small differences in exact macro fit. This keeps
+macro safety ahead of variety without allowing a fractionally closer meal to
+dominate the whole week.
 
 Repetition rules:
 
@@ -139,7 +145,8 @@ title A-Z. Search and sorting apply to the complete saved collection.
 
 ## Practical quantities
 
-- Individual portions are allocated in quarter-serving increments.
+- Individual portions are allocated in quarter-serving increments between 0.25
+  and one serving.
 - The combined quantity for both people determines the batch being cooked.
 - The whole recipe is scaled proportionally.
 - Weights and volumes are displayed at sensible cooking precision rather than
@@ -250,4 +257,6 @@ These are not MVP requirements:
   nutrition database cannot match confidently
 - Recipe-library filtering by structured attributes such as meal type,
   planning readiness, cuisine, protein, or flavour
+- Recipe difficulty and preparation, cooking, and total time, with a weekly cap
+  on demanding recipes
 - Per-person meal attendance, including one-person and empty meal slots

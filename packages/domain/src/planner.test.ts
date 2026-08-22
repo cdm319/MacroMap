@@ -68,20 +68,32 @@ const breakfast = recipe(1, 'Oats', 'breakfast', {
   carbsGrams: 42.5,
   fatGrams: 17,
   kcal: 425,
-  proteinGrams: 42.5,
+  proteinGrams: 50,
 });
 const lunch = recipe(2, 'Chicken bowl', 'lunch', {
   carbsGrams: 51,
   fatGrams: 20.4,
   kcal: 510,
-  proteinGrams: 51,
+  proteinGrams: 60,
 });
 const dinnerNutrition = {
   carbsGrams: 76.5,
   fatGrams: 30.6,
   kcal: 765,
-  proteinGrams: 76.5,
+  proteinGrams: 90,
 };
+
+function scaleNutrition(
+  nutrition: PlanningRecipe['nutrition'],
+  factor: number,
+): PlanningRecipe['nutrition'] {
+  return {
+    carbsGrams: nutrition.carbsGrams * factor,
+    fatGrams: nutrition.fatGrams * factor,
+    kcal: nutrition.kcal * factor,
+    proteinGrams: nutrition.proteinGrams * factor,
+  };
+}
 
 describe('weekly planner', () => {
   it('builds the complete week deterministically with quarter servings', () => {
@@ -115,13 +127,13 @@ describe('weekly planner', () => {
           carbsGrams: 170,
           fatGrams: 68,
           kcal: 1_700,
-          proteinGrams: 170,
+          proteinGrams: 200,
         },
         target: {
-          carbsGrams: 170,
-          fatGrams: 68,
+          carbsGrams: 200,
+          fatGrams: 80,
           kcal: 1_700,
-          proteinGrams: 170,
+          proteinGrams: 200,
         },
       },
       {
@@ -130,13 +142,13 @@ describe('weekly planner', () => {
           carbsGrams: 127.5,
           fatGrams: 51,
           kcal: 1_275,
-          proteinGrams: 127.5,
+          proteinGrams: 150,
         },
         target: {
-          carbsGrams: 127.5,
-          fatGrams: 51,
+          carbsGrams: 150,
+          fatGrams: 60,
           kcal: 1_275,
-          proteinGrams: 127.5,
+          proteinGrams: 150,
         },
       },
     ]);
@@ -164,20 +176,33 @@ describe('weekly planner', () => {
     ).toHaveLength(0);
   });
 
-  it('varies breakfasts and lunches within their repetition targets', () => {
-    const breakfasts = Array.from({ length: 4 }, (_, index) =>
+  it('varies meals when their macro fits differ slightly', () => {
+    const breakfastFactors = [1, 0.95, 1.05, 0.9];
+    const lunchFactors = [1, 0.95, 1.05, 0.9, 1.1];
+    const dinnerFactors = [1, 0.95, 1.05, 0.9, 1.1, 0.92, 1.08];
+    const breakfasts = breakfastFactors.map((factor, index) =>
       recipe(
         index + 20,
         `Breakfast ${index + 1}`,
         'breakfast',
-        dinnerNutrition,
+        scaleNutrition(breakfast.nutrition, factor),
       ),
     );
-    const lunches = Array.from({ length: 5 }, (_, index) =>
-      recipe(index + 30, `Lunch ${index + 1}`, 'lunch', dinnerNutrition),
+    const lunches = lunchFactors.map((factor, index) =>
+      recipe(
+        index + 30,
+        `Lunch ${index + 1}`,
+        'lunch',
+        scaleNutrition(lunch.nutrition, factor),
+      ),
     );
-    const dinners = Array.from({ length: 7 }, (_, index) =>
-      recipe(index + 40, `Dinner ${index + 1}`, 'dinner', dinnerNutrition),
+    const dinners = dinnerFactors.map((factor, index) =>
+      recipe(
+        index + 40,
+        `Dinner ${index + 1}`,
+        'dinner',
+        scaleNutrition(dinnerNutrition, factor),
+      ),
     );
     const plan = generateWeeklyPlan(
       planningInput([...breakfasts, ...lunches, ...dinners]),
@@ -192,6 +217,50 @@ describe('weekly planner', () => {
     expect(Math.max(...lunchCounts.values())).toBeLessThanOrEqual(2);
     expect(dinnerCounts.size).toBeGreaterThanOrEqual(5);
     expect(Math.max(...dinnerCounts.values())).toBeLessThanOrEqual(2);
+  });
+
+  it('keeps a macro-suitable meal when the alternatives are materially worse', () => {
+    const poorBreakfasts = Array.from({ length: 3 }, (_, index) =>
+      recipe(index + 60, `Poor breakfast ${index + 1}`, 'breakfast', {
+        carbsGrams: 5,
+        fatGrams: 1,
+        kcal: 50,
+        proteinGrams: 1,
+      }),
+    );
+    const plan = generateWeeklyPlan(
+      planningInput([
+        breakfast,
+        ...poorBreakfasts,
+        lunch,
+        recipe(70, 'Dinner', 'dinner', dinnerNutrition),
+      ]),
+    );
+
+    expect([...recipeCounts(plan, 'breakfast').keys()]).toEqual([breakfast.id]);
+  });
+
+  it('never allocates more than one serving to a person', () => {
+    const lightMeal = recipe(
+      80,
+      'Light meal',
+      'breakfast',
+      {
+        carbsGrams: 10,
+        fatGrams: 3,
+        kcal: 120,
+        proteinGrams: 10,
+      },
+      { mealTypes: ['breakfast', 'lunch', 'dinner'] },
+    );
+    const plan = generateWeeklyPlan(planningInput([lightMeal]));
+
+    expect(
+      plan.days
+        .flatMap(({ slots }) => slots)
+        .flatMap(({ meal }) => meal?.portions ?? [])
+        .every(({ servings }) => servings <= 1),
+    ).toBe(true);
   });
 
   it('reports unavoidable breakfast and lunch repetition', () => {
@@ -230,6 +299,9 @@ describe('weekly planner', () => {
     expect(reordered).toEqual(plan);
     expect(plan.days).toHaveLength(7);
     expect(plan.days.every(({ slots }) => slots.length === 3)).toBe(true);
+    expect(recipeCounts(plan, 'breakfast').size).toBeGreaterThanOrEqual(3);
+    expect(recipeCounts(plan, 'lunch').size).toBeGreaterThanOrEqual(4);
+    expect(recipeCounts(plan, 'dinner').size).toBeGreaterThanOrEqual(5);
     expect(
       plan.days.every((day) => {
         const recipeIds = day.slots.flatMap(({ meal }) =>

@@ -327,7 +327,7 @@ The MVP uses a bounded, seeded search:
 
 Phase 4c uses each Monday date as the explicit seed, a beam width of 80, and
 meal-share targets of 25% breakfast, 30% lunch, and 45% dinner. Per-person
-servings range from 0.5 to 1.5 in quarter increments. This sensible bound is
+servings range from 0.25 to one in quarter increments. This sensible bound is
 applied before macro optimisation. These are bounded search heuristics, not new
 user settings.
 
@@ -336,11 +336,14 @@ the separate scheduled entry point and idempotent Friday invocation; Phase 4c
 does not add any AWS resource or standing cost.
 
 The score must separate hard constraints, lexicographically ordered objectives,
-and reporting metrics. A single opaque weighted sum must not allow a lower
-priority benefit to overwhelm sensible quantities, macro proximity, or the
-same-day and meal-type repetition targets. Flavour and cuisine variation is
-evaluated between successive breakfasts, lunches, and dinners rather than only
-between dinners.
+and reporting metrics. Its first nutrition objective penalises only breaches of
+the approved daily guardrails: the non-snack calorie target +/-10%, at least 90%
+of full daily protein, and 70-110% of full daily carbohydrate and fat. Within
+those guardrails, same-day and meal-type variation is evaluated before exact
+calorie and protein proximity. Flavour and cuisine variation is evaluated
+between successive breakfasts, lunches, and dinners rather than only between
+dinners. A single opaque weighted sum must not allow one objective to silently
+overwhelm the others.
 
 Revision requests pin every unaffected meal. The planner first tries the
 explicit change alone, then portion changes, then an increasing number of meal

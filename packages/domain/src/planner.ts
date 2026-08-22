@@ -116,13 +116,10 @@ export function generateWeeklyPlan(
         : options.map((candidate) => addCandidate(state, candidate)),
     );
     states = expanded
-      .sort((left, right) =>
-        compareScores(
-          scoreState(left, input, slotIndex),
-          scoreState(right, input, slotIndex),
-        ),
-      )
-      .slice(0, beamWidth);
+      .map((state) => ({ state, score: scoreState(state, input, slotIndex) }))
+      .sort((left, right) => compareScores(left.score, right.score))
+      .slice(0, beamWidth)
+      .map(({ state }) => state);
   }
 
   const winner = states[0] ?? emptyState();

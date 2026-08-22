@@ -164,6 +164,19 @@ describe('weekly planner', () => {
     ).toHaveLength(0);
   });
 
+  it('handles a 222-recipe library without candidate-score explosion', () => {
+    const recipes = Array.from({ length: 222 }, (_, index) =>
+      recipe(index + 100, `Recipe ${index + 1}`, 'breakfast', dinnerNutrition, {
+        mealTypes: ['breakfast', 'lunch', 'dinner'],
+      }),
+    );
+
+    const plan = generateWeeklyPlan(planningInput(recipes));
+
+    expect(plan.days).toHaveLength(7);
+    expect(plan.days.every(({ slots }) => slots.length === 3)).toBe(true);
+  });
+
   it('returns the best draft with honest diagnostics when constraints conflict', () => {
     const onlyDinner = recipe(10, 'Only dinner', 'dinner', dinnerNutrition, {
       nutritionConfidence: 'low',

@@ -245,16 +245,31 @@ function onTarget(
 ): boolean {
   return (
     within(planned.kcal, target.kcal, 0.1) &&
-    planned.proteinGrams >= target.proteinGrams &&
-    within(planned.carbsGrams, target.carbsGrams, 0.15) &&
-    within(planned.fatGrams, target.fatGrams, 0.15)
+    atLeast(planned.proteinGrams, target.proteinGrams, 0.9) &&
+    withinRange(planned.carbsGrams, target.carbsGrams, 0.7, 1.1) &&
+    withinRange(planned.fatGrams, target.fatGrams, 0.7, 1.1)
   );
+}
+
+function atLeast(actual: number, target: number, minimum: number): boolean {
+  return target === 0 ? actual === 0 : actual / target >= minimum;
 }
 
 function within(actual: number, target: number, tolerance: number): boolean {
   return target === 0
     ? actual === 0
     : Math.abs(actual / target - 1) <= tolerance;
+}
+
+function withinRange(
+  actual: number,
+  target: number,
+  minimum: number,
+  maximum: number,
+): boolean {
+  if (target === 0) return actual === 0;
+  const ratio = actual / target;
+  return ratio >= minimum && ratio <= maximum;
 }
 
 function nextMonday(): string {

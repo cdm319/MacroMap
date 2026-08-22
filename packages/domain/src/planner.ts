@@ -16,7 +16,7 @@ const variationTargets: Record<
   lunch: { minimumDistinct: 4, maximumUses: 2 },
   dinner: { minimumDistinct: 5, maximumUses: 2 },
 };
-const servingOptions = [0.5, 0.75, 1, 1.25, 1.5];
+const servingOptions = [0.25, 0.5, 0.75, 1];
 const beamWidth = 80;
 const noRecipeIds: ReadonlySet<string> = new Set();
 
@@ -128,9 +128,15 @@ interface NormalisedValues {
   readonly unique: ReadonlySet<string>;
 }
 
+interface MacroScore {
+  readonly guardrail: number;
+  readonly preference: number;
+}
+
 interface PlanState {
   readonly breakfastLunchRepetition: number;
-  readonly completedMacroPenalty: number;
+  readonly completedMacroGuardrail: number;
+  readonly completedMacroPreference: number;
   readonly currentDayRecipeIds: ReadonlySet<string>;
   readonly dinnerRepetition: number;
   readonly flavourRepetition: number;
@@ -227,7 +233,7 @@ function createCandidates(
         personId: person.id,
         servings: chooseServingSize(
           recipe.nutrition,
-          plannedTarget(person.macroTargets, input.snackReserve),
+          planningTarget(person.macroTargets, input.snackReserve),
           mealShares[mealType],
         ),
       }));
@@ -264,31 +270,27 @@ function chooseServingSize(
 ): number {
   return [...servingOptions].sort((left, right) => {
     const leftScore = [
-      portionMacroDistance(nutrition, dailyTarget, mealShare, left),
+      ...portionMacroScore(nutrition, dailyTarget, mealShare, left),
       left,
     ];
     const rightScore = [
-      portionMacroDistance(nutrition, dailyTarget, mealShare, right),
+      ...portionMacroScore(nutrition, dailyTarget, mealShare, right),
       right,
     ];
     return compareScores(leftScore, rightScore);
   })[0]!;
 }
 
-function portionMacroDistance(
+function portionMacroScore(
   nutrition: RecipeNutrition,
   dailyTarget: RecipeNutrition,
   mealShare: number,
   servings: number,
-): number {
+): ReadonlyArray<number> {
   const target = scaleMacros(dailyTarget, mealShare);
   const actual = scaleMacros(nutrition, servings);
-  return (
-    relativeDifference(actual.kcal, target.kcal) +
-    relativeDifference(actual.carbsGrams, target.carbsGrams) +
-    relativeDifference(actual.fatGrams, target.fatGrams) +
-    2 * relativeDifference(actual.proteinGrams, target.proteinGrams)
-  );
+  const score = evaluateMacros(actual, target);
+  return [score.guardrail, score.preference];
 }
 
 function proposeMeal(
@@ -313,7 +315,8 @@ function proposeMeal(
       previousUses >= variationTargets[mealType].maximumUses
         ? 1
         : 0),
-    completedMacroPenalty: state.completedMacroPenalty,
+    completedMacroGuardrail: state.completedMacroGuardrail,
+    completedMacroPreference: state.completedMacroPreference,
     currentDayRecipeIds,
     dinnerRepetition:
       state.dinnerRepetition +
@@ -350,19 +353,21 @@ function proposeMeal(
         : stableHash(`${state.meals.length}:${candidate.recipe.id}`)),
     usedIngredients: state.usedIngredients,
   };
-  return mealType === 'dinner'
-    ? {
-        ...proposed,
-        completedMacroPenalty:
-          state.completedMacroPenalty +
-          dayMacroPenalty(
-            proposed,
-            input,
-            Math.floor(state.meals.length / mealTypes.length),
-            1,
-          ),
-      }
-    : proposed;
+  if (mealType !== 'dinner') return proposed;
+
+  const macroScore = dayMacroScore(
+    proposed,
+    input,
+    Math.floor(state.meals.length / mealTypes.length),
+    1,
+  );
+  return {
+    ...proposed,
+    completedMacroGuardrail:
+      state.completedMacroGuardrail + macroScore.guardrail,
+    completedMacroPreference:
+      state.completedMacroPreference + macroScore.preference,
+  };
 }
 
 function commitMeal(
@@ -399,7 +404,8 @@ function commitMeal(
 function emptyState(): PlanState {
   return {
     breakfastLunchRepetition: 0,
-    completedMacroPenalty: 0,
+    completedMacroGuardrail: 0,
+    completedMacroPreference: 0,
     currentDayRecipeIds: noRecipeIds,
     dinnerRepetition: 0,
     flavourRepetition: 0,
@@ -423,65 +429,78 @@ function scoreState(
   input: WeeklyPlanningInput,
 ): ReadonlyArray<number> {
   const mealsIntoCurrentDay = state.meals.length % mealTypes.length;
-  let macroPenalty = state.completedMacroPenalty;
+  let macroGuardrail = state.completedMacroGuardrail;
+  let macroPreference = state.completedMacroPreference;
   if (mealsIntoCurrentDay > 0) {
-    macroPenalty += dayMacroPenalty(
+    const partialMacroScore = dayMacroScore(
       state,
       input,
       Math.floor((state.meals.length - 1) / mealTypes.length),
       partialDayShares[mealsIntoCurrentDay]!,
     );
+    macroGuardrail += partialMacroScore.guardrail;
+    macroPreference += partialMacroScore.preference;
   }
   return [
-    roundScore(macroPenalty),
+    roundScore(macroGuardrail),
     state.sameDayRepetition,
     state.dinnerRepetition,
     state.breakfastLunchRepetition,
     state.flavourRepetition,
     state.historyPenalty,
+    roundScore(macroPreference),
     -state.ingredientReuse,
     state.tieBreaker,
   ];
 }
 
-function dayMacroPenalty(
+function dayMacroScore(
   state: PlanState,
   input: WeeklyPlanningInput,
   dayIndex: number,
   targetShare: number,
-): number {
+): MacroScore {
   const dayMeals = state.meals.slice(
     dayIndex * mealTypes.length,
     dayIndex * mealTypes.length + mealTypes.length,
   );
-  return input.people.reduce((total, person) => {
-    const planned = sumPersonMacros(dayMeals, person.id);
-    const target = scaleMacros(
-      plannedTarget(person.macroTargets, input.snackReserve),
-      targetShare,
-    );
-    return total + macroBandPenalty(planned, target);
-  }, 0);
-}
-
-function macroBandPenalty(
-  actual: RecipeNutrition,
-  target: RecipeNutrition,
-): number {
-  return (
-    outsideTolerance(actual.kcal, target.kcal, 0.1) +
-    outsideTolerance(actual.carbsGrams, target.carbsGrams, 0.15) +
-    outsideTolerance(actual.fatGrams, target.fatGrams, 0.15) +
-    Math.max(0, 1 - safeRatio(actual.proteinGrams, target.proteinGrams))
+  return input.people.reduce(
+    (total, person) => {
+      const planned = sumPersonMacros(dayMeals, person.id);
+      const target = scaleMacros(
+        planningTarget(person.macroTargets, input.snackReserve),
+        targetShare,
+      );
+      const score = evaluateMacros(planned, target);
+      return {
+        guardrail: total.guardrail + score.guardrail,
+        preference: total.preference + score.preference,
+      };
+    },
+    { guardrail: 0, preference: 0 },
   );
 }
 
-function outsideTolerance(
-  actual: number,
-  target: number,
-  tolerance: number,
-): number {
-  return Math.max(0, Math.abs(safeRatio(actual, target) - 1) - tolerance);
+function evaluateMacros(
+  actual: RecipeNutrition,
+  target: RecipeNutrition,
+): MacroScore {
+  const kcal = safeRatio(actual.kcal, target.kcal);
+  const protein = safeRatio(actual.proteinGrams, target.proteinGrams);
+  const carbs = safeRatio(actual.carbsGrams, target.carbsGrams);
+  const fat = safeRatio(actual.fatGrams, target.fatGrams);
+  return {
+    guardrail:
+      outsideRange(kcal, 0.9, 1.1) +
+      Math.max(0, 0.9 - protein) +
+      outsideRange(carbs, 0.7, 1.1) +
+      outsideRange(fat, 0.7, 1.1),
+    preference: Math.abs(kcal - 1) + Math.max(0, 1 - protein),
+  };
+}
+
+function outsideRange(ratio: number, minimum: number, maximum: number): number {
+  return Math.max(0, minimum - ratio, ratio - maximum);
 }
 
 function safeRatio(actual: number, target: number): number {
@@ -503,7 +522,7 @@ function buildDays(
         personId: person.id,
         planned: roundMacros(sumPersonMacros(dayMeals, person.id)),
         target: roundMacros(
-          plannedTarget(person.macroTargets, input.snackReserve),
+          planningTarget(person.macroTargets, input.snackReserve),
         ),
       })),
       slots: mealTypes.map((mealType, mealIndex) => ({
@@ -550,7 +569,7 @@ function buildDiagnostics(
     const dates = days.flatMap((day) => {
       const macros = day.macros.find(({ personId }) => personId === person.id);
       return macros !== undefined &&
-        macroBandPenalty(macros.planned, macros.target) > 0
+        evaluateMacros(macros.planned, macros.target).guardrail > 0
         ? [day.date]
         : [];
     });
@@ -621,11 +640,11 @@ function sumPersonMacros(
   }, emptyMacros());
 }
 
-function plannedTarget(
+function planningTarget(
   target: RecipeNutrition,
   snackReserve: number,
 ): RecipeNutrition {
-  return scaleMacros(target, 1 - snackReserve);
+  return { ...target, kcal: target.kcal * (1 - snackReserve) };
 }
 
 function emptyMacros(): RecipeNutrition {
@@ -664,10 +683,6 @@ function roundMacros(macros: RecipeNutrition): RecipeNutrition {
 
 function round(value: number): number {
   return Math.round(value * 10) / 10;
-}
-
-function relativeDifference(actual: number, target: number): number {
-  return Math.abs(safeRatio(actual, target) - 1);
 }
 
 function mealSimilarity(previous: Candidate, current: Candidate): number {

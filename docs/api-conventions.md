@@ -249,9 +249,13 @@ content remains stored with the import.
 The response contains seven ordered days. Each day contains breakfast, lunch,
 and dinner slots; independently allocated quarter-serving portions; the total
 batch servings to cook; and planned-versus-target kcal, protein, carbohydrate,
-and fat for every profile. Targets already exclude the household snack reserve.
-Empty slots and unsatisfied objectives remain visible through machine-readable
-diagnostics rather than making generation fail.
+and fat for every profile. No person receives more than one recipe serving.
+The calorie target excludes the household snack reserve; protein,
+carbohydrate, and fat show the full daily targets. A day is in range when
+calories are within 10% of the non-snack target, protein reaches at least 90%,
+and carbohydrate and fat are each 70-110% of their full targets. Empty slots
+and unsatisfied objectives remain visible through machine-readable diagnostics
+rather than making generation fail.
 
 A normal week targets at least three distinct breakfasts, four distinct
 lunches, and five distinct dinners. Breakfasts normally appear no more than
@@ -259,6 +263,10 @@ three times; lunches and dinners normally appear no more than twice. The
 response reports a meal-type-specific diagnostic when the planner cannot meet
 one of these best-effort targets. It likewise avoids placing the same recipe in
 multiple slots on one day and reports when that is unavoidable.
+
+Material macro-range breaches take priority over variation. Once a plan is
+inside the accepted ranges, repetition and flavour objectives are evaluated
+before small differences in exact calorie or protein proximity.
 
 Only active, unarchived, planning-ready saved recipes are candidates. The
 planner uses the previous 14 days of stored dinners as a penalty and never

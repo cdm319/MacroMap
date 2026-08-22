@@ -1,5 +1,6 @@
 import {
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -11,6 +12,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 import type { RecipeNutritionProvenance } from '@macromap/contracts';
+import type { GeneratedWeeklyPlan } from '@macromap/domain';
 
 const timestamps = {
   createdAt: timestamp('created_at', { withTimezone: true })
@@ -204,6 +206,27 @@ export const recipeTags = pgTable(
       table.recipeId,
       table.category,
       table.value,
+    ),
+  ],
+);
+
+export const weeklyPlans = pgTable(
+  'weekly_plan',
+  {
+    id: uuid('id').primaryKey(),
+    householdId: uuid('household_id')
+      .notNull()
+      .references(() => households.id, { onDelete: 'cascade' }),
+    weekStart: date('week_start_date').notNull(),
+    status: text('status').default('draft').notNull(),
+    version: integer('version').default(1).notNull(),
+    draft: jsonb('draft').$type<GeneratedWeeklyPlan>().notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex('weekly_plan_household_week_unique').on(
+      table.householdId,
+      table.weekStart,
     ),
   ],
 );

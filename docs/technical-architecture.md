@@ -1,6 +1,6 @@
 # MacroMap technical architecture
 
-Status: Approved; Phase 4a complete
+Status: Approved; Phase 4c complete
 Last reviewed: 2026-08-21
 
 ## Purpose and authority
@@ -258,14 +258,20 @@ step.
 ### Weekly plans
 
 - `weekly_plan`: one Monday-to-Sunday plan with `draft` or `approved` status,
-  generation diagnostics, and an optimistic-concurrency version.
-- `meal_slot`: date and breakfast/lunch/dinner type.
-- `planned_meal`: selected source recipe, per-person quarter-serving portions,
-  and combined batch scale.
+  an optimistic-concurrency version, and the validated current draft document.
+  The document contains the 21 timetable slots, source recipe identifiers,
+  combined batch scale, per-profile quarter-serving portions, daily macro
+  summaries, and generation diagnostics.
 - `planned_meal_snapshot`: immutable recipe instructions, ingredients,
   nutrition, quantities, and attribution used by that plan revision.
 - `grocery_list` and `grocery_item`: generated requirements plus user additions,
   overrides, deletions, and checked state.
+
+Phase 4c implements only `weekly_plan`. The whole draft is a small, bounded
+aggregate (seven days and 21 slots), so one validated JSONB document keeps reads
+and replacements simple without premature child tables. Phase 4d can calculate
+the provisional grocery list from its recipe identifiers and portions. Phase
+4e adds immutable recipe snapshots for exact approved-plan reconciliation.
 
 Historical status is derived from the plan's week rather than a background
 status-changing job. Past meal slots are immutable based on the current
@@ -318,6 +324,16 @@ The MVP uses a bounded, seeded search:
    product requirements.
 5. Apply stable tie-breaking using stored identifiers and an explicit seed.
 6. Persist the best plan plus machine-readable shortfall diagnostics.
+
+Phase 4c uses each Monday date as the explicit seed, a beam width of 80, and
+meal-share targets of 25% breakfast, 30% lunch, and 45% dinner. Per-person
+servings range from 0.5 to 1.5 in quarter increments. This sensible bound is
+applied before macro optimisation. These are bounded search heuristics, not new
+user settings.
+
+The interactive API Lambda currently generates drafts on request. Phase 4e adds
+the separate scheduled entry point and idempotent Friday invocation; Phase 4c
+does not add any AWS resource or standing cost.
 
 The score must separate hard constraints, lexicographically ordered objectives,
 and reporting metrics. A single opaque weighted sum must not allow a lower

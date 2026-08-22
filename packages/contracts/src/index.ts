@@ -395,6 +395,87 @@ export const recipeListResponseSchema = z
   })
   .strict();
 
+export const localDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/u);
+
+export const weeklyPlanDiagnosticSchema = z
+  .object({
+    code: z.enum([
+      'DAILY_MACROS_OUTSIDE_TARGET',
+      'DINNER_REPEATED',
+      'DINNER_VARIETY_LOW',
+      'LOW_CONFIDENCE_NUTRITION',
+      'MEAL_TYPE_UNAVAILABLE',
+    ]),
+    message: z.string().min(1),
+  })
+  .strict();
+
+export const weeklyPlanPortionSchema = z
+  .object({
+    personId: opaqueIdSchema,
+    servings: z
+      .number()
+      .positive()
+      .refine((value) => (value * 4) % 1 === 0),
+  })
+  .strict();
+
+export const weeklyPlanMealSchema = z
+  .object({
+    batchServings: z.number().positive(),
+    portions: z.array(weeklyPlanPortionSchema).min(1),
+    recipeId: opaqueIdSchema,
+    recipeTitle: z.string().min(1),
+  })
+  .strict();
+
+const macroTotalSchema = z
+  .object({
+    carbsGrams: z.number().nonnegative(),
+    fatGrams: z.number().nonnegative(),
+    kcal: z.number().nonnegative(),
+    proteinGrams: z.number().nonnegative(),
+  })
+  .strict();
+
+export const weeklyPlanDaySchema = z
+  .object({
+    date: localDateSchema,
+    macros: z.array(
+      z
+        .object({
+          personId: opaqueIdSchema,
+          planned: macroTotalSchema,
+          target: recipeNutritionSchema,
+        })
+        .strict(),
+    ),
+    slots: z
+      .array(
+        z
+          .object({
+            meal: weeklyPlanMealSchema.nullable(),
+            mealType: mealTypeSchema,
+          })
+          .strict(),
+      )
+      .length(3),
+  })
+  .strict();
+
+export const weeklyPlanSchema = z
+  .object({
+    days: z.array(weeklyPlanDaySchema).length(7),
+    diagnostics: z.array(weeklyPlanDiagnosticSchema),
+    generatedAt: z.string().datetime(),
+    id: opaqueIdSchema,
+    seed: z.string().min(1),
+    status: z.enum(['draft', 'approved']),
+    version: z.number().int().positive(),
+    weekStart: localDateSchema,
+  })
+  .strict();
+
 export type ApiError = z.infer<typeof apiErrorSchema>;
 export type CognitoRuntimeConfig = z.infer<typeof cognitoRuntimeConfigSchema>;
 export type HouseholdSettings = z.infer<typeof householdSettingsSchema>;
@@ -429,3 +510,6 @@ export type RecipeSummary = z.infer<typeof recipeSummarySchema>;
 export type RecipeSource = z.infer<typeof recipeSourceSchema>;
 export type RuntimeConfig = z.infer<typeof runtimeConfigSchema>;
 export type SessionResponse = z.infer<typeof sessionResponseSchema>;
+export type WeeklyPlan = z.infer<typeof weeklyPlanSchema>;
+export type WeeklyPlanDay = z.infer<typeof weeklyPlanDaySchema>;
+export type WeeklyPlanDiagnostic = z.infer<typeof weeklyPlanDiagnosticSchema>;

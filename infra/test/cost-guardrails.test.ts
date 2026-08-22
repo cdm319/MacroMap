@@ -77,6 +77,8 @@ describe('approved infrastructure foundation', () => {
       'POST /v1/recipes/{recipeId}/photos',
       'PUT /v1/recipes/{recipeId}/photos/{uploadId}',
       'DELETE /v1/recipes/{recipeId}/photos',
+      'GET /v1/weekly-plans/{weekStart}',
+      'POST /v1/weekly-plans/{weekStart}/generate',
     ]) {
       template.hasResourceProperties('AWS::ApiGatewayV2::Route', {
         AuthorizationType: 'JWT',

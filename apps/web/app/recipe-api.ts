@@ -1,5 +1,4 @@
 import {
-  apiErrorSchema,
   recipeImportResponseSchema,
   recipeImportSaveRequestSchema,
   recipePhotoResponseSchema,
@@ -13,11 +12,9 @@ import {
   type RecipeListResponse,
   type RecipeListSort,
 } from '@macromap/contracts';
+import { apiRequest, type ApiConfig } from './api-client';
 
-export interface RecipeApiConfig {
-  readonly accessToken: string;
-  readonly baseUrl: string;
-}
+export type RecipeApiConfig = ApiConfig;
 
 export interface RecipeListOptions {
   readonly cursor?: string;
@@ -39,7 +36,7 @@ export async function listRecipes(
   if (options.sort !== undefined && options.sort !== 'updated') {
     url.searchParams.set('sort', options.sort);
   }
-  const response = await request(config, url);
+  const response = await apiRequest(config, url);
   return recipeListResponseSchema.parse(await response.json());
 }
 
@@ -47,7 +44,7 @@ export async function getRecipe(
   config: RecipeApiConfig,
   recipeId: string,
 ): Promise<Recipe> {
-  const response = await request(
+  const response = await apiRequest(
     config,
     `${config.baseUrl}/v1/recipes/${recipeId}`,
   );
@@ -59,7 +56,7 @@ export async function saveRecipe(
   recipeId: string,
   input: RecipeInput,
 ): Promise<Recipe> {
-  const response = await request(
+  const response = await apiRequest(
     config,
     `${config.baseUrl}/v1/recipes/${recipeId}`,
     {
@@ -76,7 +73,7 @@ export async function previewRecipeImport(
   content: string,
   recipeIndex?: number,
 ): Promise<RecipeImportResponse> {
-  const response = await request(
+  const response = await apiRequest(
     config,
     `${config.baseUrl}/v1/recipe-imports/preview`,
     {
@@ -93,7 +90,7 @@ export async function previewRecipeUrl(
   url: string,
   recipeIndex?: number,
 ): Promise<RecipeImportResponse> {
-  const response = await request(
+  const response = await apiRequest(
     config,
     `${config.baseUrl}/v1/recipe-imports/preview`,
     {
@@ -111,7 +108,7 @@ export async function saveRecipeImport(
   recipe: RecipeInput,
 ): Promise<Recipe> {
   const body = recipeImportSaveRequestSchema.parse({ recipe });
-  const response = await request(
+  const response = await apiRequest(
     config,
     `${config.baseUrl}/v1/recipe-imports/${importId}/save`,
     {
@@ -127,7 +124,7 @@ export async function archiveRecipe(
   config: RecipeApiConfig,
   recipeId: string,
 ): Promise<void> {
-  await request(config, `${config.baseUrl}/v1/recipes/${recipeId}`, {
+  await apiRequest(config, `${config.baseUrl}/v1/recipes/${recipeId}`, {
     method: 'DELETE',
   });
 }
@@ -138,7 +135,7 @@ export async function uploadRecipePhoto(
   file: File,
 ): Promise<string> {
   const input = validateRecipePhoto(file);
-  const createResponse = await request(
+  const createResponse = await apiRequest(
     config,
     `${config.baseUrl}/v1/recipes/${recipeId}/photos`,
     {
@@ -157,7 +154,7 @@ export async function uploadRecipePhoto(
   });
   if (!uploaded.ok) throw new Error('MacroMap could not upload that photo.');
 
-  const completeResponse = await request(
+  const completeResponse = await apiRequest(
     config,
     `${config.baseUrl}/v1/recipes/${recipeId}/photos/${upload.uploadId}`,
     { method: 'PUT' },
@@ -170,7 +167,7 @@ export async function deleteRecipePhoto(
   config: RecipeApiConfig,
   recipeId: string,
 ): Promise<void> {
-  await request(config, `${config.baseUrl}/v1/recipes/${recipeId}/photos`, {
+  await apiRequest(config, `${config.baseUrl}/v1/recipes/${recipeId}/photos`, {
     method: 'DELETE',
   });
 }
@@ -184,32 +181,4 @@ export function validateRecipePhoto(file: File) {
     throw new Error('Choose a JPEG, PNG, or WebP image no larger than 5 MB.');
   }
   return input.data;
-}
-
-async function request(
-  config: RecipeApiConfig,
-  input: string | URL,
-  init: RequestInit = {},
-): Promise<Response> {
-  const response = await fetch(input, {
-    ...init,
-    headers: {
-      authorization: `Bearer ${config.accessToken}`,
-      ...init.headers,
-    },
-  });
-  if (response.status === 401) {
-    throw new Error('Your session ended. Please sign in again.');
-  }
-  if (!response.ok) {
-    const error = apiErrorSchema.safeParse(
-      await response.json().catch(() => null),
-    );
-    throw new Error(
-      error.success
-        ? error.data.error.message
-        : 'MacroMap could not complete that request.',
-    );
-  }
-  return response;
 }

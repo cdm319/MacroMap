@@ -1,6 +1,6 @@
 # MacroMap MVP delivery plan
 
-Status: Approved implementation sequence; Phase 4a complete
+Status: Approved implementation sequence; Phase 4c complete
 Last reviewed: 2026-08-21
 
 ## Delivery principles
@@ -26,7 +26,10 @@ Current progress:
   are implemented.
 - Phase 4a is complete. Recipe search and sorting cover the full saved
   collection.
-- Phases 4c-6 have not started.
+- Phase 4c is complete. The app generates and displays a deterministic weekly
+  draft with per-profile portions, macro summaries, dinner variation, recent
+  dinner penalties, and shortfall diagnostics.
+- Phases 4d-6 have not started.
 
 ## Phase 0: Repository and contracts
 

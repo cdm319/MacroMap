@@ -269,6 +269,24 @@ export class MacroMapStack extends Stack {
       methods: [HttpMethod.PUT],
       path: '/v1/recipes/{recipeId}/photos/{uploadId}',
     });
+    api.addRoutes({
+      authorizer,
+      integration: new HttpLambdaIntegration(
+        'WeeklyPlanIntegration',
+        sessionFunction,
+      ),
+      methods: [HttpMethod.GET],
+      path: '/v1/weekly-plans/{weekStart}',
+    });
+    api.addRoutes({
+      authorizer,
+      integration: new HttpLambdaIntegration(
+        'WeeklyPlanGenerationIntegration',
+        sessionFunction,
+      ),
+      methods: [HttpMethod.POST],
+      path: '/v1/weekly-plans/{weekStart}/generate',
+    });
     new HttpStage(this, 'DefaultStage', {
       autoDeploy: true,
       httpApi: api,

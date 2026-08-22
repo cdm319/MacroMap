@@ -1,0 +1,257 @@
+.weekly-plan-page {
+  width: min(100% - 2rem, 82rem);
+  margin: 0 auto;
+  padding: clamp(2.5rem, 7vw, 5rem) 0 4rem;
+}
+
+.weekly-plan-heading {
+  display: flex;
+  gap: 2rem;
+  align-items: end;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.weekly-plan-heading h1 {
+  margin: 0.35rem 0 0.5rem;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(2.5rem, 7vw, 4.5rem);
+  font-weight: 500;
+  letter-spacing: -0.055em;
+  line-height: 0.95;
+}
+
+.weekly-plan-heading p:last-child {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.weekly-plan-heading .primary-button {
+  flex: none;
+  margin: 0;
+}
+
+.plan-state,
+.plan-notes,
+.plan-ready-note {
+  padding: 1.4rem 1.6rem;
+  border: 1px solid rgb(35 67 50 / 14%);
+  border-radius: 1rem;
+  background: var(--color-surface);
+}
+
+.plan-state h2,
+.plan-notes h2 {
+  margin: 0 0 0.5rem;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 500;
+}
+
+.plan-state p,
+.plan-ready-note {
+  margin: 0;
+  color: #56635b;
+}
+
+.plan-state .secondary-button {
+  margin-top: 1rem;
+}
+
+.plan-notes {
+  margin-bottom: 1.5rem;
+  border-color: rgb(162 112 23 / 22%);
+  background: #fff8e8;
+}
+
+.plan-notes ul {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: #65522f;
+  line-height: 1.5;
+}
+
+.plan-ready-note {
+  margin-bottom: 1.5rem;
+  color: var(--color-primary);
+}
+
+.weekly-timetable {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.plan-day {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr) minmax(18rem, 0.7fr);
+  overflow: hidden;
+  border: 1px solid rgb(35 67 50 / 14%);
+  border-radius: 1.4rem;
+  background: var(--color-surface);
+  box-shadow: 0 1rem 2.5rem rgb(31 50 39 / 6%);
+}
+
+.plan-day > header {
+  padding: 1.5rem;
+  background: #e3ead2;
+}
+
+.plan-day > header p,
+.plan-day > header h2 {
+  margin: 0;
+}
+
+.plan-day > header p {
+  color: #586a5c;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.plan-day > header h2 {
+  margin-top: 0.25rem;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.45rem;
+  font-weight: 500;
+}
+
+.day-meals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.meal-slot {
+  min-width: 0;
+  padding: 1.35rem;
+  border-right: 1px solid rgb(35 67 50 / 10%);
+}
+
+.meal-slot-label {
+  margin: 0 0 0.55rem;
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.meal-slot h3,
+.meal-slot p {
+  margin: 0;
+}
+
+.meal-slot h3 {
+  margin-bottom: 0.6rem;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.1rem;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.meal-slot h3 + p,
+.empty-meal,
+.batch-size {
+  color: #617067;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.batch-size {
+  margin-top: 0.35rem !important;
+}
+
+.day-macros {
+  display: grid;
+  gap: 1rem;
+  align-content: center;
+  padding: 1.2rem;
+  background: #f7f4eb;
+}
+
+.macro-heading {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.macro-heading h3 {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.macro-heading span {
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  font-weight: 750;
+}
+
+.on-target {
+  background: #dce9c9;
+  color: #28563c;
+}
+
+.off-target {
+  background: #f3dfb1;
+  color: #765817;
+}
+
+.day-macros dl {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.35rem 0.8rem;
+  margin: 0.4rem 0 0;
+}
+
+.day-macros dl div {
+  display: flex;
+  gap: 0.35rem;
+  justify-content: space-between;
+}
+
+.day-macros dt,
+.day-macros dd {
+  margin: 0;
+  font-size: 0.68rem;
+}
+
+.day-macros dt {
+  color: var(--color-muted);
+  text-transform: capitalize;
+}
+
+@media (max-width: 70rem) {
+  .plan-day {
+    grid-template-columns: 8rem minmax(0, 1fr);
+  }
+
+  .day-macros {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 44rem) {
+  .weekly-plan-heading {
+    display: grid;
+    align-items: start;
+  }
+
+  .plan-day {
+    grid-template-columns: 1fr;
+  }
+
+  .day-meals {
+    grid-template-columns: 1fr;
+  }
+
+  .meal-slot {
+    border-right: 0;
+    border-bottom: 1px solid rgb(35 67 50 / 10%);
+  }
+
+  .day-macros {
+    grid-column: auto;
+    grid-template-columns: 1fr;
+  }
+}

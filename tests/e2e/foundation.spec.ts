@@ -78,6 +78,22 @@ async function fillIngredient(
   await page.getByLabel(`Ingredient ${index} name`).fill(name);
 }
 
+function upcomingMonday(): string {
+  const date = new Date();
+  date.setDate(date.getDate() + ((8 - date.getDay()) % 7 || 7));
+  return [date.getFullYear(), date.getMonth() + 1, date.getDate()]
+    .map((part) => String(part).padStart(2, '0'))
+    .join('-');
+}
+
+function addLocalDays(date: string, days: number): string {
+  const value = new Date(`${date}T12:00:00`);
+  value.setDate(value.getDate() + days);
+  return [value.getFullYear(), value.getMonth() + 1, value.getDate()]
+    .map((part) => String(part).padStart(2, '0'))
+    .join('-');
+}
+
 test('shows the private household foundation', async ({ page }) => {
   await page.goto('/');
 
@@ -429,6 +445,113 @@ test('searches and sorts the complete authenticated recipe library', async ({
     'Weeknight noodles',
   ]);
   expect(requestedQueries).toContain('?search=chicken&sort=title');
+});
+
+test('generates and reviews a weekly timetable', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem(
+      'macromap.tokens',
+      JSON.stringify({
+        accessToken: 'test-access-token',
+        expiresAt: Date.now() + 60_000,
+      }),
+    );
+  });
+  await useCognitoConfig(page);
+  await page.route('https://api.example.test/v1/session', (route) =>
+    route.fulfill({ contentType: 'application/json', json: householdSession }),
+  );
+  await page.route('https://api.example.test/v1/recipes', (route) =>
+    route.fulfill({
+      contentType: 'application/json',
+      json: { items: [], nextCursor: null },
+    }),
+  );
+
+  const weekStart = upcomingMonday();
+  const recipeId = '00000000-0000-4000-8000-000000000201';
+  const plan = {
+    days: Array.from({ length: 7 }, (_, day) => ({
+      date: addLocalDays(weekStart, day),
+      macros: householdSession.people.map((person) => ({
+        personId: person.id,
+        planned: {
+          carbsGrams: person.displayName === 'Chris' ? 255 : 195.5,
+          fatGrams: person.displayName === 'Chris' ? 68 : 55.3,
+          kcal: person.displayName === 'Chris' ? 2_125 : 1_700,
+          proteinGrams: person.displayName === 'Chris' ? 153 : 119,
+        },
+        target: {
+          carbsGrams: person.displayName === 'Chris' ? 255 : 195.5,
+          fatGrams: person.displayName === 'Chris' ? 68 : 55.3,
+          kcal: person.displayName === 'Chris' ? 2_125 : 1_700,
+          proteinGrams: person.displayName === 'Chris' ? 153 : 119,
+        },
+      })),
+      slots: (['breakfast', 'lunch', 'dinner'] as const).map((mealType) => ({
+        meal: {
+          batchServings: 1.75,
+          portions: [
+            { personId: householdSession.people[0].id, servings: 1 },
+            { personId: householdSession.people[1].id, servings: 0.75 },
+          ],
+          recipeId,
+          recipeTitle: `${mealType} recipe`,
+        },
+        mealType,
+      })),
+    })),
+    diagnostics: [],
+    generatedAt: '2026-08-21T12:00:00.000Z',
+    id: '00000000-0000-4000-8000-000000000401',
+    seed: weekStart,
+    status: 'draft',
+    version: 1,
+    weekStart,
+  };
+  let generated = false;
+  await page.route(
+    `https://api.example.test/v1/weekly-plans/${weekStart}`,
+    (route) =>
+      route.fulfill(
+        generated
+          ? { contentType: 'application/json', json: plan }
+          : {
+              contentType: 'application/json',
+              json: {
+                error: {
+                  code: 'PLAN_NOT_FOUND',
+                  message: 'No draft has been generated for this week yet.',
+                },
+              },
+              status: 404,
+            },
+      ),
+  );
+  await page.route(
+    `https://api.example.test/v1/weekly-plans/${weekStart}/generate`,
+    (route) => {
+      generated = true;
+      expect(route.request().headers().authorization).toBe(
+        'Bearer test-access-token',
+      );
+      return route.fulfill({ contentType: 'application/json', json: plan });
+    },
+  );
+
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Plan' }).click();
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Your weekly map' }),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Generate draft' }).click();
+
+  await expect(page.locator('.plan-day')).toHaveCount(7);
+  await expect(page.locator('.meal-slot')).toHaveCount(21);
+  await expect(
+    page.getByText('Chris 1 serving · Alex 0.75 servings').first(),
+  ).toBeVisible();
+  await expect(page.getByText('On target')).toHaveCount(14);
 });
 
 test('saves targets through the authenticated API', async ({ page }) => {

@@ -18,6 +18,7 @@ import {
 } from './auth';
 import { HouseholdSettingsView } from './household-settings';
 import { RecipeLibrary } from './recipe-library';
+import { WeeklyPlanView } from './weekly-plan';
 
 const localSession: SessionResponse = {
   household: {
@@ -139,7 +140,9 @@ async function initializeView(): Promise<ViewState> {
 
 export function MacroMapApp() {
   const [view, setView] = useState<ViewState>({ kind: 'loading' });
-  const [section, setSection] = useState<'recipes' | 'settings'>('recipes');
+  const [section, setSection] = useState<'plan' | 'recipes' | 'settings'>(
+    'recipes',
+  );
   const initialization = useRef<Promise<ViewState> | undefined>(undefined);
   const wakeAttempts = useRef(0);
 
@@ -339,6 +342,12 @@ export function MacroMapApp() {
             Recipes
           </button>
           <button
+            aria-current={section === 'plan' ? 'page' : undefined}
+            onClick={() => setSection('plan')}
+          >
+            Plan
+          </button>
+          <button
             aria-current={section === 'settings' ? 'page' : undefined}
             onClick={() => setSection('settings')}
           >
@@ -367,9 +376,21 @@ export function MacroMapApp() {
               : undefined
           }
         />
-      ) : (
+      ) : section === 'settings' ? (
         <HouseholdSettingsView
           onSave={(settings) => saveSettings(view, settings)}
+          session={view.session}
+        />
+      ) : (
+        <WeeklyPlanView
+          api={
+            'accessToken' in view
+              ? {
+                  accessToken: view.accessToken,
+                  baseUrl: view.config.apiBaseUrl,
+                }
+              : undefined
+          }
           session={view.session}
         />
       )}

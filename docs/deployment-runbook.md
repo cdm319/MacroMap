@@ -1,7 +1,7 @@
 # MacroMap production deployment runbook
 
 Status: Phase 3 live
-Last reviewed: 2026-08-21
+Last reviewed: 2026-08-22
 
 ## Boundaries
 
@@ -46,13 +46,11 @@ The owner applied and verified
 production on 18 August 2026. It added one nullable JSONB column to `recipe`;
 both existing recipes remained unchanged. Do not reapply it to production.
 
-## Phase 4 schema update pending
+## Phase 4 schema update record
 
-Before Phase 4c is merged, the owner must apply and verify
-`packages/database/sql/updates/006-weekly-plans.sql`. It creates one empty
-weekly-plan table and does not alter existing household, profile, recipe, or
-import rows. Record the completed date here before marking the pull request
-ready to merge.
+The owner applied and verified
+`packages/database/sql/updates/006-weekly-plans.sql` in production on 22 August 2026. It created one empty `weekly_plan` table without altering existing
+household, profile, recipe, or import data. Do not reapply it to production.
 
 The expected USD 2-6 monthly cost envelope is now live. The
 database-not-pausing failure case remains approximately USD 51 per month. Check

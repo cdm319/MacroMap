@@ -400,11 +400,16 @@ export const localDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/u);
 export const weeklyPlanDiagnosticSchema = z
   .object({
     code: z.enum([
+      'BREAKFAST_REPEATED',
+      'BREAKFAST_VARIETY_LOW',
       'DAILY_MACROS_OUTSIDE_TARGET',
       'DINNER_REPEATED',
       'DINNER_VARIETY_LOW',
+      'LUNCH_REPEATED',
+      'LUNCH_VARIETY_LOW',
       'LOW_CONFIDENCE_NUTRITION',
       'MEAL_TYPE_UNAVAILABLE',
+      'SAME_DAY_REPEATED',
     ]),
     message: z.string().min(1),
   })

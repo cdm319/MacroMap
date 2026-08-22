@@ -337,8 +337,10 @@ does not add any AWS resource or standing cost.
 
 The score must separate hard constraints, lexicographically ordered objectives,
 and reporting metrics. A single opaque weighted sum must not allow a lower
-priority benefit to overwhelm sensible quantities, macro proximity, or dinner
-uniqueness.
+priority benefit to overwhelm sensible quantities, macro proximity, or the
+same-day and meal-type repetition targets. Flavour and cuisine variation is
+evaluated between successive breakfasts, lunches, and dinners rather than only
+between dinners.
 
 Revision requests pin every unaffected meal. The planner first tries the
 explicit change alone, then portion changes, then an increasing number of meal

@@ -1,7 +1,7 @@
 # MacroMap MVP delivery plan
 
-Status: Approved implementation sequence; Phase 4c complete
-Last reviewed: 2026-08-21
+Status: Approved implementation sequence; Phase 4c deployed
+Last reviewed: 2026-08-22
 
 ## Delivery principles
 
@@ -27,8 +27,9 @@ Current progress:
 - Phase 4a is complete. Recipe search and sorting cover the full saved
   collection.
 - Phase 4c is complete. The app generates and displays a deterministic weekly
-  draft with per-profile portions, macro summaries, dinner variation, recent
-  dinner penalties, and shortfall diagnostics.
+  draft with per-profile portions, macro summaries, same-day duplicate
+  avoidance, meal-type variation, recent dinner penalties, and shortfall
+  diagnostics.
 - Phases 4d-6 have not started.
 
 ## Phase 0: Repository and contracts
@@ -138,7 +139,8 @@ Deliverables:
 - **4c — Timetable and planning:** Monday-to-Sunday breakfast, lunch, and dinner
   slots; quarter-serving portion allocation; sensible batch rounding; a
   deterministic bounded planner; shortfall diagnostics; daily macro summaries;
-  the five-distinct-dinner target; and the two-week history penalty.
+  same-day duplicate avoidance; the three-breakfast, four-lunch, and five-dinner
+  variety targets; and the two-week dinner-history penalty.
 - **4d — Grocery generation:** a provisional grocery list generated from the
   current plan, with compatible-unit and canonical-ingredient consolidation.
 - **4e — Hardening:** immutable planned-meal recipe snapshots, deterministic
@@ -149,7 +151,7 @@ Exit criteria:
 
 - search and sorting operate across the complete recipe library rather than
   only the currently loaded page;
-- golden tests cover the full priority order, dinner repetition, impossible
+- golden tests cover the full priority order, meal-type repetition, impossible
   targets, deterministic tie-breaking, and DST;
 - the scheduler cannot create duplicate weekly drafts;
 - grocery totals exactly reconcile to planned recipe snapshots; and

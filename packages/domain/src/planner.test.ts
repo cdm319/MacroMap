@@ -164,6 +164,55 @@ describe('weekly planner', () => {
     ).toHaveLength(0);
   });
 
+  it('varies breakfasts and lunches within their repetition targets', () => {
+    const breakfasts = Array.from({ length: 4 }, (_, index) =>
+      recipe(
+        index + 20,
+        `Breakfast ${index + 1}`,
+        'breakfast',
+        dinnerNutrition,
+      ),
+    );
+    const lunches = Array.from({ length: 5 }, (_, index) =>
+      recipe(index + 30, `Lunch ${index + 1}`, 'lunch', dinnerNutrition),
+    );
+    const dinners = Array.from({ length: 7 }, (_, index) =>
+      recipe(index + 40, `Dinner ${index + 1}`, 'dinner', dinnerNutrition),
+    );
+    const plan = generateWeeklyPlan(
+      planningInput([...breakfasts, ...lunches, ...dinners]),
+    );
+    const breakfastCounts = recipeCounts(plan, 'breakfast');
+    const lunchCounts = recipeCounts(plan, 'lunch');
+    const dinnerCounts = recipeCounts(plan, 'dinner');
+
+    expect(breakfastCounts.size).toBeGreaterThanOrEqual(3);
+    expect(Math.max(...breakfastCounts.values())).toBeLessThanOrEqual(3);
+    expect(lunchCounts.size).toBeGreaterThanOrEqual(4);
+    expect(Math.max(...lunchCounts.values())).toBeLessThanOrEqual(2);
+    expect(dinnerCounts.size).toBeGreaterThanOrEqual(5);
+    expect(Math.max(...dinnerCounts.values())).toBeLessThanOrEqual(2);
+  });
+
+  it('reports unavoidable breakfast and lunch repetition', () => {
+    const plan = generateWeeklyPlan(
+      planningInput([
+        breakfast,
+        lunch,
+        recipe(10, 'Only dinner', 'dinner', dinnerNutrition),
+      ]),
+    );
+
+    expect(plan.diagnostics.map(({ code }) => code)).toEqual(
+      expect.arrayContaining([
+        'BREAKFAST_REPEATED',
+        'BREAKFAST_VARIETY_LOW',
+        'LUNCH_REPEATED',
+        'LUNCH_VARIETY_LOW',
+      ]),
+    );
+  });
+
   it('handles a 222-recipe library without candidate-score explosion', () => {
     const recipes = Array.from({ length: 222 }, (_, index) =>
       recipe(index + 100, `Recipe ${index + 1}`, 'breakfast', dinnerNutrition, {
@@ -181,6 +230,25 @@ describe('weekly planner', () => {
     expect(reordered).toEqual(plan);
     expect(plan.days).toHaveLength(7);
     expect(plan.days.every(({ slots }) => slots.length === 3)).toBe(true);
+    expect(
+      plan.days.every((day) => {
+        const recipeIds = day.slots.flatMap(({ meal }) =>
+          meal === null ? [] : [meal.recipeId],
+        );
+        return new Set(recipeIds).size === recipeIds.length;
+      }),
+    ).toBe(true);
+  });
+
+  it('reports unavoidable same-day repetition', () => {
+    const onlyRecipe = recipe(10, 'Every meal', 'breakfast', dinnerNutrition, {
+      mealTypes: ['breakfast', 'lunch', 'dinner'],
+    });
+    const plan = generateWeeklyPlan(planningInput([onlyRecipe]));
+
+    expect(plan.diagnostics).toContainEqual(
+      expect.objectContaining({ code: 'SAME_DAY_REPEATED' }),
+    );
   });
 
   it('returns the best draft with honest diagnostics when constraints conflict', () => {
@@ -214,3 +282,18 @@ describe('weekly planner', () => {
     ).toThrow('Week start must be a Monday');
   });
 });
+
+function recipeCounts(
+  plan: ReturnType<typeof generateWeeklyPlan>,
+  mealType: 'breakfast' | 'lunch' | 'dinner',
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const day of plan.days) {
+    const recipeId = day.slots.find((slot) => slot.mealType === mealType)?.meal
+      ?.recipeId;
+    if (recipeId !== undefined) {
+      counts.set(recipeId, (counts.get(recipeId) ?? 0) + 1);
+    }
+  }
+  return counts;
+}

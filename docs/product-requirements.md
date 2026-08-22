@@ -48,19 +48,28 @@ Planner priorities, in order:
 
 1. Sensible portions and cooking quantities
 2. Proximity to daily macro targets
-3. Dinner uniqueness
-4. Flavour and cuisine variation
-5. Avoidance of recently served recipes
-6. Reuse of ingredients across the week
+3. Avoidance of the same recipe in multiple slots on one day
+4. Dinner uniqueness
+5. Breakfast and lunch repetition targets
+6. Flavour and cuisine variation within each meal type
+7. Avoidance of recently served dinners
+8. Reuse of ingredients across the week
 
 Repetition rules:
 
-- Breakfasts and lunches may repeat.
+- A recipe should not appear in more than one meal slot on the same day.
+- A normal week should contain at least three distinct breakfasts, with no
+  breakfast appearing more than three times.
+- A normal week should contain at least four distinct lunches, with no lunch
+  appearing more than twice.
 - A normal seven-dinner week should contain at least five distinct dinner
   recipes.
 - No dinner should normally appear more than twice.
 - Dinners used during the previous two weeks receive a soft penalty but remain
   eligible.
+- These are best-effort targets. If the saved recipe library or higher-priority
+  macro constraints prevent them, the draft explains the shortfall, including
+  any unavoidable same-day repetition.
 
 ## Recipe management
 

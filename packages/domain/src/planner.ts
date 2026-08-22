@@ -161,6 +161,30 @@ export function generateWeeklyPlan(
     mealTypes.map((mealType) => [mealType, createCandidates(input, mealType)]),
   );
   const recentDinnerIds = new Set(input.recentDinnerRecipeIds);
+  const variedPlan = search(input, candidates, recentDinnerIds, true);
+  const winner =
+    variedPlan.completedMacroGuardrail === 0
+      ? variedPlan
+      : betterMacroPlan(
+          variedPlan,
+          search(input, candidates, recentDinnerIds, false),
+        );
+
+  const days = buildDays(winner, input);
+  return {
+    days,
+    diagnostics: buildDiagnostics(days, winner, input),
+    seed: input.weekStart,
+    weekStart: input.weekStart,
+  };
+}
+
+function search(
+  input: WeeklyPlanningInput,
+  candidates: ReadonlyMap<MealType, ReadonlyArray<Candidate>>,
+  recentDinnerIds: ReadonlySet<string>,
+  enforceVariation: boolean,
+): PlanState {
   let states: ReadonlyArray<PlanState> = [emptyState()];
 
   for (
@@ -170,10 +194,12 @@ export function generateWeeklyPlan(
   ) {
     const mealType = mealTypes[slotIndex % mealTypes.length]!;
     const options = candidates.get(mealType)!;
-    const mealOptions: ReadonlyArray<Candidate | null> =
-      options.length === 0 ? [null] : options;
-    const expanded = states.flatMap((state) =>
-      mealOptions.map((candidate) => {
+    const expanded = states.flatMap((state) => {
+      const mealOptions: ReadonlyArray<Candidate | null> =
+        options.length === 0
+          ? [null]
+          : availableCandidates(state, options, mealType, enforceVariation);
+      return mealOptions.map((candidate) => {
         const proposed = proposeMeal(
           state,
           candidate,
@@ -186,22 +212,71 @@ export function generateWeeklyPlan(
           score: scoreState(proposed, input),
           state: proposed,
         };
-      }),
-    );
+      });
+    });
     states = expanded
       .sort((left, right) => compareScores(left.score, right.score))
       .slice(0, beamWidth)
       .map(({ candidate, state }) => commitMeal(state, candidate, mealType));
   }
 
-  const winner = states[0] ?? emptyState();
-  const days = buildDays(winner, input);
-  return {
-    days,
-    diagnostics: buildDiagnostics(days, winner, input),
-    seed: input.weekStart,
-    weekStart: input.weekStart,
-  };
+  return states[0] ?? emptyState();
+}
+
+function availableCandidates(
+  state: PlanState,
+  candidates: ReadonlyArray<Candidate>,
+  mealType: MealType,
+  enforceVariation: boolean,
+): ReadonlyArray<Candidate> {
+  if (!enforceVariation) return candidates;
+
+  const varied = candidates.filter((candidate) =>
+    keepsVariationPossible(state, candidate, mealType, candidates.length),
+  );
+  const recipesUsedToday =
+    mealType === 'breakfast' ? noRecipeIds : state.currentDayRecipeIds;
+  const notUsedToday = (candidate: Candidate) =>
+    !recipesUsedToday.has(candidate.recipe.id);
+  const variedAndNewToday = varied.filter(notUsedToday);
+
+  if (variedAndNewToday.length > 0) return variedAndNewToday;
+
+  const newToday = candidates.filter(notUsedToday);
+  if (newToday.length > 0) return newToday;
+  return varied.length > 0 ? varied : candidates;
+}
+
+function keepsVariationPossible(
+  state: PlanState,
+  candidate: Candidate,
+  mealType: MealType,
+  candidateCount: number,
+): boolean {
+  const counts = state.mealCountsByType[mealType];
+  const previousUses = counts.get(candidate.recipe.id) ?? 0;
+  const target = variationTargets[mealType];
+  const maximumUses = Math.max(
+    target.maximumUses,
+    Math.ceil(daysPerWeek / candidateCount),
+  );
+  if (previousUses >= maximumUses) return false;
+
+  const completedSlots = Math.floor(state.meals.length / mealTypes.length);
+  const remainingSlots = daysPerWeek - completedSlots - 1;
+  const distinctAfterSelection = counts.size + (previousUses === 0 ? 1 : 0);
+  const minimumDistinct = Math.min(target.minimumDistinct, candidateCount);
+  return distinctAfterSelection + remainingSlots >= minimumDistinct;
+}
+
+function betterMacroPlan(
+  variedPlan: PlanState,
+  relaxedPlan: PlanState,
+): PlanState {
+  return variedPlan.completedMacroGuardrail <=
+    relaxedPlan.completedMacroGuardrail
+    ? variedPlan
+    : relaxedPlan;
 }
 
 function validateInput(input: WeeklyPlanningInput): void {

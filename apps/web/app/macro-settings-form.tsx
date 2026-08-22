@@ -126,8 +126,8 @@ export function MacroSettingsForm({ onSave, session }: MacroSettingsFormProps) {
       </div>
 
       <p className="settings-help">
-        Enter full-day targets. The snack reserve is held back from calories,
-        protein, carbs and fat when meals are planned.
+        Enter full-day targets. The snack reserve is held back from calories;
+        protein, carbs and fat use the full targets.
       </p>
 
       <div className="target-grid">

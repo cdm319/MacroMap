@@ -253,6 +253,13 @@ and fat for every profile. Targets already exclude the household snack reserve.
 Empty slots and unsatisfied objectives remain visible through machine-readable
 diagnostics rather than making generation fail.
 
+A normal week targets at least three distinct breakfasts, four distinct
+lunches, and five distinct dinners. Breakfasts normally appear no more than
+three times; lunches and dinners normally appear no more than twice. The
+response reports a meal-type-specific diagnostic when the planner cannot meet
+one of these best-effort targets. It likewise avoids placing the same recipe in
+multiple slots on one day and reports when that is unavoidable.
+
 Only active, unarchived, planning-ready saved recipes are candidates. The
 planner uses the previous 14 days of stored dinners as a penalty and never
 calls AI. Generation changes only the selected week's current draft. Approval,

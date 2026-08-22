@@ -8,8 +8,17 @@ const mealShares: Record<MealType, number> = {
   dinner: 0.45,
 };
 const partialDayShares = [0, mealShares.breakfast, 1 - mealShares.dinner];
+const variationTargets: Record<
+  MealType,
+  { readonly minimumDistinct: number; readonly maximumUses: number }
+> = {
+  breakfast: { minimumDistinct: 3, maximumUses: 3 },
+  lunch: { minimumDistinct: 4, maximumUses: 2 },
+  dinner: { minimumDistinct: 5, maximumUses: 2 },
+};
 const servingOptions = [0.5, 0.75, 1, 1.25, 1.5];
 const beamWidth = 80;
+const noRecipeIds: ReadonlySet<string> = new Set();
 
 export interface PlanningPerson {
   readonly displayName: string;
@@ -57,16 +66,36 @@ export interface PlannedDay {
 }
 
 export type PlanningDiagnosticCode =
+  | 'BREAKFAST_REPEATED'
+  | 'BREAKFAST_VARIETY_LOW'
   | 'DAILY_MACROS_OUTSIDE_TARGET'
   | 'DINNER_REPEATED'
   | 'DINNER_VARIETY_LOW'
+  | 'LUNCH_REPEATED'
+  | 'LUNCH_VARIETY_LOW'
   | 'LOW_CONFIDENCE_NUTRITION'
-  | 'MEAL_TYPE_UNAVAILABLE';
+  | 'MEAL_TYPE_UNAVAILABLE'
+  | 'SAME_DAY_REPEATED';
 
 export interface PlanningDiagnostic {
   readonly code: PlanningDiagnosticCode;
   readonly message: string;
 }
+
+const variationDiagnosticCodes: Record<
+  MealType,
+  {
+    readonly repeated: PlanningDiagnosticCode;
+    readonly variety: PlanningDiagnosticCode;
+  }
+> = {
+  breakfast: {
+    repeated: 'BREAKFAST_REPEATED',
+    variety: 'BREAKFAST_VARIETY_LOW',
+  },
+  lunch: { repeated: 'LUNCH_REPEATED', variety: 'LUNCH_VARIETY_LOW' },
+  dinner: { repeated: 'DINNER_REPEATED', variety: 'DINNER_VARIETY_LOW' },
+};
 
 export interface GeneratedWeeklyPlan {
   readonly days: ReadonlyArray<PlannedDay>;
@@ -100,15 +129,20 @@ interface NormalisedValues {
 }
 
 interface PlanState {
+  readonly breakfastLunchRepetition: number;
   readonly completedMacroPenalty: number;
+  readonly currentDayRecipeIds: ReadonlySet<string>;
   readonly dinnerRepetition: number;
   readonly flavourRepetition: number;
   readonly historyPenalty: number;
   readonly ingredientReuse: number;
-  readonly lastDinner: Candidate | null;
+  readonly lastMealByType: Readonly<Record<MealType, Candidate | null>>;
+  readonly mealCountsByType: Readonly<
+    Record<MealType, ReadonlyMap<string, number>>
+  >;
   readonly meals: ReadonlyArray<Candidate | null>;
+  readonly sameDayRepetition: number;
   readonly tieBreaker: number;
-  readonly usedDinnerIds: ReadonlySet<string>;
   readonly usedIngredients: ReadonlySet<string>;
 }
 
@@ -264,33 +298,56 @@ function proposeMeal(
   input: WeeklyPlanningInput,
   recentDinnerIds: ReadonlySet<string>,
 ): PlanState {
-  const dinner = mealType === 'dinner' ? candidate : null;
+  const currentDayRecipeIds =
+    mealType === 'breakfast' ? noRecipeIds : state.currentDayRecipeIds;
+  const previousMeal = state.lastMealByType[mealType];
+  const previousUses =
+    candidate === null
+      ? 0
+      : (state.mealCountsByType[mealType].get(candidate.recipe.id) ?? 0);
   const proposed: PlanState = {
+    breakfastLunchRepetition:
+      state.breakfastLunchRepetition +
+      (candidate !== null &&
+      mealType !== 'dinner' &&
+      previousUses >= variationTargets[mealType].maximumUses
+        ? 1
+        : 0),
     completedMacroPenalty: state.completedMacroPenalty,
+    currentDayRecipeIds,
     dinnerRepetition:
       state.dinnerRepetition +
-      (dinner !== null && state.usedDinnerIds.has(dinner.recipe.id) ? 1 : 0),
+      (candidate !== null && mealType === 'dinner' && previousUses > 0 ? 1 : 0),
     flavourRepetition:
       state.flavourRepetition +
-      (dinner !== null && state.lastDinner !== null
-        ? dinnerSimilarity(state.lastDinner, dinner)
+      (candidate !== null && previousMeal !== null
+        ? mealSimilarity(previousMeal, candidate)
         : 0),
     historyPenalty:
       state.historyPenalty +
-      (dinner !== null && recentDinnerIds.has(dinner.recipe.id) ? 1 : 0),
+      (candidate !== null &&
+      mealType === 'dinner' &&
+      recentDinnerIds.has(candidate.recipe.id)
+        ? 1
+        : 0),
     ingredientReuse:
       state.ingredientReuse +
       (candidate?.ingredientKeys.filter((ingredient) =>
         state.usedIngredients.has(ingredient),
       ).length ?? 0),
-    lastDinner: dinner ?? state.lastDinner,
+    lastMealByType: state.lastMealByType,
+    mealCountsByType: state.mealCountsByType,
     meals: [...state.meals, candidate],
+    sameDayRepetition:
+      state.sameDayRepetition +
+      (candidate !== null && currentDayRecipeIds.has(candidate.recipe.id)
+        ? 1
+        : 0),
     tieBreaker:
       state.tieBreaker +
       (candidate === null
         ? 0
         : stableHash(`${state.meals.length}:${candidate.recipe.id}`)),
-    usedDinnerIds: state.usedDinnerIds,
     usedIngredients: state.usedIngredients,
   };
   return mealType === 'dinner'
@@ -318,24 +375,45 @@ function commitMeal(
   for (const ingredient of candidate.ingredientKeys) {
     usedIngredients.add(ingredient);
   }
-  const usedDinnerIds =
+  const mealCounts = new Map(state.mealCountsByType[mealType]);
+  mealCounts.set(
+    candidate.recipe.id,
+    (mealCounts.get(candidate.recipe.id) ?? 0) + 1,
+  );
+  const currentDayRecipeIds =
     mealType === 'dinner'
-      ? new Set(state.usedDinnerIds).add(candidate.recipe.id)
-      : state.usedDinnerIds;
-  return { ...state, usedDinnerIds, usedIngredients };
+      ? state.currentDayRecipeIds
+      : new Set(state.currentDayRecipeIds).add(candidate.recipe.id);
+  return {
+    ...state,
+    currentDayRecipeIds,
+    lastMealByType: { ...state.lastMealByType, [mealType]: candidate },
+    mealCountsByType: {
+      ...state.mealCountsByType,
+      [mealType]: mealCounts,
+    },
+    usedIngredients,
+  };
 }
 
 function emptyState(): PlanState {
   return {
+    breakfastLunchRepetition: 0,
     completedMacroPenalty: 0,
+    currentDayRecipeIds: noRecipeIds,
     dinnerRepetition: 0,
     flavourRepetition: 0,
     historyPenalty: 0,
     ingredientReuse: 0,
-    lastDinner: null,
+    lastMealByType: { breakfast: null, dinner: null, lunch: null },
+    mealCountsByType: {
+      breakfast: new Map(),
+      dinner: new Map(),
+      lunch: new Map(),
+    },
     meals: [],
+    sameDayRepetition: 0,
     tieBreaker: 0,
-    usedDinnerIds: new Set(),
     usedIngredients: new Set(),
   };
 }
@@ -356,7 +434,9 @@ function scoreState(
   }
   return [
     roundScore(macroPenalty),
+    state.sameDayRepetition,
     state.dinnerRepetition,
+    state.breakfastLunchRepetition,
     state.flavourRepetition,
     state.historyPenalty,
     -state.ingredientReuse,
@@ -449,26 +529,21 @@ function buildDiagnostics(
     }
   }
 
-  const dinnerIds = days
-    .flatMap(({ slots }) => slots)
-    .filter(({ mealType }) => mealType === 'dinner')
-    .flatMap(({ meal }) => (meal === null ? [] : [meal.recipeId]));
-  const dinnerCounts = countBy(dinnerIds);
-  if (dinnerCounts.size < Math.min(5, dinnerIds.length)) {
+  const repeatedDates = days.flatMap((day) => {
+    const recipeIds = day.slots.flatMap(({ meal }) =>
+      meal === null ? [] : [meal.recipeId],
+    );
+    return new Set(recipeIds).size < recipeIds.length ? [day.date] : [];
+  });
+  if (repeatedDates.length > 0) {
     diagnostics.push({
-      code: 'DINNER_VARIETY_LOW',
-      message: `The draft contains ${dinnerCounts.size} distinct dinners; the target is five.`,
+      code: 'SAME_DAY_REPEATED',
+      message: `The same recipe appears in multiple meal slots on ${repeatedDates.join(', ')}.`,
     });
   }
-  const repeatedDinner = [...dinnerCounts.entries()].find(
-    ([, count]) => count > 2,
-  );
-  if (repeatedDinner !== undefined) {
-    const recipe = input.recipes.find(({ id }) => id === repeatedDinner[0]);
-    diagnostics.push({
-      code: 'DINNER_REPEATED',
-      message: `${recipe?.title ?? 'A dinner'} appears ${repeatedDinner[1]} times.`,
-    });
+
+  for (const mealType of mealTypes) {
+    addVariationDiagnostics(diagnostics, days, input, mealType);
   }
 
   for (const person of input.people) {
@@ -499,6 +574,37 @@ function buildDiagnostics(
     });
   }
   return diagnostics;
+}
+
+function addVariationDiagnostics(
+  diagnostics: PlanningDiagnostic[],
+  days: ReadonlyArray<PlannedDay>,
+  input: WeeklyPlanningInput,
+  mealType: MealType,
+): void {
+  const recipeIds = days
+    .flatMap(({ slots }) => slots)
+    .filter((slot) => slot.mealType === mealType)
+    .flatMap(({ meal }) => (meal === null ? [] : [meal.recipeId]));
+  const counts = countBy(recipeIds);
+  const target = variationTargets[mealType];
+  const codes = variationDiagnosticCodes[mealType];
+  if (counts.size < Math.min(target.minimumDistinct, recipeIds.length)) {
+    diagnostics.push({
+      code: codes.variety,
+      message: `The draft contains ${counts.size} distinct ${mealType} recipes; the target is ${target.minimumDistinct}.`,
+    });
+  }
+  const repeated = [...counts.entries()].find(
+    ([, count]) => count > target.maximumUses,
+  );
+  if (repeated !== undefined) {
+    const recipe = input.recipes.find(({ id }) => id === repeated[0]);
+    diagnostics.push({
+      code: codes.repeated,
+      message: `${recipe?.title ?? `A ${mealType}`} appears ${repeated[1]} times at ${mealType}; the normal maximum is ${target.maximumUses}.`,
+    });
+  }
 }
 
 function sumPersonMacros(
@@ -564,7 +670,7 @@ function relativeDifference(actual: number, target: number): number {
   return Math.abs(safeRatio(actual, target) - 1);
 }
 
-function dinnerSimilarity(previous: Candidate, current: Candidate): number {
+function mealSimilarity(previous: Candidate, current: Candidate): number {
   return (
     overlap(previous.tagKeys.cuisines, current.tagKeys.cuisines) +
     overlap(previous.tagKeys.flavours, current.tagKeys.flavours) +

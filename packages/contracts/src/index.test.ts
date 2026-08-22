@@ -12,6 +12,7 @@ import {
   recipeSchema,
   runtimeConfigSchema,
   sessionResponseSchema,
+  weeklyPlanDiagnosticSchema,
   weeklyPlanSchema,
 } from './index.js';
 
@@ -421,5 +422,19 @@ describe('shared API contracts', () => {
         ),
       }),
     ).toThrow();
+  });
+
+  it('accepts meal variety diagnostics', () => {
+    for (const code of [
+      'BREAKFAST_REPEATED',
+      'BREAKFAST_VARIETY_LOW',
+      'LUNCH_REPEATED',
+      'LUNCH_VARIETY_LOW',
+      'SAME_DAY_REPEATED',
+    ]) {
+      expect(
+        weeklyPlanDiagnosticSchema.parse({ code, message: 'Shortfall.' }),
+      ).toEqual({ code, message: 'Shortfall.' });
+    }
   });
 });
